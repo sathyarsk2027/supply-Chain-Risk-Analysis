@@ -1,0 +1,60 @@
+#!/bin/sh
+
+# Find directory of this script
+DIR="$(cd "$(dirname "$0")" && pwd)"
+PROPERTIES_FILE="$DIR/.mvn/wrapper/maven-wrapper.properties"
+
+if [ ! -f "$PROPERTIES_FILE" ]; then
+    echo "Error: $PROPERTIES_FILE not found."
+    exit 1
+fi
+
+DIST_URL=$(grep "distributionUrl" "$PROPERTIES_FILE" | cut -d'=' -f2- | tr -d '\r' | tr -d ' ')
+ZIP_NAME=$(basename "$DIST_URL")
+DIR_NAME="${ZIP_NAME%.*}"
+
+WRAPPER_DIR="$HOME/.m2/wrapper/dists/$DIR_NAME"
+ZIP_PATH="$WRAPPER_DIR/$ZIP_NAME"
+
+if [ ! -d "$WRAPPER_DIR" ]; then
+    mkdir -p "$WRAPPER_DIR"
+fi
+
+# Find mvn command if already extracted
+MVN_BIN=""
+for d in "$WRAPPER_DIR"/*; do
+    if [ -f "$d/bin/mvn" ]; then
+        MVN_BIN="$d/bin/mvn"
+    fi
+done
+
+if [ -z "$MVN_BIN" ]; then
+    if [ ! -f "$ZIP_PATH" ]; then
+        echo "Downloading Maven from $DIST_URL..."
+        if command -v curl >/dev/null 2>&1; then
+            curl -L -o "$ZIP_PATH" "$DIST_URL"
+        elif command -v wget >/dev/null 2>&1; then
+            wget -O "$ZIP_PATH" "$DIST_URL"
+        else
+            echo "Error: curl or wget is required to download Maven."
+            exit 1
+        fi
+    fi
+    echo "Extracting Maven..."
+    unzip -q "$ZIP_PATH" -d "$WRAPPER_DIR"
+    rm "$ZIP_PATH"
+    
+    for d in "$WRAPPER_DIR"/*; do
+        if [ -f "$d/bin/mvn" ]; then
+            MVN_BIN="$d/bin/mvn"
+        fi
+    done
+fi
+
+if [ -z "$MVN_BIN" ]; then
+    echo "Error: Could not find mvn in extracted directory."
+    exit 1
+fi
+
+chmod +x "$MVN_BIN"
+exec "$MVN_BIN" "$@"
