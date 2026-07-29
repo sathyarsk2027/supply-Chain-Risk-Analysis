@@ -38,6 +38,7 @@ public class MonitorApplication {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         loadDotEnv();
         SpringApplication.run(MonitorApplication.class, args);
+        System.out.println("RAW ENV GEMINI_API_KEY: " + System.getenv("GEMINI_API_KEY"));
     }
 
     private static void loadDotEnv() {
@@ -64,7 +65,7 @@ public class MonitorApplication {
                         } else if (value.startsWith("'") && value.endsWith("'")) {
                             value = value.substring(1, value.length() - 1);
                         }
-                        if (System.getProperty(key) == null && System.getenv(key) == null) {
+                        if (System.getProperty(key) == null) {
                             System.setProperty(key, value);
                         }
                     }

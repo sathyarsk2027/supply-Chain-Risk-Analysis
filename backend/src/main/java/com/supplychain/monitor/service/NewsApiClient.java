@@ -147,6 +147,8 @@ public class NewsApiClient {
 
             logger.info("News collection finished. Saved {} new articles.", savedCount);
 
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            logger.warn("NewsAPI request failed: {} - {}. Skipping news collection.", e.getStatusCode(), e.getResponseBodyAsString());
         } catch (Exception e) {
             logger.error("Failed to collect news articles from NewsAPI", e);
         }

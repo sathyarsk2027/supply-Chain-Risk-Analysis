@@ -11,13 +11,16 @@ import java.util.List;
 public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> {
     boolean existsByUrl(String url);
 
-    @Query(value = "SELECT id, title, url, source, risk_category AS riskCategory, " +
+    @Query(value = "SELECT id, title, url, source, risk_category AS riskCategory, raw_content AS rawContent, " +
                    "(embedding <=> CAST(:embedding AS vector)) AS cosineDistance " +
                    "FROM news_articles " +
                    "WHERE embedding IS NOT NULL " +
                    "ORDER BY embedding <=> CAST(:embedding AS vector) ASC " +
-                   "LIMIT 5", nativeQuery = true)
+                   "LIMIT 15", nativeQuery = true)
     List<NewsArticleSearchResult> findSimilarArticles(@Param("embedding") String embedding);
+
+    @Query(value = "SELECT source AS source, COUNT(*) AS count FROM news_articles GROUP BY source", nativeQuery = true)
+    List<SourceCountProjection> findSourceCounts();
 
     interface NewsArticleSearchResult {
         Long getId();
@@ -25,6 +28,12 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
         String getUrl();
         String getSource();
         String getRiskCategory();
+        String getRawContent();
         Double getCosineDistance();
+    }
+
+    interface SourceCountProjection {
+        String getSource();
+        Long getCount();
     }
 }

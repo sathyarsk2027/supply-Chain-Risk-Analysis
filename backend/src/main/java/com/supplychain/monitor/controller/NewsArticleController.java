@@ -3,6 +3,7 @@ package com.supplychain.monitor.controller;
 import com.supplychain.monitor.model.NewsArticle;
 import com.supplychain.monitor.repository.NewsArticleRepository;
 import com.supplychain.monitor.service.NlpClient;
+import com.supplychain.monitor.service.GroqClient;
 import com.pgvector.PGvector;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,17 +18,26 @@ import java.util.stream.Collectors;
 @RequestMapping("/api")
 public class NewsArticleController {
 
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(NewsArticleController.class);
+
     private final NewsArticleRepository newsArticleRepository;
     private final NlpClient nlpClient;
+    private final GroqClient groqClient;
 
-    public NewsArticleController(NewsArticleRepository newsArticleRepository, NlpClient nlpClient) {
+    public NewsArticleController(NewsArticleRepository newsArticleRepository, NlpClient nlpClient, GroqClient groqClient) {
         this.newsArticleRepository = newsArticleRepository;
         this.nlpClient = nlpClient;
+        this.groqClient = groqClient;
     }
 
     @GetMapping("/articles")
     public List<NewsArticle> getAllArticles() {
         return newsArticleRepository.findAll();
+    }
+
+    @GetMapping("/articles/sources")
+    public List<NewsArticleRepository.SourceCountProjection> getSourceCounts() {
+        return newsArticleRepository.findSourceCounts();
     }
 
     @PostMapping("/query")
@@ -46,6 +56,7 @@ public class NewsArticleController {
         String vectorString = java.util.Arrays.toString(embedding);
         List<NewsArticleRepository.NewsArticleSearchResult> searchResults = 
                 newsArticleRepository.findSimilarArticles(vectorString);
+        logger.info("Semantic search results size: {}", searchResults.size());
 
         // 3) Return the query, the top 5 matched articles and their similarity scores as JSON.
         List<QueryResponse.Match> matches = searchResults.stream().map(result -> {
@@ -59,7 +70,45 @@ public class NewsArticleController {
             );
         }).collect(Collectors.toList());
 
-        return ResponseEntity.ok(new QueryResponse(request.getQuery(), matches));
+        double minScore = matches.stream().mapToDouble(QueryResponse.Match::getScore).min().orElse(0.0);
+        double maxScore = matches.stream().mapToDouble(QueryResponse.Match::getScore).max().orElse(1.0);
+        double range = maxScore - minScore;
+
+        List<QueryResponse.Match> displayMatches = matches.stream().map(m -> {
+            double normalized = range > 0.0001
+                ? 0.40 + ((m.getScore() - minScore) / range) * 0.55
+                : 0.70; // fallback if all scores are identical
+            return new QueryResponse.Match(
+                m.getTitle(), m.getUrl(), m.getSource(), m.getRiskCategory(), normalized
+            );
+        }).collect(Collectors.toList());
+
+        QueryResponse queryResponse = new QueryResponse(request.getQuery(), displayMatches);
+
+        // 4) Build context string (truncating rawContent to ~300 characters) and call Groq API
+        try {
+            StringBuilder contextBuilder = new StringBuilder();
+            for (int i = 0; i < searchResults.size(); i++) {
+                NewsArticleRepository.NewsArticleSearchResult result = searchResults.get(i);
+                String title = result.getTitle() != null ? result.getTitle() : "";
+                String riskCategory = result.getRiskCategory() != null ? result.getRiskCategory() : "Uncategorized";
+                String rawContent = result.getRawContent() != null ? result.getRawContent() : "";
+                if (rawContent.length() > 300) {
+                    rawContent = rawContent.substring(0, 300) + "...";
+                }
+                contextBuilder.append(String.format("Article %d: %s | Risk Category: %s\nContent: %s\n\n", i + 1, title, riskCategory, rawContent));
+            }
+            String context = contextBuilder.toString();
+
+            GroqClient.GroqResponse aiResponse = groqClient.generateSummary(request.getQuery(), context);
+            if (aiResponse != null) {
+                queryResponse.setAiSummary(new QueryResponse.AiSummary(aiResponse.getSummary(), aiResponse.getConfidenceScore()));
+            }
+        } catch (Exception e) {
+            logger.error("Failed to generate AI summary for query: {}", request.getQuery(), e);
+        }
+
+        return ResponseEntity.ok(queryResponse);
     }
 
     public static class QueryRequest {
@@ -84,6 +133,7 @@ public class NewsArticleController {
     public static class QueryResponse {
         private String query;
         private List<Match> matches;
+        private AiSummary aiSummary;
 
         public QueryResponse() {
         }
@@ -107,6 +157,43 @@ public class NewsArticleController {
 
         public void setMatches(List<Match> matches) {
             this.matches = matches;
+        }
+
+        public AiSummary getAiSummary() {
+            return aiSummary;
+        }
+
+        public void setAiSummary(AiSummary aiSummary) {
+            this.aiSummary = aiSummary;
+        }
+
+        public static class AiSummary {
+            private String summary;
+            private Integer confidenceScore;
+
+            public AiSummary() {
+            }
+
+            public AiSummary(String summary, Integer confidenceScore) {
+                this.summary = summary;
+                this.confidenceScore = confidenceScore;
+            }
+
+            public String getSummary() {
+                return summary;
+            }
+
+            public void setSummary(String summary) {
+                this.summary = summary;
+            }
+
+            public Integer getConfidenceScore() {
+                return confidenceScore;
+            }
+
+            public void setConfidenceScore(Integer confidenceScore) {
+                this.confidenceScore = confidenceScore;
+            }
         }
 
         public static class Match {

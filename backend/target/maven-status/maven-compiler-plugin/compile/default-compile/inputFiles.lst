@@ -1,9 +1,0 @@
-C:\Users\sathy\Documents\supply-chain-risk-monitor\backend\src\main\java\com\supplychain\monitor\config\WebConfig.java
-C:\Users\sathy\Documents\supply-chain-risk-monitor\backend\src\main\java\com\supplychain\monitor\controller\NewsArticleController.java
-C:\Users\sathy\Documents\supply-chain-risk-monitor\backend\src\main\java\com\supplychain\monitor\model\NewsArticle.java
-C:\Users\sathy\Documents\supply-chain-risk-monitor\backend\src\main\java\com\supplychain\monitor\model\PGvectorConverter.java
-C:\Users\sathy\Documents\supply-chain-risk-monitor\backend\src\main\java\com\supplychain\monitor\model\VectorConverter.java
-C:\Users\sathy\Documents\supply-chain-risk-monitor\backend\src\main\java\com\supplychain\monitor\MonitorApplication.java
-C:\Users\sathy\Documents\supply-chain-risk-monitor\backend\src\main\java\com\supplychain\monitor\repository\NewsArticleRepository.java
-C:\Users\sathy\Documents\supply-chain-risk-monitor\backend\src\main\java\com\supplychain\monitor\service\NewsApiClient.java
-C:\Users\sathy\Documents\supply-chain-risk-monitor\backend\src\main\java\com\supplychain\monitor\service\NlpClient.java
