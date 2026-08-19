@@ -22,6 +22,16 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
     @Query(value = "SELECT source AS source, COUNT(*) AS count FROM news_articles GROUP BY source", nativeQuery = true)
     List<SourceCountProjection> findSourceCounts();
 
+    @Query(value = "SELECT * FROM news_articles WHERE LOWER(title) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(COALESCE(entities, '')) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(COALESCE(raw_content, '')) LIKE LOWER(CONCAT('%', :kw, '%')) ORDER BY published_at DESC LIMIT 50", nativeQuery = true)
+    List<NewsArticle> findByKeyword(@Param("kw") String keyword);
+
+    @Query(value = "SELECT * FROM news_articles WHERE " +
+                   "title ~* :pattern OR " +
+                   "COALESCE(entities, '') ~* :pattern OR " +
+                   "COALESCE(raw_content, '') ~* :pattern " +
+                   "ORDER BY published_at DESC LIMIT 50", nativeQuery = true)
+    List<NewsArticle> findByPattern(@Param("pattern") String regexPattern);
+
     interface NewsArticleSearchResult {
         Long getId();
         String getTitle();

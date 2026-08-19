@@ -248,6 +248,26 @@ h1 {
   gap: 0.5rem;
 }
 
+.subtitle-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.system-badge {
+  font-size: 0.725rem;
+  font-weight: 700;
+  color: var(--accent-purple);
+  background: rgba(192, 132, 252, 0.12);
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  padding: 0.2rem 0.65rem;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.15);
+}
+
 .live-indicator {
   display: inline-flex;
   align-items: center;
@@ -754,7 +774,7 @@ h1 {
   left: 0;
   right: 0;
   height: 3.5px;
-  background: linear-gradient(90deg, #38bdf8, #8b5cf6, #ec4899, #38bdf8);
+  background: linear-gradient(90deg, #38bdf8, #8b5cf6, #6366f1, #38bdf8);
   background-size: 200% auto;
   animation: shimmer-text 4s linear infinite;
 }

@@ -198,7 +198,15 @@ public class RssPollingService {
             return "FreightWaves";
         } else if (lowerUrl.contains("joc.com")) {
             return "Journal of Commerce";
+        } else if (lowerUrl.contains("maritime-executive.com")) {
+            return "Maritime Executive";
+        } else if (lowerUrl.contains("gcaptain.com")) {
+            return "gCaptain Maritime";
+        } else if (lowerUrl.contains("supplychainbrain.com")) {
+            return "SupplyChainBrain";
+        } else if (lowerUrl.contains("logisticsmgmt.com")) {
+            return "Logistics Management";
         }
-        return "RSS Publisher";
+        return "Global Disruption Feed";
     }
 }

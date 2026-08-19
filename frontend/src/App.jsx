@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
 // --------------------------------------------------------------------------
 // Custom Interactive Glowing Cursor Follower Component
 // --------------------------------------------------------------------------
@@ -76,298 +78,34 @@ const sanitizeArticleUrl = (article) => {
 };
 
 // --------------------------------------------------------------------------
-// Expanded Global Country Supply Chain Risk Database (20 Major Economies)
+// Geographic Pin Database for 3D Earth & HD Satellite Map
 // --------------------------------------------------------------------------
-const COUNTRY_RISK_DB = {
-  US: {
-    id: 'US',
-    flag: '🇺🇸',
-    name: 'United States',
-    region: 'North America',
-    lat: 37.0,
-    lng: -95.0,
-    keywords: ['la', 'los angeles', 'port', 'us', 'west coast', 'strike', 'tariff', 'california'],
-    baseScore: 78,
-    status: 'HIGH RISK (CRITICAL)',
-    categoryScores: { geopolitical: 82, logistics: 86, weather: 48, market: 78 },
-    chokePoints: ['Port of Los Angeles / Long Beach', 'US Gulf Coast Terminals', 'Midwest Rail Logistics'],
-    highlights: [
-      'West Coast Port labor wage disputes and berth delays',
-      'Increased tariff scrutiny on imported electronic components',
-      'Container dwell time elevated at major intermodal hubs'
-    ]
-  },
-  CN: {
-    id: 'CN',
-    flag: '🇨🇳',
-    name: 'China',
-    region: 'Asia-Pacific',
-    lat: 35.0,
-    lng: 104.0,
-    keywords: ['china', 'shanghai', 'semiconductor', 'asia', 'cargo', 'shenzhen', 'ningbo'],
-    baseScore: 85,
-    status: 'HIGH RISK (CRITICAL)',
-    categoryScores: { geopolitical: 92, logistics: 85, weather: 55, market: 82 },
-    chokePoints: ['Port of Shanghai', 'Ningbo-Zhoushan Port', 'Shenzhen Yantian Container Terminal'],
-    highlights: [
-      'Export clearance backlog on high-tech and semiconductor goods',
-      'Strict maritime customs inspections creating vessel queues',
-      'Air freight congestion at Pudong International Airport'
-    ]
-  },
-  IN: {
-    id: 'IN',
-    flag: '🇮🇳',
-    name: 'India',
-    region: 'South Asia',
-    lat: 20.5,
-    lng: 78.9,
-    keywords: ['india', 'mundra', 'nhava sheva', 'mumbai', 'asia', 'delhi'],
-    baseScore: 72,
-    status: 'ELEVATED RISK',
-    categoryScores: { geopolitical: 64, logistics: 80, weather: 72, market: 68 },
-    chokePoints: ['Nhava Sheva (JNPT) Mumbai', 'Mundra Port Logistics Hub', 'Chennai Terminal'],
-    highlights: [
-      'Container availability shortage for outward manufacturing exports',
-      'Monsoon weather disruptions impacting coastal shipping schedules',
-      'Customs inspection lead time spikes on raw material imports'
-    ]
-  },
-  DE: {
-    id: 'DE',
-    flag: '🇩🇪',
-    name: 'Germany',
-    region: 'Europe',
-    lat: 51.1,
-    lng: 10.4,
-    keywords: ['germany', 'hamburg', 'europe', 'automotive', 'rhine'],
-    baseScore: 62,
-    status: 'MODERATE RISK',
-    categoryScores: { geopolitical: 65, logistics: 66, weather: 45, market: 60 },
-    chokePoints: ['Port of Hamburg Container Hub', 'Bremerhaven Terminal', 'Rhine Waterways'],
-    highlights: [
-      'Automotive supply chain component supply bottlenecks',
-      'Inland waterways flow variations impacting raw material transport',
-      'Industrial energy cost volatility'
-    ]
-  },
-  NL: {
-    id: 'NL',
-    flag: '🇳🇱',
-    name: 'Netherlands',
-    region: 'Europe',
-    lat: 52.3,
-    lng: 4.9,
-    keywords: ['rotterdam', 'europe', 'netherlands', 'port', 'feeder', 'rhine'],
-    baseScore: 68,
-    status: 'ELEVATED RISK',
-    categoryScores: { geopolitical: 64, logistics: 76, weather: 42, market: 70 },
-    chokePoints: ['Port of Rotterdam Maasvlakte', 'Rhine Waterway Inland Feeder'],
-    highlights: [
-      'Feeder vessel queuing at container terminals',
-      'Rhine river barge capacity constraints during seasonal fluctuations',
-      'European rail freight bottleneck connections'
-    ]
-  },
-  EG: {
-    id: 'EG',
-    flag: '🇪🇬',
-    name: 'Egypt & Red Sea',
-    region: 'Middle East / North Africa',
-    lat: 26.8,
-    lng: 30.8,
-    keywords: ['suez', 'red sea', 'iran', 'gulf', 'tanker', 'maritime', 'rerouting', 'egypt'],
-    baseScore: 94,
-    status: 'SEVERE CRISIS (CRITICAL)',
-    categoryScores: { geopolitical: 98, logistics: 94, weather: 30, market: 88 },
-    chokePoints: ['Suez Canal Maritime Corridor', 'Bab-el-Mandeb Strait', 'Red Sea Transit Zone'],
-    highlights: [
-      'Geopolitical maritime attacks forcing carrier rerouting around Africa',
-      'Transit times increased by 10 to 14 days for Asia-Europe trade lanes',
-      'Bunker fuel consumption and insurance premiums surging dramatically'
-    ]
-  },
-  SG: {
-    id: 'SG',
-    flag: '🇸🇬',
-    name: 'Singapore',
-    region: 'Asia-Pacific',
-    lat: 1.35,
-    lng: 103.8,
-    keywords: ['singapore', 'asia', 'strait', 'bunker', 'transshipment'],
-    baseScore: 74,
-    status: 'ELEVATED RISK',
-    categoryScores: { geopolitical: 58, logistics: 82, weather: 50, market: 76 },
-    chokePoints: ['Singapore Strait Passage', 'Pasir Panjang Terminal Hub'],
-    highlights: [
-      'Major transshipment vessel congestion due to Red Sea rerouting schedules',
-      'Bunker refueling lead times extended by 48-72 hours',
-      'High container yard density at main container berths'
-    ]
-  },
-  JP: {
-    id: 'JP',
-    flag: '🇯🇵',
-    name: 'Japan',
-    region: 'East Asia',
-    lat: 36.2,
-    lng: 138.2,
-    keywords: ['japan', 'tokyo', 'yokohama', 'semiconductors', 'asia'],
-    baseScore: 56,
-    status: 'MODERATE RISK',
-    categoryScores: { geopolitical: 58, logistics: 54, weather: 62, market: 52 },
-    chokePoints: ['Tokyo Bay Container Terminal', 'Port of Yokohama'],
-    highlights: [
-      'Seasonal typhoon track surveillance along coastal routes',
-      'High efficiency in electronics export flow with mild port delays',
-      'Stable maritime vessel berth allocation'
-    ]
-  },
-  GB: {
-    id: 'GB',
-    flag: '🇬🇧',
-    name: 'United Kingdom',
-    region: 'Europe',
-    lat: 55.3,
-    lng: -3.4,
-    keywords: ['uk', 'britain', 'felixstowe', 'london', 'dover', 'europe'],
-    baseScore: 65,
-    status: 'MODERATE RISK',
-    categoryScores: { geopolitical: 62, logistics: 70, weather: 55, market: 66 },
-    chokePoints: ['Port of Felixstowe', 'Dover Maritime Crossing', 'London Gateway'],
-    highlights: [
-      'Felixstowe Port customs inspection lead time delays',
-      'Cross-channel freight flow volume spikes',
-      'Heavy goods vehicle driver shortage impacts'
-    ]
-  },
-  BR: {
-    id: 'BR',
-    flag: '🇧🇷',
-    name: 'Brazil',
-    region: 'South America',
-    lat: -14.2,
-    lng: -51.9,
-    keywords: ['brazil', 'santos', 'amazon', 'south america', 'grain'],
-    baseScore: 69,
-    status: 'ELEVATED RISK',
-    categoryScores: { geopolitical: 60, logistics: 74, weather: 72, market: 65 },
-    chokePoints: ['Port of Santos Grain Terminal', 'Paranaguá Bulk Corridor'],
-    highlights: [
-      'Santos Port agricultural grain export clearance backlogs',
-      'Low Amazon river water levels impacting barge transit',
-      'Highway freight labor disputes'
-    ]
-  },
-  AU: {
-    id: 'AU',
-    flag: '🇦🇺',
-    name: 'Australia',
-    region: 'Oceania',
-    lat: -25.2,
-    lng: 133.7,
-    keywords: ['australia', 'sydney', 'melbourne', 'freight', 'oceania'],
-    baseScore: 54,
-    status: 'LOW / MODERATE RISK',
-    categoryScores: { geopolitical: 50, logistics: 56, weather: 60, market: 50 },
-    chokePoints: ['Port Botany Sydney', 'Port of Melbourne Container Terminal'],
-    highlights: [
-      'Long-distance trans-ocean shipping transit lead times',
-      'Seasonal cyclone warnings across Northern Coast maritime lanes',
-      'Stable domestic freight transport routes'
-    ]
-  },
-  FR: {
-    id: 'FR',
-    flag: '🇫🇷',
-    name: 'France',
-    region: 'Europe',
-    lat: 46.2,
-    lng: 2.2,
-    keywords: ['france', 'le havre', 'marseille', 'europe', 'dockworkers'],
-    baseScore: 63,
-    status: 'MODERATE RISK',
-    categoryScores: { geopolitical: 68, logistics: 65, weather: 40, market: 62 },
-    chokePoints: ['Port of Le Havre', 'Marseille-Fos Terminal'],
-    highlights: [
-      'Periodic dockworker strike actions affecting cargo handling',
-      'Rail freight network congestion connecting Central Europe',
-      'High energy compliance costs'
-    ]
-  },
-  CA: {
-    id: 'CA',
-    flag: '🇨🇦',
-    name: 'Canada',
-    region: 'North America',
-    lat: 56.1,
-    lng: -106.3,
-    keywords: ['canada', 'vancouver', 'montreal', 'rail', 'strike'],
-    baseScore: 67,
-    status: 'ELEVATED RISK',
-    categoryScores: { geopolitical: 58, logistics: 75, weather: 65, market: 64 },
-    chokePoints: ['Port of Vancouver Terminal', 'CN/CPKC Transcontinental Rail'],
-    highlights: [
-      'Vancouver container terminal congestion and dwell times',
-      'Rail labor contract negotiations affecting cross-border trade',
-      'Winter weather impacts on northern transport corridors'
-    ]
-  },
-  MX: {
-    id: 'MX',
-    flag: '🇲🇽',
-    name: 'Mexico',
-    region: 'North America',
-    lat: 23.6,
-    lng: -102.5,
-    keywords: ['mexico', 'manzanillo', 'laredo', 'border', 'cross-border'],
-    baseScore: 71,
-    status: 'ELEVATED RISK',
-    categoryScores: { geopolitical: 72, logistics: 76, weather: 50, market: 74 },
-    chokePoints: ['Port of Manzanillo', 'Laredo Border Crossing Corridor'],
-    highlights: [
-      'Nearshoring manufacturing surge straining border customs infrastructure',
-      'Manzanillo port container yard congestion',
-      'Trucking freight capacity constraints'
-    ]
-  },
-  KR: {
-    id: 'KR',
-    flag: '🇰🇷',
-    name: 'South Korea',
-    region: 'East Asia',
-    lat: 35.9,
-    lng: 127.7,
-    keywords: ['korea', 'busan', 'semiconductor', 'asia', 'incheon'],
-    baseScore: 60,
-    status: 'MODERATE RISK',
-    categoryScores: { geopolitical: 65, logistics: 58, weather: 50, market: 62 },
-    chokePoints: ['Port of Busan Container Hub', 'Incheon Logistics Center'],
-    highlights: [
-      'High-tech semiconductor and battery export flow stability',
-      'Busan transshipment port congestion from rerouted vessels',
-      'Raw chemical import price fluctuations'
-    ]
-  },
-  AE: {
-    id: 'AE',
-    flag: '🇦🇪',
-    name: 'United Arab Emirates',
-    region: 'Middle East',
-    lat: 23.4,
-    lng: 53.8,
-    keywords: ['dubai', 'jebel ali', 'uae', 'gulf', 'air cargo'],
-    baseScore: 64,
-    status: 'MODERATE RISK',
-    categoryScores: { geopolitical: 70, logistics: 60, weather: 35, market: 65 },
-    chokePoints: ['Jebel Ali Port Dubai', 'Strait of Hormuz Approach'],
-    highlights: [
-      'Increased sea-air multimodal transshipment demand bypassing Red Sea',
-      'Strait of Hormuz tanker surveillance',
-      'High air cargo capacity utilization at Dubai World Central'
-    ]
-  }
-};
+const GLOBAL_PIN_LIST = [
+  { id: 'US', query: 'United States', flag: '🇺🇸', lat: 37.0, lng: -95.0, baseScore: 78 },
+  { id: 'CN', query: 'China', flag: '🇨🇳', lat: 35.0, lng: 104.0, baseScore: 85 },
+  { id: 'IN', query: 'India', flag: '🇮🇳', lat: 20.5, lng: 78.9, baseScore: 72 },
+  { id: 'DE', query: 'Germany', flag: '🇩🇪', lat: 51.1, lng: 10.4, baseScore: 62 },
+  { id: 'NL', query: 'Netherlands', flag: '🇳🇱', lat: 52.3, lng: 4.9, baseScore: 68 },
+  { id: 'EG', query: 'Egypt', flag: '🇪🇬', lat: 26.8, lng: 30.8, baseScore: 94 },
+  { id: 'SG', query: 'Singapore', flag: '🇸🇬', lat: 1.35, lng: 103.8, baseScore: 74 },
+  { id: 'JP', query: 'Japan', flag: '🇯🇵', lat: 36.2, lng: 138.2, baseScore: 56 },
+  { id: 'GB', query: 'United Kingdom', flag: '🇬🇧', lat: 55.3, lng: -3.4, baseScore: 65 },
+  { id: 'BR', query: 'Brazil', flag: '🇧🇷', lat: -14.2, lng: -51.9, baseScore: 69 },
+  { id: 'AU', query: 'Australia', flag: '🇦🇺', lat: -25.2, lng: 133.7, baseScore: 54 },
+  { id: 'FR', query: 'France', flag: '🇫🇷', lat: 46.2, lng: 2.2, baseScore: 63 },
+  { id: 'CA', query: 'Canada', flag: '🇨🇦', lat: 56.1, lng: -106.3, baseScore: 67 },
+  { id: 'MX', query: 'Mexico', flag: '🇲🇽', lat: 23.6, lng: -102.5, baseScore: 71 },
+  { id: 'KR', query: 'South Korea', flag: '🇰🇷', lat: 35.9, lng: 127.7, baseScore: 60 },
+  { id: 'AE', query: 'United Arab Emirates', flag: '🇦🇪', lat: 23.4, lng: 53.8, baseScore: 64 }
+];
+
+function getCountryCoords(query) {
+  if (!query) return { query: 'Global', flag: '🌐', lat: 20.0, lng: 0.0, baseScore: 50 };
+  const q = query.toLowerCase().trim();
+  const found = GLOBAL_PIN_LIST.find(p => p.query.toLowerCase() === q || p.id.toLowerCase() === q);
+  if (found) return found;
+  return { query, flag: '🌐', lat: 20.0, lng: 0.0, baseScore: 50 };
+}
 
 function App() {
   const [articles, setArticles] = useState([]);
@@ -390,7 +128,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8080/api/articles');
+      const response = await fetch(`${API_BASE_URL}/api/articles`);
       if (!response.ok) {
         throw new Error(`Failed to load articles (HTTP ${response.status})`);
       }
@@ -399,7 +137,7 @@ function App() {
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       console.error('Fetch error:', err);
-      setError('Could not connect to the news API server. Please make sure the backend is running on http://localhost:8080.');
+      setError(`Could not connect to the news API server. Please make sure the backend is running on ${API_BASE_URL}.`);
     } finally {
       setLoading(false);
     }
@@ -430,7 +168,7 @@ function App() {
     setAiSummary(null);
 
     try {
-      const response = await fetch('http://localhost:8080/api/query', {
+      const response = await fetch(`${API_BASE_URL}/api/query`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -507,12 +245,12 @@ function App() {
             <div className="brand-icon-box">🛰️</div>
             <div>
               <h1>Supply Chain Risk Monitor</h1>
-              <p className="subtitle">
+              <div className="subtitle-bar">
                 <span className="live-indicator">
-                  <span className="pulse-dot"></span> REAL-TIME SATELLITE (15m Auto-Sync)
+                  <span className="pulse-dot"></span> REAL-TIME SATELLITE INTELLIGENCE
                 </span>
-                NASA Satellite Photography & Esri World Imagery Analytics
-              </p>
+                <span className="system-badge">AUTOMATIC 15M SYNC</span>
+              </div>
             </div>
           </div>
 
@@ -762,7 +500,7 @@ function App() {
               <div className="ai-summary-card">
                 <div className="ai-summary-header">
                   <div className="ai-summary-title">
-                    <span className="ai-sparkle">✨</span> Groq AI Executive Risk Assessment
+                    <span className="ai-sparkle">✨</span> AI risk summary
                   </div>
                   <div className="ai-confidence-badge">
                     Match Confidence:{' '}
@@ -868,92 +606,83 @@ function App() {
 }
 
 // --------------------------------------------------------------------------
-// NASA Satellite & Risk Factors Analytics Section
+// Real-Time Dynamic NASA Satellite & Risk Factors Analytics Section
 // --------------------------------------------------------------------------
 function AnalyticsDashboardGoogleEarth({ articles = [] }) {
-  const [selectedCountryId, setSelectedCountryId] = useState('US');
+  const [selectedCountryQuery, setSelectedCountryQuery] = useState('Germany');
   const [searchCountryQuery, setSearchCountryQuery] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [mapMode, setMapMode] = useState('3d'); // '3d' | 'hd'
+  const [mapMode, setMapMode] = useState('hd'); // 'hd' | '3d'
 
-  const selectedCountry = COUNTRY_RISK_DB[selectedCountryId] || COUNTRY_RISK_DB['US'];
+  // Dynamic real-time REST API state
+  const [countryRiskData, setCountryRiskData] = useState(null);
+  const [loadingRisk, setLoadingRisk] = useState(false);
+  const [riskError, setRiskError] = useState(null);
 
-  const countrySearchResults = React.useMemo(() => {
-    if (!searchCountryQuery.trim()) return [];
-    const q = searchCountryQuery.toLowerCase();
-    return Object.values(COUNTRY_RISK_DB).filter(c => 
-      c.name.toLowerCase().includes(q) || 
-      c.region.toLowerCase().includes(q) ||
-      c.id.toLowerCase().includes(q)
-    );
-  }, [searchCountryQuery]);
+  const fetchRealTimeCountryRisk = useCallback(async (query) => {
+    if (!query || !query.trim()) return;
+    setLoadingRisk(true);
+    setRiskError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/countries/risk?query=${encodeURIComponent(query.trim())}`);
+      if (!response.ok) {
+        throw new Error(`Failed to calculate real-time country risk (HTTP ${response.status})`);
+      }
+      const data = await response.json();
+      setCountryRiskData(data);
+    } catch (err) {
+      console.error('Real-time country risk API error:', err);
+      setRiskError('Failed to fetch real-time country risk data from backend.');
+    } finally {
+      setLoadingRisk(false);
+    }
+  }, []);
 
-  const handleSelectCountry = (countryId) => {
-    setSelectedCountryId(countryId);
+  useEffect(() => {
+    fetchRealTimeCountryRisk(selectedCountryQuery);
+  }, [selectedCountryQuery, fetchRealTimeCountryRisk]);
+
+  const handleSelectCountry = (countryName) => {
+    setSelectedCountryQuery(countryName);
     setSearchCountryQuery('');
-    setIsDropdownOpen(false);
   };
 
-  const countryArticles = React.useMemo(() => {
-    if (!selectedCountry) return articles;
-    const kwList = selectedCountry.keywords;
-    const matched = articles.filter(a => {
-      const text = `${a.title || ''} ${a.source || ''} ${a.riskCategory || ''}`.toLowerCase();
-      return kwList.some(kw => text.includes(kw));
-    });
-    return matched.length > 0 ? matched : articles;
-  }, [articles, selectedCountry]);
+  const handleSearchSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (searchCountryQuery.trim()) {
+      handleSelectCountry(searchCountryQuery.trim());
+    }
+  };
+
+  const currentCoords = getCountryCoords(selectedCountryQuery);
 
   return (
     <div className="analytics-tab-content" style={{ animation: 'fadeInUp 0.5s ease-out' }}>
-      {/* Country Search Bar & Map Mode Switcher */}
+      {/* Real-Time Unlimited Country Search Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-        <div className="google-earth-search-box" style={{ flex: 1, minWidth: '280px', marginBottom: 0 }}>
+        <form onSubmit={handleSearchSubmit} className="google-earth-search-box" style={{ flex: 1, minWidth: '280px', marginBottom: 0 }}>
           <div className="earth-search-input-wrapper">
             <span style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>🔍</span>
             <input
               type="text"
               className="earth-search-input"
               value={searchCountryQuery}
-              onChange={(e) => {
-                setSearchCountryQuery(e.target.value);
-                setIsDropdownOpen(true);
-              }}
-              onFocus={() => setIsDropdownOpen(true)}
-              placeholder="Search country for risk factor analysis (e.g. India, United States, China, Germany, Brazil, Egypt)..."
+              onChange={(e) => setSearchCountryQuery(e.target.value)}
+              placeholder="Search ANY country for real-time risk factor calculation (e.g. India, Germany, Kenya, Vietnam, Brazil, UAE)..."
             />
             {searchCountryQuery && (
               <button 
+                type="button"
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem', padding: '0 0.5rem' }}
                 onClick={() => setSearchCountryQuery('')}
               >
                 ✕
               </button>
             )}
+            <button type="submit" className="btn-search" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+              Calculate Risk
+            </button>
           </div>
-
-          {/* Autocomplete Suggestions */}
-          {isDropdownOpen && countrySearchResults.length > 0 && (
-            <div className="earth-search-dropdown">
-              {countrySearchResults.map(c => (
-                <div 
-                  key={c.id} 
-                  className="earth-dropdown-item"
-                  onClick={() => handleSelectCountry(c.id)}
-                >
-                  <div>
-                    <span style={{ marginRight: '0.5rem', fontSize: '1.1rem' }}>{c.flag}</span>
-                    <strong style={{ color: '#ffffff' }}>{c.name}</strong>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.785rem', marginLeft: '0.5rem' }}>({c.region})</span>
-                  </div>
-                  <span className="tabular-nums" style={{ color: c.baseScore > 80 ? 'var(--error)' : c.baseScore > 65 ? 'var(--warning)' : 'var(--success)', fontWeight: '700' }}>
-                    Risk Factor: {c.baseScore}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        </form>
 
         {/* View Mode Switcher */}
         <div className="map-view-switcher">
@@ -974,55 +703,227 @@ function AnalyticsDashboardGoogleEarth({ articles = [] }) {
 
       <div className="analytics-grid">
         {/* Source Breakdown Donut Chart */}
-        <SourceBreakdownDonut articles={articles} selectedCountry={selectedCountry} />
+        <SourceBreakdownDonut 
+          articles={countryRiskData?.matchedArticles || articles} 
+          selectedCountryName={selectedCountryQuery} 
+        />
 
         {/* Render Map Component according to selected mode */}
         {mapMode === '3d' ? (
           <RealNASASatellite3DGlobeCard 
-            articles={articles}
-            selectedCountryId={selectedCountryId}
-            onSelectCountry={(id) => handleSelectCountry(id)}
+            targetCoords={currentCoords}
+            selectedCountryQuery={selectedCountryQuery}
+            countryRiskData={countryRiskData}
+            onSelectCountry={(name) => handleSelectCountry(name)}
           />
         ) : (
           <HDSatelliteTileMap 
-            selectedCountryId={selectedCountryId}
-            onSelectCountry={(id) => handleSelectCountry(id)}
+            targetCoords={currentCoords}
+            selectedCountryQuery={selectedCountryQuery}
+            countryRiskData={countryRiskData}
+            onSelectCountry={(name) => handleSelectCountry(name)}
           />
         )}
       </div>
 
-      {/* Country Quick Selector Strip */}
+      {/* Quick Selectors for Global Economies */}
       <div style={{ marginTop: '1.25rem' }}>
         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '700', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Select Country / Region to Analyze ({Object.keys(COUNTRY_RISK_DB).length} Active Global Profiles):
+          Real-Time Quick Selectors (Search accepts ANY country in the world):
         </div>
         <div className="country-selector-strip">
-          {Object.values(COUNTRY_RISK_DB).map((c) => {
-            const isSelected = selectedCountryId === c.id;
+          {GLOBAL_PIN_LIST.map((c, idx) => {
+            const isSelected = selectedCountryQuery.toLowerCase() === c.query.toLowerCase();
             return (
               <button
-                key={c.id}
+                key={idx}
                 className={`country-chip ${isSelected ? 'active' : ''}`}
-                onClick={() => handleSelectCountry(c.id)}
+                onClick={() => handleSelectCountry(c.query)}
               >
                 <span>{c.flag}</span>
-                <span>{c.name}</span>
-                <span className="tabular-nums" style={{ opacity: 0.85, fontSize: '0.75rem' }}>
-                  ({c.baseScore}%)
-                </span>
+                <span>{c.query}</span>
+                {isSelected && countryRiskData && countryRiskData.hasData && (
+                  <span className="tabular-nums" style={{ color: '#38bdf8', fontWeight: '800', marginLeft: '0.25rem' }}>
+                    ({countryRiskData.baseScore}%)
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Detailed Country Risk Factor Analysis Panel */}
-      {selectedCountry && (
-        <CountryRiskAnalysisCard 
-          country={selectedCountry} 
-          matchedArticles={countryArticles}
-        />
-      )}
+      {/* Dynamic Real-Time Country Risk Analysis Card */}
+      <RealTimeCountryRiskPanel 
+        countryQuery={selectedCountryQuery}
+        coords={currentCoords}
+        data={countryRiskData}
+        loading={loadingRisk}
+        error={riskError}
+      />
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Real-Time Computed Country Risk Factor Analysis Card Component
+// --------------------------------------------------------------------------
+function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }) {
+  if (loading) {
+    return (
+      <div className="country-risk-panel" style={{ padding: '2rem', textAlign: 'center' }}>
+        <div className="spin" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔄</div>
+        <h3 style={{ color: '#ffffff' }}>Computing Real-Time Risk Factor Score for {countryQuery}...</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Querying live database articles, analyzing category weights, and generating AI risk drivers...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="country-risk-panel" style={{ borderColor: 'var(--error)' }}>
+        <h3 style={{ color: 'var(--error)' }}>Real-Time Risk Calculation Error</h3>
+        <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
+      </div>
+    );
+  }
+
+  if (!data || !data.hasData || data.baseScore === null) {
+    return (
+      <div className="country-risk-panel">
+        <div className="country-panel-header">
+          <div className="country-flag-title">
+            <span className="country-flag-icon">{coords.flag}</span>
+            <div>
+              <h2 className="country-name">{countryQuery}</h2>
+              <div className="country-region-badge">Real-Time Database Search</div>
+            </div>
+          </div>
+          <span className="badge-severity-low" style={{ background: 'rgba(148, 163, 184, 0.2)', color: '#cbd5e1', border: '1px solid rgba(148, 163, 184, 0.4)' }}>
+            INSUFFICIENT DATA
+          </span>
+        </div>
+        <div style={{ padding: '1.5rem', textDecoration: 'none', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+          <h4 style={{ color: 'var(--accent-cyan)', marginBottom: '0.5rem' }}>ℹ️ Insufficient Live Disruption Data</h4>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
+            Zero supply chain disruption articles matching <strong>"{countryQuery}"</strong> were found in the live database. No fabricated risk scores or fake bullets are displayed.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const scoreColor = data.baseScore >= 80 ? 'var(--error)' : data.baseScore >= 65 ? 'var(--warning)' : 'var(--success)';
+  const badgeSeverityClass = data.baseScore >= 80 ? 'badge-severity-high' : data.baseScore >= 65 ? 'badge-severity-medium' : 'badge-severity-low';
+
+  const catScores = data.categoryScores || {};
+
+  return (
+    <div className="country-risk-panel">
+      {/* Panel Header */}
+      <div className="country-panel-header">
+        <div className="country-flag-title">
+          <span className="country-flag-icon">{coords.flag}</span>
+          <div>
+            <h2 className="country-name">{data.countryName} ({data.baseScore}%)</h2>
+            <div className="country-region-badge">Real-Time Dynamic Risk Calculation ({data.matchedArticles?.length || 0} Matched Articles)</div>
+          </div>
+        </div>
+
+        <div className="risk-gauge-circle">
+          <div>
+            <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '700' }}>
+              Supply Chain Risk Factor Score
+            </div>
+            <div className={`risk-gauge-score tabular-nums`} style={{ color: scoreColor }}>
+              {data.baseScore} / 100 ({data.baseScore}%)
+            </div>
+          </div>
+          <span className={badgeSeverityClass}>
+            {data.status}
+          </span>
+        </div>
+      </div>
+
+      {/* Categorized Risk Progress Meters */}
+      <h3 style={{ fontSize: '0.95rem', color: '#ffffff', marginBottom: '0.85rem' }}>
+        📈 Real-Time Categorized Risk Breakdown for {data.countryName}
+      </h3>
+      <div className="country-risk-categories-grid">
+        {[
+          { label: '⚠️ Geopolitical & Trade Stability', score: catScores.geopolitical || 0, color: '#f59e0b' },
+          { label: '🚢 Logistics & Maritime Congestion', score: catScores.logistics || 0, color: '#38bdf8' },
+          { label: '🌪️ Climate & Extreme Weather Impact', score: catScores.weather || 0, color: '#22d3ee' },
+          { label: '📈 Market, Tariff & Labor Volatility', score: catScores.market || 0, color: '#10b981' }
+        ].map((cat, idx) => (
+          <div key={idx} className="category-risk-item">
+            <div className="category-risk-header">
+              <span>{cat.label}</span>
+              <span className="tabular-nums" style={{ color: cat.color, fontWeight: '700' }}>{cat.score}%</span>
+            </div>
+            <div className="category-bar-bg">
+              <div 
+                className="category-bar-fill" 
+                style={{ width: `${cat.score}%`, backgroundColor: cat.color }} 
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Key Regional Bottlenecks & AI Risk Drivers */}
+      <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.03)', padding: '1.1rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        <h4 style={{ fontSize: '0.925rem', color: '#38bdf8', marginBottom: '0.5rem' }}>
+          📍 AI-Synthesized Risk Drivers & Regional Choke Points for {data.countryName}:
+        </h4>
+        <ul style={{ paddingLeft: '1.25rem', color: 'var(--text-primary)', fontSize: '0.875rem', lineHeight: '1.65' }}>
+          {data.highlights && data.highlights.length > 0 ? (
+            data.highlights.map((bullet, idx) => (
+              <li key={idx} style={{ marginBottom: '0.35rem' }}>{bullet}</li>
+            ))
+          ) : (
+            <li>No specific risk drivers generated.</li>
+          )}
+        </ul>
+      </div>
+
+      {/* Real Matched Intelligence Feeds */}
+      <div>
+        <h4 style={{ fontSize: '0.95rem', color: '#ffffff', marginBottom: '0.85rem' }}>
+          📰 Matched Real-Time Intelligence Feeds ({data.matchedArticles?.length || 0})
+        </h4>
+        {!data.matchedArticles || data.matchedArticles.length === 0 ? (
+          <div style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            No specific articles matched for {data.countryName}.
+          </div>
+        ) : (
+          <div className="articles-grid">
+            {data.matchedArticles.slice(0, 6).map((article) => (
+              <a 
+                key={article.id} 
+                href={sanitizeArticleUrl(article)} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="article-card"
+              >
+                <div className="card-header">
+                  <span className="source-badge">📡 {article.source || 'News Feed'}</span>
+                  <span className="time-stamp">{article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : ''}</span>
+                </div>
+                <h2 className="article-title">{article.title}</h2>
+                <div className="card-footer">
+                  <span className="read-more">
+                    Analyze Source Report
+                    <svg className="arrow-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1030,19 +931,18 @@ function AnalyticsDashboardGoogleEarth({ articles = [] }) {
 // --------------------------------------------------------------------------
 // Real NASA Satellite Photography 3D Earth Globe Component
 // --------------------------------------------------------------------------
-function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
+function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSelectCountry }) {
   const mountRef = useRef(null);
   const earthGroupRef = useRef(null);
   const targetRotationRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    const country = COUNTRY_RISK_DB[selectedCountryId];
-    if (country) {
-      const targetY = -((country.lng * Math.PI) / 180);
-      const targetX = (country.lat * Math.PI) / 180 * 0.4;
+    if (targetCoords) {
+      const targetY = -((targetCoords.lng * Math.PI) / 180);
+      const targetX = (targetCoords.lat * Math.PI) / 180 * 0.4;
       targetRotationRef.current = { x: targetX, y: targetY };
     }
-  }, [selectedCountryId]);
+  }, [targetCoords]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -1065,7 +965,6 @@ function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
     earthGroupRef.current = earthGroup;
     scene.add(earthGroup);
 
-    // 1. Load Authentic NASA Blue Marble Satellite Photography Textures
     const textureLoader = new THREE.TextureLoader();
     
     const nasaEarthTexture = textureLoader.load(
@@ -1078,7 +977,6 @@ function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
       'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_clouds_2048.png'
     );
 
-    // Photorealistic Satellite Earth Sphere Mesh
     const earthGeometry = new THREE.SphereGeometry(2, 64, 64);
     const earthMaterial = new THREE.MeshPhongMaterial({
       map: nasaEarthTexture,
@@ -1089,7 +987,6 @@ function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
     const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
     earthGroup.add(earthMesh);
 
-    // Swirling Cloud Atmosphere Layer Mesh
     const cloudsGeometry = new THREE.SphereGeometry(2.03, 64, 64);
     const cloudsMaterial = new THREE.MeshPhongMaterial({
       map: nasaCloudsTexture,
@@ -1100,7 +997,6 @@ function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
     const cloudsMesh = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
     earthGroup.add(cloudsMesh);
 
-    // Outer Atmospheric Blue Rim Glow Shader Mesh
     const atmosphereGeometry = new THREE.SphereGeometry(2.09, 64, 64);
     const atmosphereMaterial = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
@@ -1111,7 +1007,6 @@ function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
     const atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
     scene.add(atmosphereMesh);
 
-    // Directional Sunlight & Deep Space Lighting
     const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
     sunLight.position.set(5, 3, 5);
     scene.add(sunLight);
@@ -1119,35 +1014,36 @@ function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
     const ambientLight = new THREE.AmbientLight(0x334466, 0.7);
     scene.add(ambientLight);
 
-    // 3D Country Location Pin Markers (Recalibrated Spherical Math Alignment)
+    // Render 3D Pin Markers on 3D Earth Sphere
     const pinMeshes = [];
     const markerGroup = new THREE.Group();
     earthGroup.add(markerGroup);
 
-    Object.values(COUNTRY_RISK_DB).forEach((country) => {
+    GLOBAL_PIN_LIST.forEach((pin) => {
       const radius = 2.04;
-      const phi = (90 - country.lat) * (Math.PI / 180);
-      const theta = (country.lng + 180) * (Math.PI / 180);
+      const phi = (90 - pin.lat) * (Math.PI / 180);
+      const theta = (pin.lng + 180) * (Math.PI / 180);
 
       const x = - (radius * Math.sin(phi) * Math.cos(theta));
       const y = (radius * Math.cos(phi));
       const z = (radius * Math.sin(phi) * Math.sin(theta));
 
-      const colorHex = country.baseScore > 80 ? 0xef4444 : country.baseScore > 65 ? 0xf59e0b : 0x10b981;
+      const isSelected = selectedCountryQuery && selectedCountryQuery.toLowerCase() === pin.query.toLowerCase();
+      const colorHex = isSelected ? 0x38bdf8 : 0xf59e0b;
 
-      const ringGeom = new THREE.RingGeometry(0.06, 0.09, 32);
+      const ringGeom = new THREE.RingGeometry(isSelected ? 0.08 : 0.05, isSelected ? 0.12 : 0.08, 32);
       const ringMat = new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide });
       const ringMesh = new THREE.Mesh(ringGeom, ringMat);
       ringMesh.position.set(x, y, z);
       ringMesh.lookAt(0, 0, 0);
 
-      const dotGeom = new THREE.SphereGeometry(0.04, 16, 16);
+      const dotGeom = new THREE.SphereGeometry(isSelected ? 0.06 : 0.04, 16, 16);
       const dotMat = new THREE.MeshBasicMaterial({ color: colorHex });
       const dotMesh = new THREE.Mesh(dotGeom, dotMat);
       dotMesh.position.set(x, y, z);
 
-      dotMesh.userData = { countryId: country.id };
-      ringMesh.userData = { countryId: country.id };
+      dotMesh.userData = { countryQuery: pin.query };
+      ringMesh.userData = { countryQuery: pin.query };
 
       markerGroup.add(ringMesh);
       markerGroup.add(dotMesh);
@@ -1191,8 +1087,8 @@ function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
 
       if (intersects.length > 0) {
         const hitObj = intersects[0].object;
-        if (hitObj.userData && hitObj.userData.countryId) {
-          onSelectCountry(hitObj.userData.countryId);
+        if (hitObj.userData && hitObj.userData.countryQuery) {
+          onSelectCountry(hitObj.userData.countryQuery);
         }
       }
     };
@@ -1230,7 +1126,7 @@ function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
       }
       renderer.dispose();
     };
-  }, [onSelectCountry]);
+  }, [selectedCountryQuery, onSelectCountry]);
 
   return (
     <div className="analytics-card globe-card">
@@ -1254,9 +1150,9 @@ function RealNASASatellite3DGlobeCard({ selectedCountryId, onSelectCountry }) {
 }
 
 // --------------------------------------------------------------------------
-// HD Satellite Tile Map Component (Leaflet + Esri World Imagery Satellite Tiles)
+// HD Satellite Tile Map Component (Unified Score Sync with Bottom Panel)
 // --------------------------------------------------------------------------
-function HDSatelliteTileMap({ selectedCountryId, onSelectCountry }) {
+function HDSatelliteTileMap({ targetCoords, selectedCountryQuery, countryRiskData, onSelectCountry }) {
   const mapRef = useRef(null);
   const leafletInstanceRef = useRef(null);
   const markersRef = useRef([]);
@@ -1281,48 +1177,91 @@ function HDSatelliteTileMap({ selectedCountryId, onSelectCountry }) {
 
     const map = leafletInstanceRef.current;
 
+    // Render Compact Pins by default, and Expanded Badge ONLY for Selected Country
     markersRef.current.forEach(m => map.removeLayer(m));
     markersRef.current = [];
 
-    Object.values(COUNTRY_RISK_DB).forEach(country => {
-      const isSelected = selectedCountryId === country.id;
-      const color = country.baseScore > 80 ? '#ef4444' : country.baseScore > 65 ? '#f59e0b' : '#10b981';
+    GLOBAL_PIN_LIST.forEach(pin => {
+      const isSelected = selectedCountryQuery && selectedCountryQuery.toLowerCase() === pin.query.toLowerCase();
+      const color = isSelected ? '#38bdf8' : '#f59e0b';
+      
+      // Determine score strictly from real-time API response for selected country
+      let scoreStr = `${pin.baseScore}%`;
+      if (isSelected && countryRiskData) {
+        if (countryRiskData.hasData && countryRiskData.baseScore !== null) {
+          scoreStr = `${countryRiskData.baseScore}%`;
+        } else if (!countryRiskData.hasData) {
+          scoreStr = 'N/A';
+        }
+      }
 
-      const customIcon = window.L.divIcon({
-        className: 'custom-satellite-pin',
-        html: `
-          <div style="
-            background: ${color};
-            border: 2px solid ${isSelected ? '#ffffff' : 'rgba(255,255,255,0.7)'};
-            width: ${isSelected ? '24px' : '18px'};
-            height: ${isSelected ? '24px' : '18px'};
-            border-radius: 50%;
-            box-shadow: 0 0 12px ${color};
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: #fff;
-            cursor: pointer;
-          ">
-            ${country.flag}
-          </div>
-        `,
-        iconSize: [24, 24]
-      });
+      let customIcon;
+      if (isSelected) {
+        // Expanded glowing risk badge ONLY for currently selected country
+        customIcon = window.L.divIcon({
+          className: 'custom-satellite-pin-selected',
+          html: `
+            <div style="
+              background: rgba(11, 17, 32, 0.95);
+              border: 2px solid #38bdf8;
+              padding: 4px 10px;
+              border-radius: 14px;
+              box-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              white-space: nowrap;
+              cursor: pointer;
+              color: #ffffff;
+              font-size: 12px;
+              font-weight: 700;
+              z-index: 1000;
+            ">
+              <span>${pin.flag}</span>
+              <span>${pin.query}</span>
+              <span style="color: #38bdf8; font-weight: 800;">(${scoreStr})</span>
+            </div>
+          `,
+          iconSize: [140, 32],
+          iconAnchor: [70, 16]
+        });
+      } else {
+        // Compact circular flag dot by default for unselected pins
+        customIcon = window.L.divIcon({
+          className: 'custom-satellite-pin-compact',
+          html: `
+            <div style="
+              background: rgba(11, 17, 32, 0.85);
+              border: 2px solid rgba(255, 255, 255, 0.6);
+              width: 24px;
+              height: 24px;
+              border-radius: 50%;
+              box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 11px;
+              cursor: pointer;
+            ">
+              ${pin.flag}
+            </div>
+          `,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+      }
 
-      const marker = window.L.marker([country.lat, country.lng], { icon: customIcon }).addTo(map);
-      marker.bindTooltip(`<b>${country.flag} ${country.name}</b><br/>Risk Score: ${country.baseScore}%`, { direction: 'top' });
-      marker.on('click', () => onSelectCountry(country.id));
+      const marker = window.L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(map);
+      marker.bindTooltip(`<b>${pin.flag} ${pin.query}</b>`, { direction: 'top' });
+      marker.on('click', () => onSelectCountry(pin.query));
       markersRef.current.push(marker);
     });
 
-    const targetCountry = COUNTRY_RISK_DB[selectedCountryId];
-    if (targetCountry) {
-      map.flyTo([targetCountry.lat, targetCountry.lng], 4, { duration: 1.5 });
+    if (targetCoords) {
+      map.flyTo([targetCoords.lat, targetCoords.lng], 4, { duration: 1.5 });
     }
 
-  }, [selectedCountryId, onSelectCountry]);
+  }, [targetCoords, selectedCountryQuery, countryRiskData, onSelectCountry]);
 
   return (
     <div className="analytics-card globe-card">
@@ -1350,11 +1289,11 @@ function HDSatelliteTileMap({ selectedCountryId, onSelectCountry }) {
 // --------------------------------------------------------------------------
 // Source Breakdown Donut Chart Component
 // --------------------------------------------------------------------------
-function SourceBreakdownDonut({ articles = [], selectedCountry = null }) {
+function SourceBreakdownDonut({ articles = [], selectedCountryName = null }) {
   const [dbSources, setDbSources] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/articles/sources')
+    fetch(`${API_BASE_URL}/api/articles/sources`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.length > 0) {
@@ -1364,26 +1303,16 @@ function SourceBreakdownDonut({ articles = [], selectedCountry = null }) {
       .catch((e) => console.warn('Backend sources endpoint check:', e));
   }, []);
 
-  const targetArticles = React.useMemo(() => {
-    if (!selectedCountry || !articles || articles.length === 0) return articles;
-    const kwList = selectedCountry.keywords;
-    const matched = articles.filter(a => {
-      const text = `${a.title || ''} ${a.source || ''} ${a.riskCategory || ''}`.toLowerCase();
-      return kwList.some(kw => text.includes(kw));
-    });
-    return matched.length > 0 ? matched : articles;
-  }, [articles, selectedCountry]);
-
   const sourceData = React.useMemo(() => {
     const colors = ['#38bdf8', '#f59e0b', '#10b981', '#8b5cf6', '#06b6d4', '#ec4899', '#f43f5e'];
 
-    if (targetArticles && targetArticles.length > 0) {
+    if (articles && articles.length > 0) {
       const counts = {};
-      targetArticles.forEach((a) => {
+      articles.forEach((a) => {
         const src = a.source || 'Other Feeds';
         counts[src] = (counts[src] || 0) + 1;
       });
-      const total = targetArticles.length;
+      const total = articles.length;
       const res = Object.entries(counts).map(([label, count], idx) => ({
         label,
         count,
@@ -1409,7 +1338,7 @@ function SourceBreakdownDonut({ articles = [], selectedCountry = null }) {
       { label: 'Reuters Maritime', count: 5, percent: 11.1, color: '#10b981' },
       { label: 'FreightWaves', count: 3, percent: 6.6, color: '#8b5cf6' }
     ];
-  }, [dbSources, targetArticles]);
+  }, [dbSources, articles]);
 
   const totalCount = sourceData.reduce((sum, item) => sum + item.count, 0);
   let cumulativeAngle = 0;
@@ -1421,8 +1350,8 @@ function SourceBreakdownDonut({ articles = [], selectedCountry = null }) {
           📊 Intelligence Source Breakdown
         </h3>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem', marginBottom: 0 }}>
-          {selectedCountry ? (
-            <span style={{ color: '#38bdf8', fontWeight: '600' }}>{selectedCountry.flag} {selectedCountry.name} ({targetArticles.length} Feeds)</span>
+          {selectedCountryName ? (
+            <span style={{ color: '#38bdf8', fontWeight: '600' }}>{selectedCountryName} ({articles.length} Feeds)</span>
           ) : (
             <span>Live Aggregated Distribution (<code style={{ fontSize: '0.725rem' }}>SELECT source, COUNT(*)</code>)</span>
           )}
@@ -1474,121 +1403,6 @@ function SourceBreakdownDonut({ articles = [], selectedCountry = null }) {
             </div>
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// --------------------------------------------------------------------------
-// Detailed Country Risk Factor Analysis Card Component
-// --------------------------------------------------------------------------
-function CountryRiskAnalysisCard({ country, matchedArticles = [] }) {
-  if (!country) return null;
-
-  const scoreColor = country.baseScore > 80 ? 'var(--error)' : country.baseScore > 65 ? 'var(--warning)' : 'var(--success)';
-  const badgeSeverityClass = country.baseScore > 80 ? 'badge-severity-high' : country.baseScore > 65 ? 'badge-severity-medium' : 'badge-severity-low';
-
-  return (
-    <div className="country-risk-panel">
-      {/* Panel Header */}
-      <div className="country-panel-header">
-        <div className="country-flag-title">
-          <span className="country-flag-icon">{country.flag}</span>
-          <div>
-            <h2 className="country-name">{country.name}</h2>
-            <div className="country-region-badge">Region: {country.region}</div>
-          </div>
-        </div>
-
-        <div className="risk-gauge-circle">
-          <div>
-            <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '700' }}>
-              Supply Chain Risk Factor Score
-            </div>
-            <div className={`risk-gauge-score tabular-nums`} style={{ color: scoreColor }}>
-              {country.baseScore} / 100
-            </div>
-          </div>
-          <span className={badgeSeverityClass}>
-            {country.status}
-          </span>
-        </div>
-      </div>
-
-      {/* Categorized Risk Progress Meters */}
-      <h3 style={{ fontSize: '0.95rem', color: '#ffffff', marginBottom: '0.85rem' }}>
-        📈 Categorized Risk Factor Breakdown
-      </h3>
-      <div className="country-risk-categories-grid">
-        {[
-          { label: '⚠️ Geopolitical & Trade Stability', score: country.categoryScores.geopolitical, color: '#f59e0b' },
-          { label: '🚢 Logistics & Maritime Congestion', score: country.categoryScores.logistics, color: '#38bdf8' },
-          { label: '🌪️ Climate & Extreme Weather Impact', score: country.categoryScores.weather, color: '#22d3ee' },
-          { label: '📈 Market, Tariff & Labor Volatility', score: country.categoryScores.market, color: '#10b981' }
-        ].map((cat, idx) => (
-          <div key={idx} className="category-risk-item">
-            <div className="category-risk-header">
-              <span>{cat.label}</span>
-              <span className="tabular-nums" style={{ color: cat.color, fontWeight: '700' }}>{cat.score}%</span>
-            </div>
-            <div className="category-bar-bg">
-              <div 
-                className="category-bar-fill" 
-                style={{ width: `${cat.score}%`, backgroundColor: cat.color }} 
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Key Regional Bottlenecks & Risk Drivers */}
-      <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.03)', padding: '1.1rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-        <h4 style={{ fontSize: '0.925rem', color: '#38bdf8', marginBottom: '0.5rem' }}>
-          📍 Key Regional Choke Points & Risk Drivers:
-        </h4>
-        <ul style={{ paddingLeft: '1.25rem', color: 'var(--text-primary)', fontSize: '0.875rem', lineHeight: '1.65' }}>
-          {country.highlights.map((item, idx) => (
-            <li key={idx} style={{ marginBottom: '0.35rem' }}>{item}</li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Matched Disruption News Feeds for Country */}
-      <div>
-        <h4 style={{ fontSize: '0.95rem', color: '#ffffff', marginBottom: '0.85rem' }}>
-          📰 Matched Real-Time Intelligence Feeds ({matchedArticles.length})
-        </h4>
-        {matchedArticles.length === 0 ? (
-          <div style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            No specific articles currently matched for {country.name}.
-          </div>
-        ) : (
-          <div className="articles-grid">
-            {matchedArticles.slice(0, 6).map((article) => (
-              <a 
-                key={article.id} 
-                href={sanitizeArticleUrl(article)} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="article-card"
-              >
-                <div className="card-header">
-                  <span className="source-badge">📡 {article.source || 'News Feed'}</span>
-                  <span className="time-stamp">{article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : ''}</span>
-                </div>
-                <h2 className="article-title">{article.title}</h2>
-                <div className="card-footer">
-                  <span className="read-more">
-                    Analyze Source Report
-                    <svg className="arrow-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  </span>
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
