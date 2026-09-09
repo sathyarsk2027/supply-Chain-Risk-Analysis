@@ -108,9 +108,14 @@ Because Render's free tier is strictly limited to **512MB RAM**, we must deploy 
 > [!WARNING]
 > **Known Free-Tier Limitation: The Cold Start Delay**
 > Render automatically spins down free Web Services after **15 minutes of inactivity**. 
-> - If you visit the site after 15 minutes, the Vercel frontend will load instantly, but the API calls will stall. 
-> - The Spring Boot backend takes **~30-50 seconds** to wake up and start the JVM.
-> - The Python NLP service takes another **~10-20 seconds** to load its PyTorch models into RAM.
-> - **Result**: The first search or page load might appear broken or "hang" for up to a minute. Once awake, the app is extremely fast. 
+> - If you visit the site after 15 minutes, the Vercel frontend will load instantly, but the API calls will stall for **~30-50 seconds** while the Spring Boot backend wakes up.
+> - **Critical Impact**: The 15-minute background NewsAPI ingestion cron job will ALSO stop running when the server sleeps. It will only fetch articles when the server is awake.
+> 
+> **How to Fix This (True 24/7 Live Ingestion):**
+> To prevent your Render backend from sleeping and ensure your automated 15-minute data ingestion runs continuously:
+> 1. Create a free account on [cron-job.org](https://cron-job.org) or [UptimeRobot](https://uptimerobot.com).
+> 2. Create a new HTTP monitor pointing to your live backend health endpoint: `https://[your-backend-url].onrender.com/actuator/health`
+> 3. Set the ping interval to **10 minutes**.
+> 4. This simple ping keeps Render awake permanently, ensuring your AI database is always ingesting the absolute latest supply chain news.
 > 
 > *Tip for academic review: Simply "warm up" the backend by opening the site and running a search 5 minutes before your presentation begins!*

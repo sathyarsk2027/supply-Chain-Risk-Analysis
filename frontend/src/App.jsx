@@ -91,6 +91,12 @@ const sanitizeArticleUrl = (article) => {
 // --------------------------------------------------------------------------
 // Geographic Pin Database for 3D Earth & HD Satellite Map
 // --------------------------------------------------------------------------
+const getGIBSTimeString = () => {
+  // NASA GIBS global composites can take up to 48h to fully stitch without black swath gaps.
+  const d = new Date();
+  d.setDate(d.getDate() - 2);
+  return d.toISOString().split('T')[0];
+};
 let GLOBAL_PIN_LIST = [];
 
 function getCountryCoords(query) {
@@ -1276,13 +1282,13 @@ function HDSatelliteTileMap({ targetCoords, selectedCountryQuery, countryRiskDat
   useEffect(() => {
     if (!window.L || !mapRef.current) return;
 
-    if (!leafletInstanceRef.current) {
+    if (mapRef.current && !leafletInstanceRef.current) {
       const map = window.L.map(mapRef.current, {
         center: [20, 0],
-        zoom: 2,
-        zoomControl: true
+        zoom: 3,
+        worldCopyJump: true
       });
-
+      
       window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
         maxZoom: 18
@@ -1384,14 +1390,14 @@ function HDSatelliteTileMap({ targetCoords, selectedCountryQuery, countryRiskDat
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
           <h3 className="section-title" style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff' }}>
-            🗺️ HD Esri satellite tile map (Google Earth quality)
+            🗺️ HD Esri Satellite Tile Map
           </h3>
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            High-resolution satellite photography tiles, pan & zoom controls
+            High-resolution satellite composite. <strong>Note: Static composite used to prevent orbital swath gaps.</strong>
           </p>
         </div>
         <span className="source-badge" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)', background: 'rgba(16, 185, 129, 0.1)' }}>
-          ● Live HD satellite tiles
+          ● Gapless HD Composite
         </span>
       </div>
 
