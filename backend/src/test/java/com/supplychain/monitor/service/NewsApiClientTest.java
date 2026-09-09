@@ -116,7 +116,7 @@ class NewsApiClientTest {
     }
 
     @Test
-    void shouldEnrichArticleWithNlpResult() {
+    void shouldEnrichArticleWithNlpResult() throws Exception {
         String jsonResponse = "{\n" +
                 "  \"status\": \"ok\",\n" +
                 "  \"totalResults\": 1,\n" +
