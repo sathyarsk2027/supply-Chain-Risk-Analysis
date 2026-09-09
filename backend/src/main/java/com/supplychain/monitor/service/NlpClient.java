@@ -42,14 +42,14 @@ public class NlpClient {
         }
     }
 
-    public float[] getEmbedding(String text) {
+    public float[] getEmbedding(String text) throws Exception {
         try {
             EmbedRequest request = new EmbedRequest(text);
             EmbedResponse response = restTemplate.postForObject(nlpEmbedUrl, request, EmbedResponse.class);
             return (response != null) ? response.embedding : null;
         } catch (Exception e) {
-            logger.warn("Failed to retrieve embedding from NLP service at {}. Error: {}", nlpEmbedUrl, e.getMessage());
-            return null;
+            logger.error("Failed to retrieve embedding from NLP service at {}. Error: {}", nlpEmbedUrl, e.getMessage());
+            throw new Exception("NLP Service Error (" + nlpEmbedUrl + "): " + e.getMessage());
         }
     }
 

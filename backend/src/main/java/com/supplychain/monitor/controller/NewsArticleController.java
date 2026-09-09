@@ -51,9 +51,14 @@ public class NewsArticleController {
         }
 
         // 1) Call the NLP service's POST /embed endpoint to get an embedding vector for the query text.
-        float[] embedding = nlpClient.getEmbedding(request.getQuery());
-        if (embedding == null) {
-            return ResponseEntity.internalServerError().body("Failed to generate embedding for the query");
+        float[] embedding;
+        try {
+            embedding = nlpClient.getEmbedding(request.getQuery());
+            if (embedding == null) {
+                return ResponseEntity.internalServerError().body("Failed to generate embedding (Returned null)");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(e.getMessage());
         }
 
         // 2) Run a native SQL query using pgvector's cosine distance operator (embedding <=> ?)
