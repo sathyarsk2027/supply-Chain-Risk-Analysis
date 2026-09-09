@@ -33,7 +33,7 @@ class RssPollingServiceTest {
     }
 
     @Test
-    void shouldPollRssFeedsAndSaveArticles() {
+    void shouldPollRssFeedsAndSaveArticles() throws Exception {
         when(newsArticleRepository.existsByUrl(anyString())).thenReturn(false);
         when(newsArticleRepository.save(any(NewsArticle.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
