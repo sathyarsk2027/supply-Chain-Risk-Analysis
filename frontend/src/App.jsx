@@ -192,7 +192,12 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error(`Search failed (HTTP ${response.status})`);
+        let errorMsg = `HTTP ${response.status}`;
+        try {
+          const errBody = await response.text();
+          if (errBody) errorMsg = errBody;
+        } catch (e) {}
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
@@ -200,7 +205,7 @@ function App() {
       setAiSummary(data.aiSummary || null);
     } catch (err) {
       console.error('Search error:', err);
-      setSearchError('Failed to perform semantic search. Please check that the backend is running.');
+      setSearchError(`Backend Error: ${err.message}`);
     } finally {
       setSearching(false);
     }
