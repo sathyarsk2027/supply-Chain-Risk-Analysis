@@ -163,5 +163,33 @@ class NewsArticleQueryControllerTest {
                 .andExpect(jsonPath("$.matches[0].title", is("Supply Chain Disruption Peak")))
                 .andExpect(jsonPath("$.aiSummary", nullValue()));
     }
+
+    @Test
+    void shouldRejectIrrelevantQueryBelowRelevanceThreshold() throws Exception {
+        float[] mockEmbedding = new float[]{0.1f, 0.2f, 0.3f};
+        when(nlpClient.getEmbedding(anyString())).thenReturn(mockEmbedding);
+
+        // Cosine distance of 0.85 means similarity is only 0.15 (below 0.35 threshold)
+        NewsArticleRepository.NewsArticleSearchResult mockIrrelevantResult = new NewsArticleRepository.NewsArticleSearchResult() {
+            @Override public Long getId() { return 2L; }
+            @Override public String getTitle() { return "Irrelevant Logistics Article"; }
+            @Override public String getUrl() { return "https://example.com/other"; }
+            @Override public String getSource() { return "Other News"; }
+            @Override public String getRiskCategory() { return "Other"; }
+            @Override public String getRawContent() { return "Content..."; }
+            @Override public Double getCosineDistance() { return 0.85; }
+        };
+
+        when(newsArticleRepository.findSimilarArticles(any())).thenReturn(List.of(mockIrrelevantResult));
+
+        mockMvc.perform(post("/api/query")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"query\":\"sexy\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.query", is("sexy")))
+                .andExpect(jsonPath("$.matches", hasSize(0)))
+                .andExpect(jsonPath("$.aiSummary.summary", is("This query doesn't appear related to supply chain disruptions in our current dataset.")))
+                .andExpect(jsonPath("$.aiSummary.confidenceScore", is(0)));
+    }
 }
 

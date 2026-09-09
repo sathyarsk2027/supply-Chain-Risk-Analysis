@@ -1,0 +1,647 @@
+ID: 3d-web-experience
+Name: 3d-web-experience
+Desc: Expert in building 3D experiences for the web - Three.js, React Three Fiber, Spline, WebGL, and interactive 3D scenes. Covers product configurators, 3D portfolios, immersive websites, and bringing depth to web experiences.
+
+ID: algolia-search
+Name: algolia-search
+Desc: Expert patterns for Algolia search implementation, indexing strategies, React InstantSearch, and relevance tuning
+
+ID: android-dev
+Name: android-dev
+Desc: Production-grade Android app development guide covering native (Kotlin/Java), cross-platform (Flutter, RN, KMM), and hybrid architectures.
+
+ID: angular
+Name: angular
+Desc: Modern Angular (v20+) expert with deep knowledge of Signals, Standalone Components, Zoneless applications, SSR/Hydration, and reactive patterns.
+
+ID: animejs-animation
+Name: animejs-animation
+Desc: Advanced JavaScript animation library skill for creating complex, high-performance web animations.
+
+ID: appium-skill
+Name: appium-skill
+Desc: Generates production-grade Appium mobile automation scripts for Android and iOS in Java, Python, or JavaScript. Supports real device and emulator testing locally and on TestMu AI cloud with 100+ real devices. Use when the user asks to automate mobile apps, test on Android/iOS, write...
+
+ID: applicationinsights-web-ts
+Name: applicationinsights-web-ts
+Desc: Instrument browser/web apps with the Application Insights JavaScript SDK (@microsoft/applicationinsights-web). Use for Real User Monitoring (RUM) — page views, clicks, AJAX/fetch dependencies, exceptions, custom events, and browser-side GenAI agent traces correlated to backend...
+
+ID: avalonia-viewmodels-zafiro
+Name: avalonia-viewmodels-zafiro
+Desc: Optimal ViewModel and Wizard creation patterns for Avalonia using Zafiro and ReactiveUI.
+
+ID: awt-e2e-testing
+Name: awt-e2e-testing
+Desc: AI-powered E2E web testing — eyes and hands for AI coding tools. Declarative YAML scenarios, Playwright execution, visual matching (OpenCV + OCR), platform auto-detection (Flutter/React/Vue), learning DB. Install: npx skills add ksgisang/awt-skill --skill awt -g
+
+ID: azure-ai-agents-persistent-java
+Name: azure-ai-agents-persistent-java
+Desc: Azure AI Agents Persistent SDK for Java. Low-level SDK for creating and managing AI agents with threads, messages, runs, and tools.
+
+ID: azure-ai-anomalydetector-java
+Name: azure-ai-anomalydetector-java
+Desc: Build anomaly detection applications with Azure AI Anomaly Detector SDK for Java. Use when implementing univariate/multivariate anomaly detection, time-series analysis, or AI-powered monitoring.
+
+ID: azure-ai-contentsafety-java
+Name: azure-ai-contentsafety-java
+Desc: Build content moderation applications using the Azure AI Content Safety SDK for Java.
+
+ID: azure-ai-formrecognizer-java
+Name: azure-ai-formrecognizer-java
+Desc: Build document analysis applications using the Azure AI Document Intelligence SDK for Java.
+
+ID: azure-ai-projects-java
+Name: azure-ai-projects-java
+Desc: Azure AI Projects SDK for Java. High-level SDK for Azure AI Foundry project management including connections, datasets, indexes, and evaluations.
+
+ID: azure-ai-vision-imageanalysis-java
+Name: azure-ai-vision-imageanalysis-java
+Desc: Build image analysis applications with Azure AI Vision SDK for Java. Use when implementing image captioning, OCR text extraction, object detection, tagging, or smart cropping.
+
+ID: azure-ai-voicelive-java
+Name: azure-ai-voicelive-java
+Desc: Azure AI VoiceLive SDK for Java. Real-time bidirectional voice conversations with AI assistants using WebSocket.
+
+ID: azure-ai-voicelive-ts
+Name: azure-ai-voicelive-ts
+Desc: Azure AI Voice Live SDK for JavaScript/TypeScript. Build real-time voice AI applications with bidirectional WebSocket communication.
+
+ID: azure-appconfiguration-java
+Name: azure-appconfiguration-java
+Desc: Azure App Configuration SDK for Java. Centralized application configuration management with key-value settings, feature flags, and snapshots.
+
+ID: azure-communication-callautomation-java
+Name: azure-communication-callautomation-java
+Desc: Build server-side call automation workflows including IVR systems, call routing, recording, and AI-powered interactions.
+
+ID: azure-communication-callingserver-java
+Name: azure-communication-callingserver-java
+Desc: ⚠️ DEPRECATED: This SDK has been renamed to Call Automation. For new projects, use azure-communication-callautomation instead. This skill is for maintaining legacy code only.
+
+ID: azure-communication-chat-java
+Name: azure-communication-chat-java
+Desc: Build real-time chat applications with thread management, messaging, participants, and read receipts.
+
+ID: azure-communication-common-java
+Name: azure-communication-common-java
+Desc: Azure Communication Services common utilities for Java. Use when working with CommunicationTokenCredential, user identifiers, token refresh, or shared authentication across ACS services.
+
+ID: azure-communication-sms-java
+Name: azure-communication-sms-java
+Desc: Send SMS messages with Azure Communication Services SMS Java SDK. Use when implementing SMS notifications, alerts, OTP delivery, bulk messaging, or delivery reports.
+
+ID: azure-compute-batch-java
+Name: azure-compute-batch-java
+Desc: Azure Batch SDK for Java. Run large-scale parallel and HPC batch jobs with pools, jobs, tasks, and compute nodes.
+
+ID: azure-cosmos-java
+Name: azure-cosmos-java
+Desc: Azure Cosmos DB SDK for Java. NoSQL database operations with global distribution, multi-model support, and reactive patterns.
+
+ID: azure-cosmos-ts
+Name: azure-cosmos-ts
+Desc: Azure Cosmos DB JavaScript/TypeScript SDK (@azure/cosmos) for data plane operations. Use for CRUD operations on documents, queries, bulk operations, and container management.
+
+ID: azure-data-tables-java
+Name: azure-data-tables-java
+Desc: Build table storage applications using the Azure Tables SDK for Java. Works with both Azure Table Storage and Cosmos DB Table API.
+
+ID: azure-eventgrid-java
+Name: azure-eventgrid-java
+Desc: Build event-driven applications with Azure Event Grid SDK for Java. Use when publishing events, implementing pub/sub patterns, or integrating with Azure services via events.
+
+ID: azure-eventhub-java
+Name: azure-eventhub-java
+Desc: Build real-time streaming applications with Azure Event Hubs SDK for Java. Use when implementing event streaming, high-throughput data ingestion, or building event-driven architectures.
+
+ID: azure-identity-java
+Name: azure-identity-java
+Desc: Authenticate Java applications with Azure services using Microsoft Entra ID (Azure AD).
+
+ID: azure-keyvault-keys-ts
+Name: azure-keyvault-keys-ts
+Desc: Manage cryptographic keys using Azure Key Vault Keys SDK for JavaScript (@azure/keyvault-keys). Use when creating, encrypting/decrypting, signing, or rotating keys.
+
+ID: azure-keyvault-secrets-ts
+Name: azure-keyvault-secrets-ts
+Desc: Manage secrets using Azure Key Vault Secrets SDK for JavaScript (@azure/keyvault-secrets). Use when storing and retrieving application secrets or configuration values.
+
+ID: azure-messaging-webpubsub-java
+Name: azure-messaging-webpubsub-java
+Desc: Build real-time web applications with Azure Web PubSub SDK for Java. Use when implementing WebSocket-based messaging, live updates, chat applications, or server-to-client push notifications.
+
+ID: azure-monitor-ingestion-java
+Name: azure-monitor-ingestion-java
+Desc: Azure Monitor Ingestion SDK for Java. Send custom logs to Azure Monitor via Data Collection Rules (DCR) and Data Collection Endpoints (DCE).
+
+ID: azure-monitor-opentelemetry-exporter-java
+Name: azure-monitor-opentelemetry-exporter-java
+Desc: Azure Monitor OpenTelemetry Exporter for Java. Export OpenTelemetry traces, metrics, and logs to Azure Monitor/Application Insights.
+
+ID: azure-monitor-query-java
+Name: azure-monitor-query-java
+Desc: Azure Monitor Query SDK for Java. Execute Kusto queries against Log Analytics workspaces and query metrics from Azure resources.
+
+ID: azure-postgres-ts
+Name: azure-postgres-ts
+Desc: Connect to Azure Database for PostgreSQL Flexible Server from Node.js/TypeScript using the pg (node-postgres) package.
+
+ID: azure-resource-manager-postgresql-dotnet
+Name: azure-resource-manager-postgresql-dotnet
+Desc: Azure PostgreSQL Flexible Server SDK for .NET. Database management for PostgreSQL Flexible Server deployments.
+
+ID: azure-security-keyvault-keys-java
+Name: azure-security-keyvault-keys-java
+Desc: Azure Key Vault Keys Java SDK for cryptographic key management. Use when creating, managing, or using RSA/EC keys, performing encrypt/decrypt/sign/verify operations, or working with HSM-backed keys.
+
+ID: azure-security-keyvault-secrets-java
+Name: azure-security-keyvault-secrets-java
+Desc: Azure Key Vault Secrets Java SDK for secret management. Use when storing, retrieving, or managing passwords, API keys, connection strings, or other sensitive configuration data.
+
+ID: azure-storage-blob-java
+Name: azure-storage-blob-java
+Desc: Build blob storage applications using the Azure Storage Blob SDK for Java.
+
+ID: azure-storage-blob-ts
+Name: azure-storage-blob-ts
+Desc: Azure Blob Storage JavaScript/TypeScript SDK (@azure/storage-blob) for blob operations. Use for uploading, downloading, listing, and managing blobs and containers.
+
+ID: azure-storage-file-share-ts
+Name: azure-storage-file-share-ts
+Desc: Azure File Share JavaScript/TypeScript SDK (@azure/storage-file-share) for SMB file share operations.
+
+ID: azure-storage-queue-ts
+Name: azure-storage-queue-ts
+Desc: Azure Queue Storage JavaScript/TypeScript SDK (@azure/storage-queue) for message queue operations. Use for sending, receiving, peeking, and deleting messages in queues.
+
+ID: bun-development
+Name: bun-development
+Desc: Fast, modern JavaScript/TypeScript development with the Bun runtime, inspired by [oven-sh/bun](https://github.com/oven-sh/bun).
+
+ID: cc-skill-coding-standards
+Name: cc-skill-coding-standards
+Desc: Universal coding standards, best practices, and patterns for TypeScript, JavaScript, React, and Node.js development.
+
+ID: cc-skill-frontend-patterns
+Name: cc-skill-frontend-patterns
+Desc: Frontend development patterns for React, Next.js, state management, performance optimization, and UI best practices.
+
+ID: cdk-patterns
+Name: cdk-patterns
+Desc: Common AWS CDK patterns and constructs for building cloud infrastructure with TypeScript, Python, or Java. Use when designing reusable CDK stacks and L3 constructs.
+
+ID: ckw-design
+Name: ckw-design
+Desc: Frontend design entry point: direction, design system, visual philosophy. Use whenever building or touching the look of any web UI (components, pages, dashboards, React/Vue/HTML-CSS) or when the user says "make this look better", "fix the spacing/layout", or mentions styling, color, type, or polish.
+
+ID: claimable-postgres
+Name: claimable-postgres
+Desc: Provision instant temporary Postgres databases via Claimable Postgres by Neon (neon.new) with no login, signup, or credit card. Supports REST API, CLI, and SDK. Use when users ask for a quick Postgres environment, a throwaway DATABASE_URL for prototyping/tests, or "just give me a DB...
+
+ID: code-showcase-react-ui-patterns
+Name: code-showcase-react-ui-patterns
+Desc: Modern React UI patterns for loading states, error handling, and data fetching. Use when building UI components, handling async data, or managing UI states.
+
+ID: codebase-to-wordpress-converter
+Name: codebase-to-wordpress-converter
+Desc: Expert skill for converting any codebase (React/HTML/Next.js) into a pixel-perfect, SEO-optimized, and dynamic WordPress theme.
+
+ID: context7-auto-research
+Name: context7-auto-research
+Desc: Automatically fetch latest library/framework documentation for Claude Code via Context7 API. Use when you need up-to-date documentation for libraries and frameworks or asking about React, Next.js, Prisma, or any other popular library.
+
+ID: convex
+Name: convex
+Desc: Convex reactive backend expert: schema design, TypeScript functions, real-time subscriptions, auth, file storage, scheduling, and deployment.
+
+ID: cucumber-skill
+Name: cucumber-skill
+Desc: Generates Cucumber BDD tests with Gherkin feature files and step definitions in Java, JavaScript, or Ruby. Use when user mentions "Cucumber", "Gherkin", "Feature/Scenario", "Given/When/Then", "BDD". Triggers on: "Cucumber", "Gherkin", "BDD", "Feature file", "Given/When/Then", "step...
+
+ID: cypress-skill
+Name: cypress-skill
+Desc: Generates production-grade Cypress E2E and component tests in JavaScript or TypeScript. Supports local execution and TestMu AI cloud. Use when the user asks to write Cypress tests, set up Cypress, test with cy commands, or mentions "Cypress", "cy.visit", "cy.get", "cy.intercept"....
+
+ID: database-migrations-sql-migrations
+Name: database-migrations-sql-migrations
+Desc: SQL database migrations with zero-downtime strategies for PostgreSQL, MySQL, and SQL Server. Focus on data integrity and rollback plans.
+
+ID: design-taste-frontend
+Name: design-taste-frontend
+Desc: Use when building high-agency frontend interfaces with strict design taste, calibrated color, responsive layout, and motion rules.
+
+ID: discord-automation
+Name: discord-automation
+Desc: Automate Discord tasks via Rube MCP (Composio): messages, channels, roles, webhooks, reactions. Always search tools first for current schemas.
+
+ID: discord-bot-architect
+Name: discord-bot-architect
+Desc: Specialized skill for building production-ready Discord bots. Covers Discord.js (JavaScript) and Pycord (Python), gateway intents, slash commands, interactive components, rate limiting, and sharding.
+
+ID: expo-brownfield
+Name: expo-brownfield
+Desc: Integrate Expo and React Native into an existing native iOS or Android app. Use when the user mentions brownfield, embedding React Native in a native app, AAR/XCFramework, or adding Expo to an existing Kotlin/Swift project. Covers both the isolated approach and the integrated approach.
+
+ID: expo-observe
+Name: expo-observe
+Desc: Use for anything related to EAS Observe — adding `expo-observe` to an Expo project (AppMetricsRoot/ObserveRoot HOC, markInteractive, the useObserve hook, and the Expo Router / React Navigation integrations for per-route metrics), querying via the EAS CLI (`eas observe:metrics-summary`,...
+
+ID: expo-tailwind-setup
+Name: expo-tailwind-setup
+Desc: Set up Tailwind CSS v4 in Expo with react-native-css and NativeWind v5 for universal styling
+
+ID: expo-ui
+Name: expo-ui
+Desc: Build native UI with the @expo/ui package: real SwiftUI on iOS and Jetpack Compose on Android rendered from React in an Expo or React Native app. Covers universal cross-platform components (Host, Column, Row, Button, Text, List, and more imported from @expo/ui), drop-in replacements...
+
+ID: fastapi-pro
+Name: fastapi-pro
+Desc: Build high-performance async APIs with FastAPI, SQLAlchemy 2.0, and Pydantic V2. Master microservices, WebSockets, and modern Python async patterns.
+
+ID: fastapi-router-py
+Name: fastapi-router-py
+Desc: Create FastAPI routers following established patterns with proper authentication, response models, and HTTP status codes.
+
+ID: fastapi-templates
+Name: fastapi-templates
+Desc: Create production-ready FastAPI projects with async patterns, dependency injection, and comprehensive error handling. Use when building new FastAPI applications or setting up backend API projects.
+
+ID: fp-react
+Name: fp-react
+Desc: Practical patterns for using fp-ts with React - hooks, state, forms, data fetching. Works with React 18/19, Next.js 14/15.
+
+ID: fp-ts-react
+Name: fp-ts-react
+Desc: Practical patterns for using fp-ts with React - hooks, state, forms, data fetching. Use when building React apps with functional programming patterns. Works with React 18/19, Next.js 14/15.
+
+ID: frontend-api-integration-patterns
+Name: frontend-api-integration-patterns
+Desc: Production-ready patterns for integrating frontend applications with backend APIs, including race condition handling, request cancellation, retry strategies, error normalization, and UI state management.
+
+ID: frontend-architecture
+Name: frontend-architecture
+Desc: A portable, framework-agnostic architecture style for any React or React Native frontend. Organizes apps into feature modules with page/screen directories, a strict server-state vs UI-state split, barrel-only cross-module imports, co-located styles, and clear component-promotion rules....
+
+ID: frontend-data-contracts
+Name: frontend-data-contracts
+Desc: A portable, framework-agnostic discipline for type safety at the network edge of any React or React Native app. Establishes one typed API client as the single fetch boundary, a parse-don't-validate rule that turns wire JSON into trusted domain types before it enters the app, a single...
+
+ID: frontend-developer
+Name: frontend-developer
+Desc: Build React components, implement responsive layouts, and handle client-side state management. Masters React 19, Next.js 15, and modern frontend architecture.
+
+ID: frontend-mobile-development-component-scaffold
+Name: frontend-mobile-development-component-scaffold
+Desc: You are a React component architecture expert specializing in scaffolding production-ready, accessible, and performant components. Generate complete component implementations with TypeScript, tests, s
+
+ID: frontend-mobile-security-xss-scan
+Name: frontend-mobile-security-xss-scan
+Desc: You are a frontend security specialist focusing on Cross-Site Scripting (XSS) vulnerability detection and prevention. Analyze React, Vue, Angular, and vanilla JavaScript code to identify injection poi
+
+ID: frontend-observability
+Name: frontend-observability
+Desc: A portable, framework-agnostic field-side observability system for any React or React Native app. Establishes one typed event taxonomy (canonical event-name constants, never inline strings), a best-effort non-blocking provider fan-out so a failing or absent analytics provider can never...
+
+ID: frontend-optimistic-mutations
+Name: frontend-optimistic-mutations
+Desc: A portable, framework-agnostic discipline for the write path of any React or React Native app using a query/cache layer. Codifies the optimistic-update lifecycle (cancel in-flight queries → snapshot every affected cache → patch instantly → roll back verbatim on error → invalidate on...
+
+ID: frontend-seo
+Name: frontend-seo
+Desc: A portable, framework-agnostic SEO system for any React or React Native-for-web frontend. Centralizes site metadata in one constants module, derives canonical URLs from a single base, builds per-route metadata (title, description, canonical, Open Graph, Twitter/X cards), generates...
+
+ID: frontend-ui-dark-ts
+Name: frontend-ui-dark-ts
+Desc: A modern dark-themed React UI system using Tailwind CSS and Framer Motion. Designed for dashboards, admin panels, and data-rich applications with glassmorphism effects and tasteful animations.
+
+ID: java
+Name: java
+Desc: Language-specific super-code guidelines for java.
+
+ID: java-pro
+Name: java-pro
+Desc: Master Java 21+ with modern features like virtual threads, pattern matching, and Spring Boot 3.x. Expert in the latest Java ecosystem including GraalVM, Project Loom, and cloud-native patterns.
+
+ID: javascript-mastery
+Name: javascript-mastery
+Desc: 33+ essential JavaScript concepts every developer should know, inspired by [33-js-concepts](https://github.com/leonardomso/33-js-concepts).
+
+ID: javascript-pro
+Name: javascript-pro
+Desc: Master modern JavaScript with ES6+, async patterns, and Node.js APIs. Handles promises, event loops, and browser/Node compatibility.
+
+ID: javascript-testing-patterns
+Name: javascript-testing-patterns
+Desc: Comprehensive guide for implementing robust testing strategies in JavaScript/TypeScript applications using modern testing frameworks and best practices.
+
+ID: javascript-typescript-typescript-scaffold
+Name: javascript-typescript-typescript-scaffold
+Desc: You are a TypeScript project architecture expert specializing in scaffolding production-ready Node.js and frontend applications. Generate complete project structures with modern tooling (pnpm, Vite, N
+
+ID: jest-skill
+Name: jest-skill
+Desc: Generates Jest unit and integration tests in JavaScript or TypeScript. Covers mocking, snapshots, async testing, and React component testing. Use when user mentions "Jest", "describe/it/expect", "jest.mock", "toMatchSnapshot". Triggers on: "Jest", "expect().toBe()", "jest.mock",...
+
+ID: junit-5-skill
+Name: junit-5-skill
+Desc: Generates production-grade JUnit 5 unit and integration tests in Java. Covers assertions, parameterized tests, lifecycle hooks, mocking with Mockito, and nested tests. Use when user mentions "JUnit", "JUnit 5", "@Test", "assertEquals", "Assertions", "Java unit test". Triggers on:...
+
+ID: junta-leiloeiros
+Name: junta-leiloeiros
+Desc: Coleta e consulta dados de leiloeiros oficiais de todas as 27 Juntas Comerciais do Brasil. Scraper multi-UF, banco SQLite, API FastAPI e exportacao CSV/JSON.
+
+ID: landing-page-generator
+Name: landing-page-generator
+Desc: Generates high-converting Next.js/React landing pages with Tailwind CSS. Uses PAS, AIDA, and BAB frameworks for optimized copy/components (Heroes, Features, Pricing). Focuses on Core Web Vitals/SEO.
+
+ID: langgraph
+Name: langgraph
+Desc: Expert in LangGraph - the production-grade framework for building stateful, multi-actor AI applications. Covers graph construction, state management, cycles and branches, persistence with checkpointers, human-in-the-loop patterns, and the ReAct agent pattern.
+
+ID: latex-paper-conversion
+Name: latex-paper-conversion
+Desc: This skill should be used when the user asks to convert an academic paper in LaTeX from one format (e.g., Springer, IPOL) to another format (e.g., MDPI, IEEE, Nature). It automates extraction, injection, fixing formatting, and compiling.
+
+ID: lovable-cleanup
+Name: lovable-cleanup
+Desc: Audits and strips Lovable scaffolding from Vite + React projects — removes lovable-tagger, swaps placeholder assets, prunes unused Radix deps, and cleans generated docs so the codebase ships as yours.
+
+ID: markstream-custom-components
+Name: markstream-custom-components
+Desc: Override Markstream node renderers and add trusted custom tags across Vue, React, Svelte, and Angular using scoped or renderer-local mappings.
+
+ID: markstream-install
+Name: markstream-install
+Desc: Install and configure Markstream streaming Markdown renderers for Vue, React, Svelte, Angular, Nuxt, Next.js, and Vue 2 applications.
+
+ID: markstream-react
+Name: markstream-react
+Desc: Integrate the beta markstream-react renderer into React 18+ or Next.js with correct client/server entrypoints, CSS, streaming state, and component overrides.
+
+ID: mesh-memory
+Name: mesh-memory
+Desc: Self-hosted semantic memory for AI agents via MCP. Save worklogs, decisions, and notes, then recall them across sessions by meaning, not keyword. Postgres + pgvector with auto-tagging.
+
+ID: mobile-developer
+Name: mobile-developer
+Desc: Develop React Native, Flutter, or native mobile apps with modern architecture patterns. Masters cross-platform development, native integrations, offline sync, and app store optimization.
+
+ID: modern-javascript-patterns
+Name: modern-javascript-patterns
+Desc: Comprehensive guide for mastering modern JavaScript (ES6+) features, functional programming patterns, and best practices for writing clean, maintainable, and performant code.
+
+ID: n8n-code-javascript
+Name: n8n-code-javascript
+Desc: Write JavaScript code in n8n Code nodes. Use when writing JavaScript in n8n, using $input/$json/$node syntax, making HTTP requests with $helpers, working with dates using DateTime, troubleshooting Code node errors, or choosing between Code node modes.
+
+ID: n8n-code-tool
+Name: n8n-code-tool
+Desc: Write and debug JavaScript or Python for the AI-callable n8n Custom Code Tool, including schemas, sandbox limits, and return formats.
+
+ID: native-data-fetching
+Name: native-data-fetching
+Desc: Use when implementing or debugging ANY network request, API call, or data fetching. Covers fetch API, React Query, SWR, error handling, caching, offline support, and Expo Router data loaders (`useLoaderData`).
+
+ID: neon-postgres
+Name: neon-postgres
+Desc: Guides and best practices for working with Neon Serverless Postgres. Covers setup, connection methods, branching, autoscaling, scale-to-zero, read replicas, connection pooling, Neon Auth, and the Neon CLI, MCP server, REST API, TypeScript SDK, and Python SDK. Use when users ask about...
+
+ID: neon-postgres-branches
+Name: neon-postgres-branches
+Desc: Choose and create the right Neon branch type for testing and development. Use when users ask about Neon branching, migration testing with real data, isolated test environments, schema-only branch workflows for sensitive data, or branch creation via Neon CLI or Neon MCP. Triggers...
+
+ID: neon-postgres-egress-optimizer
+Name: neon-postgres-egress-optimizer
+Desc: Diagnose and fix excessive Postgres egress (network data transfer) in a codebase. Use when a user mentions high database bills, unexpected data transfer costs, network transfer charges, egress spikes, "why is my Neon bill so high", "database costs jumped", SELECT * optimization, query...
+
+ID: nextjs-app-router-patterns
+Name: nextjs-app-router-patterns
+Desc: Comprehensive patterns for Next.js 14+ App Router architecture, Server Components, and modern full-stack React development.
+
+ID: odoo-docker-deployment
+Name: odoo-docker-deployment
+Desc: Production-ready Docker and docker-compose setup for Odoo with PostgreSQL, persistent volumes, environment-based configuration, and Nginx reverse proxy.
+
+ID: odoo-performance-tuner
+Name: odoo-performance-tuner
+Desc: Expert guide for diagnosing and fixing Odoo performance issues: slow queries, worker configuration, memory limits, PostgreSQL tuning, and profiling tools.
+
+ID: odoo-rpc-api
+Name: odoo-rpc-api
+Desc: Expert on Odoo's external JSON-RPC and XML-RPC APIs. Covers authentication, model calls, record CRUD, and real-world integration examples in Python, JavaScript, and curl.
+
+ID: pdf-official
+Name: pdf-official
+Desc: This guide covers essential PDF processing operations using Python libraries and command-line tools. For advanced features, JavaScript libraries, and detailed examples, see reference.md. If you need to fill out a PDF form, read forms.md and follow its instructions.
+
+ID: playwright-java
+Name: playwright-java
+Desc: Scaffold, write, debug, and enhance enterprise-grade Playwright E2E tests in Java using Page Object Model, JUnit 5, Allure reporting, and parallel execution.
+
+ID: postgres-best-practices
+Name: postgres-best-practices
+Desc: Postgres performance optimization and best practices from Supabase. Use this skill when writing, reviewing, or optimizing Postgres queries, schema designs, or database configurations.
+
+ID: postgres-readonly-queries
+Name: postgres-readonly-queries
+Desc: Execute safe read-only SQL queries against PostgreSQL databases with multi-connection support and defense-in-depth write protection.
+
+ID: postgresql
+Name: postgresql
+Desc: Design a PostgreSQL-specific schema. Covers best-practices, data types, indexing, constraints, performance patterns, and advanced features
+
+ID: postgresql-cli
+Name: postgresql-cli
+Desc: PostgreSQL interactive terminal (psql) reference and usage guide. Use this skill whenever the user mentions psql, PostgreSQL command-line client, backslash commands, meta-commands, \d commands, database inspection, SQL scripting in PostgreSQL, importing/exporting data with psql, \copy,...
+
+ID: postgresql-optimization
+Name: postgresql-optimization
+Desc: PostgreSQL database optimization workflow for query tuning, indexing strategies, performance analysis, and production database management.
+
+ID: prisma-expert
+Name: prisma-expert
+Desc: You are an expert in Prisma ORM with deep knowledge of schema design, migrations, query optimization, relations modeling, and database operations across PostgreSQL, MySQL, and SQLite.
+
+ID: python-development
+Name: python-development
+Desc: You are a Python project architecture expert specializing in scaffolding production-ready Python applications. Generate complete project structures with modern tooling (uv, FastAPI, Django), type hint (Alias for python-development-python-scaffold)
+
+ID: python-development-python-scaffold
+Name: python-development-python-scaffold
+Desc: You are a Python project architecture expert specializing in scaffolding production-ready Python applications. Generate complete project structures with modern tooling (uv, FastAPI, Django), type hint
+
+ID: python-fastapi-development
+Name: python-fastapi-development
+Desc: Python FastAPI backend development with async patterns, SQLAlchemy, Pydantic, authentication, and production API patterns.
+
+ID: python-pro
+Name: python-pro
+Desc: Master Python 3.12+ with modern features, async programming, performance optimization, and production-ready practices. Expert in the latest Python ecosystem including uv, ruff, pydantic, and FastAPI.
+
+ID: rayden-code
+Name: rayden-code
+Desc: Generate React code with Rayden UI components using correct props, tokens, and premium layout patterns
+
+ID: react-best-practices
+Name: react-best-practices
+Desc: Comprehensive performance optimization guide for React and Next.js applications, maintained by Vercel. Use when writing new React components or Next.js pages, implementing data fetching (client or server-side), or reviewing code for performance issues.
+
+ID: react-component-performance
+Name: react-component-performance
+Desc: Diagnose slow React components and suggest targeted performance fixes.
+
+ID: react-flow-architect
+Name: react-flow-architect
+Desc: Build production-ready ReactFlow applications with hierarchical navigation, performance optimization, and advanced state management.
+
+ID: react-flow-node-ts
+Name: react-flow-node-ts
+Desc: Create React Flow node components following established patterns with proper TypeScript types and store integration.
+
+ID: react-modernization
+Name: react-modernization
+Desc: Master React version upgrades, class to hooks migration, concurrent features adoption, and codemods for automated transformation.
+
+ID: react-native-architecture
+Name: react-native-architecture
+Desc: Production-ready patterns for React Native development with Expo, including navigation, state management, native modules, and offline-first architecture.
+
+ID: react-native-skills
+Name: react-native-skills
+Desc: Use when working with react-native-skills tasks or workflows
+
+ID: react-nextjs-development
+Name: react-nextjs-development
+Desc: React and Next.js 14+ application development with App Router, Server Components, TypeScript, Tailwind CSS, and modern frontend patterns.
+
+ID: react-patterns
+Name: react-patterns
+Desc: Modern React patterns and principles. Hooks, composition, performance, TypeScript best practices.
+
+ID: react-state-management
+Name: react-state-management
+Desc: Master modern React state management with Redux Toolkit, Zustand, Jotai, and React Query. Use when setting up global state, managing server state, or choosing between state management solutions.
+
+ID: react-ui-patterns
+Name: react-ui-patterns
+Desc: Modern React UI patterns for loading states, error handling, and data fetching. Use when building UI components, handling async data, or managing UI states.
+
+ID: remotion-best-practices
+Name: remotion-best-practices
+Desc: Best practices for Remotion - Video creation in React
+
+ID: saas-multi-tenant
+Name: saas-multi-tenant
+Desc: Design and implement multi-tenant SaaS architectures with row-level security, tenant-scoped queries, shared-schema isolation, and safe cross-tenant admin patterns in PostgreSQL and TypeScript.
+
+ID: sankhya-dashboard-html-jsp-custom-best-pratices
+Name: sankhya-dashboard-html-jsp-custom-best-pratices
+Desc: This skill should be used when the user asks for patterns, best practices, creation, or fixing of Sankhya dashboards using HTML, JSP, Java, and SQL.
+
+ID: scala-pro
+Name: scala-pro
+Desc: Master enterprise-grade Scala development with functional programming, distributed systems, and big data processing. Expert in Apache Pekko, Akka, Spark, ZIO/Cats Effect, and reactive architectures.
+
+ID: selenium-skill
+Name: selenium-skill
+Desc: Generates production-grade Selenium WebDriver automation scripts and tests in Java, Python, JavaScript, C#, Ruby, or PHP. Supports local execution and TestMu AI cloud with 3000+ browser/OS combinations. Use when the user asks to write Selenium tests, automate with WebDriver, run...
+
+ID: sendblue-api
+Name: sendblue-api
+Desc: Send and receive iMessage, SMS, and RCS from application code via the Sendblue HTTP API — text, media, group messages, send styles, reactions, typing indicators, status callbacks, and inbound webhooks.
+
+ID: senior-frontend
+Name: senior-frontend
+Desc: Frontend development skill for React, Next.js, TypeScript, and Tailwind CSS applications. Use when building React components, optimizing Next.js performance, analyzing bundle sizes, scaffolding frontend projects, implementing accessibility, or reviewing frontend code quality.
+
+ID: seo-technical
+Name: seo-technical
+Desc: Audit technical SEO across crawlability, indexability, security, URLs, mobile, Core Web Vitals, structured data, JavaScript rendering, and related platform signals like robots.txt and AI crawler access.
+
+ID: shopify-apps
+Name: shopify-apps
+Desc: Expert patterns for Shopify app development including Remix/React Router apps, embedded apps with App Bridge, webhook handling, GraphQL Admin API, Polaris components, billing, and app extensions.
+
+ID: slack-automation
+Name: slack-automation
+Desc: Automate Slack workspace operations including messaging, search, channel management, and reaction workflows through Composio's Slack toolkit.
+
+ID: slack-bot-builder
+Name: slack-bot-builder
+Desc: Build Slack apps using the Bolt framework across Python, JavaScript, and Java. Covers Block Kit for rich UIs, interactive components, slash commands, event handling, OAuth installation flows, and Workflow Builder integration.
+
+ID: spline-3d-integration
+Name: spline-3d-integration
+Desc: Use when adding interactive 3D scenes from Spline.design to web projects, including React embedding and runtime control API.
+
+ID: sql-sentinel
+Name: sql-sentinel
+Desc: Audit SQL for the cost & performance anti-patterns that burn warehouse credits. Scores warehouse health 0-100 and outputs a prioritized cost-reduction plan for BigQuery, Snowflake, Redshift, and Postgres.
+
+ID: sshepherd
+Name: sshepherd
+Desc: Zero-knowledge SSH ops CLI — server health checks, docker/systemd control, log tailing, Postgres introspection, and declarative deploys, without ever exposing credentials to the agent.
+
+ID: styleseed-design-review
+Name: styleseed-design-review
+Desc: Reviews UI/frontend code and tells you exactly why it "looks AI-generated" — then how to fix it. Use it when a React/Tailwind/HTML interface looks off, generic, or unfinished, when you want a design score before shipping, or when asked to make UI look more professional, polished, or...
+
+ID: supabase
+Name: supabase
+Desc: Use when doing ANY task involving Supabase. Triggers: Supabase products (Database, Auth, Edge Functions, Realtime, Storage, Vectors, Cron, Queues); client libraries and SSR integrations (supabase-js, @supabase/ssr) in Next.js, React, SvelteKit, Astro, Remix; auth issues (login, logout,...
+
+ID: supabase-postgres-best-practices
+Name: supabase-postgres-best-practices
+Desc: Postgres performance optimization and best practices from Supabase. Use this skill when writing, reviewing, or optimizing Postgres queries, schema designs, or database configurations.
+
+ID: tanstack-query-expert
+Name: tanstack-query-expert
+Desc: Expert in TanStack Query (React Query) — asynchronous state management. Covers data fetching, stale time configuration, mutations, optimistic updates, and Next.js App Router (SSR) integration.
+
+ID: testng-skill
+Name: testng-skill
+Desc: Generates TestNG tests in Java with groups, data providers, parallel execution, XML suite configuration, and listeners. Use when user mentions "TestNG", "@DataProvider", "testng.xml", "groups". Triggers on: "TestNG", "@DataProvider", "testng.xml", "TestNG suite", "parallel tests Java".
+
+ID: transformers-js
+Name: transformers-js
+Desc: Use Transformers.js to run state-of-the-art machine learning models directly in JavaScript/TypeScript. Supports NLP (text classification, translation, summarization), computer vision (image classification, object detection), audio (speech recognition, audio classification), and...
+
+ID: trpc-fullstack
+Name: trpc-fullstack
+Desc: Build end-to-end type-safe APIs with tRPC — routers, procedures, middleware, subscriptions, and Next.js/React integration patterns.
+
+ID: typescript-expert
+Name: typescript-expert
+Desc: TypeScript and JavaScript expert with deep knowledge of type-level programming, performance optimization, monorepo management, migration strategies, and modern tooling.
+
+ID: ui-motion
+Name: ui-motion
+Desc: Apply a named StyleSeed motion to a component — either one of the 5 personality seeds (Spring/Silk/Snap/Float/Pulse × entrance/exit/hover/press/layout) or a distinctive keyword move from the motion library (toggle-flip, toggle-curtain, reveal-blur, pop-in, shimmer, …). Translates vibe...
+
+ID: using-neon
+Name: using-neon
+Desc: Neon is a serverless Postgres platform that separates compute and storage to offer autoscaling, branching, instant restore, and scale-to-zero. It's fully compatible with Postgres and works with any language, framework, or ORM that supports Postgres.
+
+ID: vercel-ai-sdk-expert
+Name: vercel-ai-sdk-expert
+Desc: Expert in the Vercel AI SDK. Covers Core API (generateText, streamText), UI hooks (useChat, useCompletion), tool calling, and streaming UI components with React and Next.js.
+
+ID: vercel-react-view-transitions
+Name: vercel-react-view-transitions
+Desc: Guide React and Next.js view transitions, shared element animations, route transitions, transition types, and reduced-motion-safe UI state animation.
+
+ID: vibe-code-cleanup
+Name: vibe-code-cleanup
+Desc: Safe production cleanup and hardening for vibe-coded fullstack apps (Next.js, React, Node.js, etc.). Removes dead imports, unused files, and broken references without breaking routes or APIs.
+
+ID: vitest-skill
+Name: vitest-skill
+Desc: Generates Vitest tests in JavaScript/TypeScript with Vite-native speed. Jest-compatible API with ESM support and HMR. Use when user mentions "Vitest", "vi.mock", "vitest.config". Triggers on: "Vitest", "vi.mock", "vi.fn", "Vite test", "vitest config".
+
+ID: webdriverio-skill
+Name: webdriverio-skill
+Desc: Generates WebdriverIO (WDIO) automation tests in JavaScript or TypeScript. Supports local and TestMu AI cloud. Use when user mentions "WebdriverIO", "WDIO", "wdio.conf", "browser.url", "$", "$$". Triggers on: "WebdriverIO", "WDIO", "wdio", "browser.$".
+
+ID: zod-validation-expert
+Name: zod-validation-expert
+Desc: Expert in Zod — TypeScript-first schema validation. Covers parsing, custom errors, refinements, type inference, and integration with React Hook Form, Next.js, and tRPC.

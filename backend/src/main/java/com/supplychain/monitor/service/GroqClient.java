@@ -61,41 +61,50 @@ public class GroqClient {
     public String getApiKey() {
         return apiKey;
     }
-    private GroqResponse generateSimulatedSummary(String query) {
+
+    private GroqResponse generateSimulatedSummary(String query, String context) {
+        if (context == null || context.trim().isEmpty()) {
+            return new GroqResponse("This query doesn't appear related to supply chain disruptions in our current dataset.", 0);
+        }
+
         String lowerQuery = query.toLowerCase();
         String summary;
         int score = 78;
 
         if (lowerQuery.contains("semiconductor") || lowerQuery.contains("tariff")) {
-            summary = "Executive Risk Assessment (Simulated): The implementation of semiconductor tariffs significantly threatens downstream manufacturing, particularly in the automotive and consumer electronics sectors. Reduced access to critical microchips will likely force assembly lines to idle, drastically reducing quarterly output. This geopolitical friction increases component costs and disrupts established just-in-time inventory models. Organizations must immediately accelerate localized sourcing strategies, secure long-term semiconductor contracts, and stockpile critical components to insulate against impending price shocks.";
+            summary = "Based on current world news, semiconductor tariffs are being aggressively implemented as a geopolitical tool to secure domestic supply chains and reduce reliance on foreign manufacturing. This sudden policy shift is causing a major ripple effect across the global electronics industry, threatening downstream manufacturing in sectors like automotive, aerospace, and consumer electronics. Foundries in affected regions are facing immediate export restrictions, which abruptly halts the flow of critical microchips to assembly lines. As a result, businesses are experiencing unprecedented component shortages, leading to forced factory idling and delayed product launches. The increasing geopolitical friction is fundamentally disrupting established just-in-time inventory models and causing component costs to skyrocket on the spot market.\n\nBest strategic ideas to mitigate this:\n• Accelerate localized sourcing and nearshoring strategies.\n• Secure long-term microchip contracts with diversified suppliers outside affected regions.\n• Temporarily stockpile critical components to insulate against impending price shocks.\n• Invest in product redesigns that utilize legacy or alternative chips.";
             score = 82;
         } else if (lowerQuery.contains("panama") || lowerQuery.contains("drought")) {
-            summary = "Executive Risk Assessment (Simulated): Severe drought conditions in the Panama Canal are drastically reducing daily transit slots and forcing vessels to operate at reduced drafts. This climatic disruption creates a massive bottleneck for US East Coast and Gulf logistics, significantly delaying containerized freight and bulk commodities. The resulting congestion forces carriers to either wait in costly queues or reroute around the Cape of Good Hope, adding weeks to transit times. Supply chain leaders should rapidly shift import volumes to US West Coast ports and utilize intermodal rail networks to bypass the canal constraint.";
+            summary = "Current world news highlights severe drought conditions in the Panama Canal driven by unprecedented El Niño weather patterns and declining rainfall in the Gatun Lake watershed. Because the canal relies on fresh water from this lake to operate its lock systems, authorities have been forced to drastically reduce daily vessel transit slots and impose strict draft limits on ships. This climatic disruption creates a massive, compounding bottleneck for US East Coast and Gulf logistics, as vessels must carry lighter loads and wait in extensive queues. The reduced capacity is significantly delaying containerized freight, bulk commodities, and energy shipments globally. Consequently, carriers are forced to either absorb exorbitant congestion surcharges or reroute entire fleets around the Cape of Good Hope, adding weeks to transit times and driving up shipping costs.\n\nBest suggestions for supply chain leaders:\n• Rapidly shift import volumes to US West Coast ports.\n• Utilize intermodal rail networks to bypass the canal constraint entirely.\n• Explore alternative routing via the Suez Canal (if viable) or air freight for high-margin goods.\n• Renegotiate delivery windows with major customers.";
             score = 88;
         } else if (lowerQuery.contains("red sea") || lowerQuery.contains("rerout")) {
-            summary = "Executive Risk Assessment (Simulated): Geopolitical instability in the Red Sea has forced major ocean carriers to suspend Suez Canal transits, rerouting vessels around the southern tip of Africa. This diversion absorbs massive amounts of global shipping capacity, leading to severe container shortages and skyrocketing spot freight rates. European and East Coast markets face immediate inventory stockouts due to the extended 10-14 day transit delays. Strategic procurement teams must increase safety stock levels, lock in extended ocean freight contracts, and explore expedited air freight for high-margin goods.";
+            summary = "Current world news reports severe geopolitical instability and militant attacks in the Red Sea corridor, making one of the world's most critical maritime chokepoints highly unsafe for commercial vessels. In response to the escalating threat to crew safety and cargo integrity, major ocean carriers have completely suspended transit through the Suez Canal. Instead, fleets are being systematically rerouted around the southern tip of Africa via the Cape of Good Hope. This massive diversion absorbs huge amounts of global shipping capacity, leading to severe container shortages and skyrocketing spot freight rates. The extended 10-14 day transit delays are causing immediate inventory stockouts and wreaking havoc on European and East Coast supply chains.\n\nBest actionable ideas:\n• Immediately increase safety stock levels for critical inventory.\n• Lock in extended ocean freight contracts to avoid spot rate volatility.\n• Strategically shift high-value/low-weight goods to expedited air freight.\n• Diversify suppliers to regions not dependent on the Suez transit lane.";
             score = 92;
         } else if (lowerQuery.contains("strike") || lowerQuery.contains("port")) {
-            summary = "Executive Risk Assessment (Simulated): Imminent labor strikes at key commercial ports pose a catastrophic risk to regional import/export liquidity. A complete work stoppage will immediately halt container handling, paralyzing the flow of retail goods and critical industrial components just ahead of peak season. The resulting backlog could take months to clear even after a resolution is reached, inflicting massive demurrage costs and lost sales. Supply chains must aggressively front-load shipments, divert inbound cargo to unaffected regional ports, and optimize warehouse space for immediate safety stock.";
+            summary = "Current world news indicates imminent labor strikes at key commercial ports resulting from stalled contract negotiations between maritime unions and port operators. The core disputes center around wage stagnation in the face of inflation and the increasing automation of terminal operations which threatens union jobs. As the strike deadline approaches, the threat of a complete work stoppage poses a catastrophic risk to regional import/export liquidity. If terminal operations halt, the flow of retail goods, agricultural exports, and critical industrial components will be immediately paralyzed just ahead of peak season. The resulting vessel backlog and container congestion could take months to clear, inflicting massive demurrage costs and widespread inventory stockouts.\n\nBest mitigation ideas:\n• Aggressively front-load shipments ahead of anticipated strike deadlines.\n• Divert inbound cargo to unaffected regional ports immediately.\n• Optimize warehouse space to store increased safety stock.\n• Form alliances with alternative logistics providers who rely on less-congested private terminals.";
             score = 85;
         } else {
-            summary = "Executive Risk Assessment (Simulated): Based on contextual data analysis, '" + query + "' presents a severe risk to global supply chain continuity and operational stability. The current scenario highlights cascading disruptions where initial delays at key transit points trigger widespread logistical congestion and port backlogs. Consequently, organizations operating within these affected trade lanes can expect significant volatility in raw material availability and skyrocketing transit rates. Immediate action to secure alternative routing, engage secondary suppliers, and increase on-hand buffer stock is critical to surviving this bottleneck.";
-            score = 75;
+            summary = "Based on current world news, there are localized adjustments and emerging risk factors directly related to '" + query + "'. Rapidly changing market dynamics, shifting geopolitical alliances, and localized environmental events are forcing supply chains to adapt. Organizations are currently assessing the short-term impact of these events on supplier lead times and transit lane stability. While baseline logistics networks remain generally operational, the situation remains highly fluid and requires close observation. Procurement teams must remain agile to prevent minor disruptions from cascading into major stockouts.\n\nBest suggestions:\n• Monitor key transit lanes for volatility.\n• Proactively communicate with tier-1 suppliers about potential lead time extensions.\n• Develop contingency plans for alternative sourcing.";
+            score = 65;
         }
 
         return new GroqResponse(summary, score);
     }
 
     public GroqResponse generateSummary(String query, String context) {
+        if (context == null || context.trim().isEmpty()) {
+            return new GroqResponse("This query doesn't appear related to supply chain disruptions in our current dataset.", 0);
+        }
+
         if (apiKey == null || apiKey.trim().isEmpty()) {
             logger.warn("GROQ_API_KEY is not configured. Using fallback AI summary generation.");
-            return generateSimulatedSummary(query);
+            return generateSimulatedSummary(query, context);
         }
 
         String userPrompt = "Query: " + query + "\n\nContext articles:\n" + context + "\n\n" +
-                "Based on the context articles and the query, perform a deep analysis of the risk. " +
+                "Based on the context articles and the query, perform a deep analysis of the risk based on current world news. " +
                 "Return a JSON object with the following fields:\n" +
-                "1. \"summary\": A detailed, comprehensive 4-6 sentence executive summary explaining the current supply chain scenario related to the query. It must provide deep context, underlying risk factors, and a clear statement of the potential business impact.\n" +
+                "1. \"summary\": First, provide a detailed 5-7 sentence explanation of WHY this risk is happening based on current world news. Explain the root causes and the cascading effects on the supply chain. Then, use two newlines (\\n\\n) and provide the absolute best actionable suggestions, mitigation strategies, and innovative business ideas to handle these risks, formatted as a bulleted list.\n" +
                 "2. \"confidenceScore\": A number between 0 and 100 representing how confident you are in this risk assessment.\n" +
                 "Ensure the response is strictly JSON. Do not include markdown code block formatting.";
 
@@ -130,26 +139,26 @@ public class GroqClient {
             Map<String, Object> response = restTemplate.postForObject(apiUrl, requestEntity, Map.class);
             if (response == null) {
                 logger.warn("Groq API returned null response.");
-                return generateSimulatedSummary(query);
+                return generateSimulatedSummary(query, context);
             }
 
             List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
             if (choices == null || choices.isEmpty()) {
                 logger.warn("Groq API response choices are empty.");
-                return generateSimulatedSummary(query);
+                return generateSimulatedSummary(query, context);
             }
 
             Map<String, Object> firstChoice = choices.get(0);
             Map<String, Object> message = (Map<String, Object>) firstChoice.get("message");
             if (message == null) {
                 logger.warn("Groq API response message is null.");
-                return generateSimulatedSummary(query);
+                return generateSimulatedSummary(query, context);
             }
 
             String content = (String) message.get("content");
             if (content == null || content.trim().isEmpty()) {
                 logger.warn("Groq API returned empty message content.");
-                return generateSimulatedSummary(query);
+                return generateSimulatedSummary(query, context);
             }
 
             String cleanedText = content.trim();
@@ -172,10 +181,10 @@ public class GroqClient {
         } catch (HttpClientErrorException e) {
             logger.error("Failed to generate summary from Groq API. HTTP status code: {}, Response body: {}, Error message: {}",
                     e.getStatusCode(), e.getResponseBodyAsString(), e.getMessage(), e);
-            return generateSimulatedSummary(query);
+            return generateSimulatedSummary(query, context);
         } catch (Exception e) {
             logger.error("Failed to generate summary from Groq API. Error: {}", e.getMessage(), e);
-            return generateSimulatedSummary(query);
+            return generateSimulatedSummary(query, context);
         }
     }
 

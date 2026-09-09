@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 @RestController
 @RequestMapping("/api/countries")
@@ -22,9 +24,89 @@ public class CountryRiskController {
     private final NewsArticleRepository newsArticleRepository;
     private final GroqClient groqClient;
 
+    public static class CountryPin {
+        public String id;
+        public String query;
+        public String flag;
+        public double lat;
+        public double lng;
+
+        public CountryPin(String id, String query, String flag, double lat, double lng) {
+            this.id = id;
+            this.query = query;
+            this.flag = flag;
+            this.lat = lat;
+            this.lng = lng;
+        }
+    }
+
+    private static final List<CountryPin> ALL_COUNTRIES = List.of(
+        new CountryPin("US", "United States", "🇺🇸", 37.0, -95.0),
+        new CountryPin("CN", "China", "🇨🇳", 35.0, 104.0),
+        new CountryPin("IN", "India", "🇮🇳", 20.5, 78.9),
+        new CountryPin("DE", "Germany", "🇩🇪", 51.1, 10.4),
+        new CountryPin("NL", "Netherlands", "🇳🇱", 52.3, 4.9),
+        new CountryPin("EG", "Egypt", "🇪🇬", 26.8, 30.8),
+        new CountryPin("SG", "Singapore", "🇸🇬", 1.35, 103.8),
+        new CountryPin("JP", "Japan", "🇯🇵", 36.2, 138.2),
+        new CountryPin("GB", "United Kingdom", "🇬🇧", 55.3, -3.4),
+        new CountryPin("BR", "Brazil", "🇧🇷", -14.2, -51.9),
+        new CountryPin("AU", "Australia", "🇦🇺", -25.2, 133.7),
+        new CountryPin("FR", "France", "🇫🇷", 46.2, 2.2),
+        new CountryPin("CA", "Canada", "🇨🇦", 56.1, -106.3),
+        new CountryPin("MX", "Mexico", "🇲🇽", 23.6, -102.5),
+        new CountryPin("KR", "South Korea", "🇰🇷", 35.9, 127.7),
+        new CountryPin("AE", "United Arab Emirates", "🇦🇪", 23.4, 53.8),
+        new CountryPin("IT", "Italy", "🇮🇹", 41.8, 12.5),
+        new CountryPin("ES", "Spain", "🇪🇸", 40.4, -3.7),
+        new CountryPin("RU", "Russia", "🇷🇺", 61.5, 105.3),
+        new CountryPin("ZA", "South Africa", "🇿🇦", -30.5, 22.9),
+        new CountryPin("TR", "Turkey", "🇹🇷", 38.9, 35.2),
+        new CountryPin("SA", "Saudi Arabia", "🇸🇦", 23.8, 45.0),
+        new CountryPin("ID", "Indonesia", "🇮🇩", -0.7, 113.9),
+        new CountryPin("MY", "Malaysia", "🇲🇾", 4.2, 109.2),
+        new CountryPin("VN", "Vietnam", "🇻🇳", 14.0, 108.2),
+        new CountryPin("TH", "Thailand", "🇹🇭", 15.8, 100.9)
+    );
+
     public CountryRiskController(NewsArticleRepository newsArticleRepository, GroqClient groqClient) {
         this.newsArticleRepository = newsArticleRepository;
         this.groqClient = groqClient;
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<List<Map<String, Object>>> getActiveCountries() {
+        List<NewsArticle> allArticles = newsArticleRepository.findAll();
+        List<Map<String, Object>> activePins = new ArrayList<>();
+        
+        for (CountryPin pin : ALL_COUNTRIES) {
+            String pattern = buildCountryRegexPattern(pin.query);
+            Pattern r = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+            
+            boolean matches = false;
+            for (NewsArticle article : allArticles) {
+                String content = (article.getTitle() != null ? article.getTitle() : "") + " " +
+                                 (article.getRawContent() != null ? article.getRawContent() : "") + " " +
+                                 (article.getEntities() != null ? article.getEntities() : "");
+                if (r.matcher(content).find()) {
+                    matches = true;
+                    break;
+                }
+            }
+            
+            if (matches) {
+                Map<String, Object> pinMap = new HashMap<>();
+                pinMap.put("id", pin.id);
+                pinMap.put("query", pin.query);
+                pinMap.put("flag", pin.flag);
+                pinMap.put("lat", pin.lat);
+                pinMap.put("lng", pin.lng);
+                pinMap.put("baseScore", 50); // Default base score
+                activePins.add(pinMap);
+            }
+        }
+        
+        return ResponseEntity.ok(activePins);
     }
 
     @GetMapping("/risk")
@@ -34,10 +116,13 @@ public class CountryRiskController {
         }
 
         String countryQuery = query.trim();
-        String regexPattern = buildCountryRegexPattern(countryQuery);
-        logger.info("Computing real-time dynamic country risk for query: '{}' using pattern: '{}'", countryQuery, regexPattern);
+        String javaRegexPattern = buildCountryRegexPattern(countryQuery);
+        // Postgres POSIX regex uses \y for word boundaries and doesn't support \Q \E
+        String pgRegexPattern = javaRegexPattern.replace("\\b", "\\y").replace("\\Q", "").replace("\\E", "");
+        
+        logger.info("Computing real-time dynamic country risk for query: '{}' using PG pattern: '{}'", countryQuery, pgRegexPattern);
 
-        List<NewsArticle> matchedArticles = newsArticleRepository.findByPattern(regexPattern);
+        List<NewsArticle> matchedArticles = newsArticleRepository.findByPattern(pgRegexPattern);
 
         if (matchedArticles == null) {
             matchedArticles = new ArrayList<>();
@@ -167,59 +252,59 @@ public class CountryRiskController {
         switch (q) {
             case "germany":
             case "german":
-                return "germany|german|hamburg|rhine|bremerhaven|berlin|frankfurt|munich|volkswagen|bmw|siemens|basf";
+                return "\\b(germany|german|hamburg|rhine|bremerhaven|berlin|frankfurt|munich)\\b";
             case "egypt":
             case "egyptian":
-                return "egypt|egyptian|suez|suez canal|red sea|bab el-mandeb|cairo|sinai|houthis";
+                return "\\b(egypt|egyptian|suez|suez canal|cairo|sinai)\\b";
             case "united states":
             case "usa":
             case "us":
             case "america":
-                return "united states|usa|\\bus\\b|\\bu\\.s\\.\\b|america|american|los angeles|long beach|california|fmc";
+                return "\\b(united states|usa|us|u\\.s\\.|america|american|los angeles|long beach|california)\\b";
             case "united kingdom":
             case "uk":
             case "britain":
             case "england":
-                return "united kingdom|\\buk\\b|\\bu\\.k\\.\\b|britain|british|felixstowe|dover|london|england";
+                return "\\b(united kingdom|uk|u\\.k\\.|britain|british|felixstowe|dover|london|england)\\b";
             case "netherlands":
             case "holland":
             case "dutch":
-                return "netherlands|dutch|rotterdam|holland|north sea";
+                return "\\b(netherlands|dutch|rotterdam|holland)\\b";
             case "france":
             case "french":
-                return "france|french|le havre|marseille|paris";
+                return "\\b(france|french|le havre|marseille|paris)\\b";
             case "brazil":
             case "brazilian":
-                return "brazil|brazilian|santos|paranaguá|amazon";
+                return "\\b(brazil|brazilian|santos|paranaguá)\\b";
             case "south korea":
             case "korea":
-                return "korea|korean|busan|incheon|seoul|hyundai|samsung";
+                return "\\b(korea|korean|busan|incheon|seoul)\\b";
             case "uae":
             case "united arab emirates":
             case "dubai":
-                return "uae|united arab emirates|dubai|abu dhabi|jebel ali";
+                return "\\b(uae|united arab emirates|dubai|abu dhabi|jebel ali)\\b";
             case "china":
             case "chinese":
-                return "china|chinese|shanghai|shenzhen|ningbo|beijing|guangzhou|yantian";
+                return "\\b(china|chinese|shanghai|shenzhen|ningbo|beijing|guangzhou|yantian)\\b";
             case "singapore":
-                return "singapore|pasir panjang|malacca|strait of malacca";
+                return "\\b(singapore|pasir panjang|malacca|strait of malacca)\\b";
             case "canada":
             case "canadian":
-                return "canada|canadian|vancouver|montreal|prince rupert";
+                return "\\b(canada|canadian|vancouver|montreal|prince rupert)\\b";
             case "mexico":
             case "mexican":
-                return "mexico|mexican|manzanillo|laredo|monterrey";
+                return "\\b(mexico|mexican|manzanillo|laredo|monterrey)\\b";
             case "japan":
             case "japanese":
-                return "japan|japanese|tokyo|yokohama|kobe|nagoya|toyota";
+                return "\\b(japan|japanese|tokyo|yokohama|kobe|nagoya)\\b";
             case "australia":
             case "australian":
-                return "australia|australian|sydney|melbourne|brisbane|fremantle";
+                return "\\b(australia|australian|sydney|melbourne|brisbane|fremantle)\\b";
             case "india":
             case "indian":
-                return "india|indian|mumbai|mundra|nhava sheva|delhi|gujarat|chennai|bengaluru";
+                return "\\b(india|indian|mumbai|mundra|nhava sheva|delhi|gujarat|chennai|bengaluru)\\b";
             default:
-                return q;
+                return "\\b" + Pattern.quote(q) + "\\b";
         }
     }
 

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "aas-core": {
+      "command": "npx",
+      "args": [
+        "--yes",
+        "--ignore-scripts",
+        "--package=agentic-awesome-skills@15.16.0",
+        "aas",
+        "mcp",
+        "start"
+      ]
+    }
+  }
+}

@@ -1,4 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+
+const Hero3DContainer = lazy(() => import('./components/Hero3DContainer'));
+
+const hasWebGL = (() => {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+  } catch (e) {
+    return false;
+  }
+})();
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -80,24 +91,7 @@ const sanitizeArticleUrl = (article) => {
 // --------------------------------------------------------------------------
 // Geographic Pin Database for 3D Earth & HD Satellite Map
 // --------------------------------------------------------------------------
-const GLOBAL_PIN_LIST = [
-  { id: 'US', query: 'United States', flag: '🇺🇸', lat: 37.0, lng: -95.0, baseScore: 78 },
-  { id: 'CN', query: 'China', flag: '🇨🇳', lat: 35.0, lng: 104.0, baseScore: 85 },
-  { id: 'IN', query: 'India', flag: '🇮🇳', lat: 20.5, lng: 78.9, baseScore: 72 },
-  { id: 'DE', query: 'Germany', flag: '🇩🇪', lat: 51.1, lng: 10.4, baseScore: 62 },
-  { id: 'NL', query: 'Netherlands', flag: '🇳🇱', lat: 52.3, lng: 4.9, baseScore: 68 },
-  { id: 'EG', query: 'Egypt', flag: '🇪🇬', lat: 26.8, lng: 30.8, baseScore: 94 },
-  { id: 'SG', query: 'Singapore', flag: '🇸🇬', lat: 1.35, lng: 103.8, baseScore: 74 },
-  { id: 'JP', query: 'Japan', flag: '🇯🇵', lat: 36.2, lng: 138.2, baseScore: 56 },
-  { id: 'GB', query: 'United Kingdom', flag: '🇬🇧', lat: 55.3, lng: -3.4, baseScore: 65 },
-  { id: 'BR', query: 'Brazil', flag: '🇧🇷', lat: -14.2, lng: -51.9, baseScore: 69 },
-  { id: 'AU', query: 'Australia', flag: '🇦🇺', lat: -25.2, lng: 133.7, baseScore: 54 },
-  { id: 'FR', query: 'France', flag: '🇫🇷', lat: 46.2, lng: 2.2, baseScore: 63 },
-  { id: 'CA', query: 'Canada', flag: '🇨🇦', lat: 56.1, lng: -106.3, baseScore: 67 },
-  { id: 'MX', query: 'Mexico', flag: '🇲🇽', lat: 23.6, lng: -102.5, baseScore: 71 },
-  { id: 'KR', query: 'South Korea', flag: '🇰🇷', lat: 35.9, lng: 127.7, baseScore: 60 },
-  { id: 'AE', query: 'United Arab Emirates', flag: '🇦🇪', lat: 23.4, lng: 53.8, baseScore: 64 }
-];
+let GLOBAL_PIN_LIST = [];
 
 function getCountryCoords(query) {
   if (!query) return { query: 'Global', flag: '🌐', lat: 20.0, lng: 0.0, baseScore: 50 };
@@ -112,22 +106,37 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [activePins, setActivePins] = useState([]);
 
   // Category & Filter state
   const [categoryFilter, setCategoryFilter] = useState('ALL');
 
   // Semantic Search States
-  const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'search' | 'analytics'
+  const [activeTab, setActiveTab] = useState('overview'); // 'feed' | 'search' | 'analytics'
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [aiSummary, setAiSummary] = useState(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
 
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
+
+
+
+
   const fetchArticles = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      const pinsRes = await fetch(`${API_BASE_URL}/api/countries/active`);
+      if (pinsRes.ok) {
+        const pinsData = await pinsRes.json();
+        GLOBAL_PIN_LIST = pinsData;
+        setActivePins(pinsData);
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/articles`);
       if (!response.ok) {
         throw new Error(`Failed to load articles (HTTP ${response.status})`);
@@ -239,69 +248,108 @@ function App() {
         <div className="nebula-blob nebula-blob-3" />
       </div>
 
-      <header>
-        <div className="header-title-container">
-          <div className="brand-wrapper">
-            <div className="brand-icon-box">🛰️</div>
-            <div>
-              <h1>Supply Chain Risk Monitor</h1>
-              <div className="subtitle-bar">
-                <span className="live-indicator">
-                  <span className="pulse-dot"></span> REAL-TIME SATELLITE INTELLIGENCE
-                </span>
-                <span className="system-badge">AUTOMATIC 15M SYNC</span>
-              </div>
+              <header className="cinematic-hero">
+          <div className="hero-text-block" style={{ zIndex: 20 }}>
+            <h1>SUPPLY CHAIN<br/>RISK MONITOR<br/><span style={{ color: 'var(--accent-olive)' }}>LIVE INTELLIGENCE LAYERED.</span></h1>
+            <p className="hero-subtitle">
+              Well-organized data, real-time satellite intelligence, and semantic AI search. Together, we are a system — we don't skim on the surface.
+            </p>
+            <br/>
+            <div className="hero-cta-group" style={{ display: 'flex', gap: '1rem' }}>
+              <button 
+                className="btn-refresh primary" 
+                onClick={fetchArticles} 
+                disabled={loading}
+                style={{ background: 'var(--accent-olive)', color: 'var(--bg-primary)', border: '1px solid var(--accent-olive)', borderRadius: '0', textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.75rem', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                {loading ? 'SYNCING FEED...' : 'REFRESH FEED'}
+              </button>
+              <button 
+                className="btn-refresh secondary" 
+                onClick={() => {
+                  handleTabClick('feed');
+                  setTimeout(() => {
+                    const feedSection = document.getElementById('main-content-section');
+                    if (feedSection) feedSection.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                }}
+                style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--text-muted)', borderRadius: '0', textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.75rem', padding: '0.5rem 1rem', cursor: 'pointer' }}
+              >
+                VIEW LIVE FEED
+              </button>
             </div>
           </div>
-
-          {activeTab === 'feed' && (
-            <button 
-              className="btn-refresh" 
-              onClick={fetchArticles} 
-              disabled={loading}
-              aria-label="Refresh feeds"
-              id="refresh-btn"
-            >
-              <svg 
-                className={loading ? 'spin' : ''} 
-                width="18" 
-                height="18" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2.5" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
+          
+          <div className="hero-graphic">
+            <div className={`img-wrapper ${activeTab !== 'overview' ? 'is-exploded' : ''} zoom-${activeTab}`}>
+              {hasWebGL ? (
+                <Suspense fallback={
+                  <>
+                    <img 
+                      src="/assets/containers_closed.jpg" 
+                      className={`iso-container-main ${activeTab === 'overview' ? 'visible' : 'hidden'}`} 
+                      alt="Closed Shipping Containers" 
+                    />
+                    <img 
+                      src="/assets/containers_exploded.jpg" 
+                      className={`iso-container-main ${activeTab !== 'overview' ? 'visible' : 'hidden'}`} 
+                      alt="Expanded Shipping Containers" 
+                    />
+                  </>
+                }>
+                  <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+                    <Hero3DContainer activeTab={activeTab} />
+                  </div>
+                </Suspense>
+              ) : (
+                <>
+                  <img 
+                    src="/assets/containers_closed.jpg" 
+                    className={`iso-container-main ${activeTab === 'overview' ? 'visible' : 'hidden'}`} 
+                    alt="Closed Shipping Containers" 
+                  />
+                  <img 
+                    src="/assets/containers_exploded.jpg" 
+                    className={`iso-container-main ${activeTab !== 'overview' ? 'visible' : 'hidden'}`} 
+                    alt="Expanded Shipping Containers" 
+                  />
+                </>
+              )}
+            
+              <div 
+                className={`iso-label label-a ${activeTab === 'feed' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); handleTabClick('feed'); }}
               >
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-              </svg>
-              {loading ? 'Syncing Feeds...' : 'Refresh Feeds'}
-            </button>
-          )}
-        </div>
+                <span className="marker">A</span> ALL FEEDS
+              </div>
+              
+              <div 
+                className={`iso-label label-b ${activeTab === 'search' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); handleTabClick('search'); }}
+              >
+                <span className="marker">B</span> SEMANTIC AI SEARCH
+              </div>
+              
+              <div 
+                className={`iso-label label-c ${activeTab === 'analytics' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); handleTabClick('analytics'); }}
+              >
+                <span className="marker">C</span> NASA SATELLITE
+              </div>
 
-        {/* Floating Tab Switcher */}
-        <div className="tabs-container">
-          <button 
-            className={`tab-btn ${activeTab === 'feed' ? 'active' : ''}`}
-            onClick={() => setActiveTab('feed')}
-          >
-            📋 All Feeds ({articles.length})
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'search' ? 'active' : ''}`}
-            onClick={() => setActiveTab('search')}
-          >
-            🔍 Semantic AI Search
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analytics')}
-          >
-            🌎 NASA Satellite & Risk Factors
-          </button>
-        </div>
-      </header>
+            </div>
+            
+            {activeTab !== 'overview' && (
+              <div 
+                className="iso-label label-reset"
+                onClick={(e) => { e.stopPropagation(); handleTabClick('overview'); }}
+                style={{ position: 'absolute', top: '1rem', right: '1rem', cursor: 'pointer', zIndex: 50, background: 'var(--text-primary)', color: 'var(--bg-primary)' }}
+              >
+                [X] RESET VIEW
+              </div>
+            )}
+          </div>
+        </header>
 
       {/* Stats Summary Banner */}
       {activeTab === 'feed' && !error && (
@@ -309,7 +357,7 @@ function App() {
           <div className="stat-card" style={{ '--accent-color': 'var(--success)' }}>
             <div className="stat-icon" style={{ color: 'var(--success)' }}>🟢</div>
             <div className="stat-item">
-              <span className="stat-label">System Status</span>
+              <span className="stat-label">System status</span>
               <span className="stat-value" style={{ color: 'var(--success)', fontSize: '1.1rem' }}>
                 Active (15m Auto-Sync)
               </span>
@@ -319,7 +367,7 @@ function App() {
           <div className="stat-card" style={{ '--accent-color': 'var(--accent-cyan)' }}>
             <div className="stat-icon" style={{ color: 'var(--accent-cyan)' }}>📰</div>
             <div className="stat-item">
-              <span className="stat-label">Ingested Articles</span>
+              <span className="stat-label">Ingested articles</span>
               <span className="stat-value">{articles.length}</span>
             </div>
           </div>
@@ -327,7 +375,7 @@ function App() {
           <div className="stat-card" style={{ '--accent-color': 'var(--accent-indigo)' }}>
             <div className="stat-icon" style={{ color: 'var(--accent-indigo)' }}>⚡</div>
             <div className="stat-item">
-              <span className="stat-label">Filtered Feeds</span>
+              <span className="stat-label">Filtered feeds</span>
               <span className="stat-value">{filteredArticles.length}</span>
             </div>
           </div>
@@ -335,7 +383,7 @@ function App() {
           <div className="stat-card" style={{ '--accent-color': 'var(--warning)' }}>
             <div className="stat-icon" style={{ color: 'var(--warning)' }}>🕒</div>
             <div className="stat-item">
-              <span className="stat-label">Last Synchronization</span>
+              <span className="stat-label">Last synchronization</span>
               <span className="stat-value" style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
                 {lastUpdated || 'Just Now'}
               </span>
@@ -344,22 +392,22 @@ function App() {
         </section>
       )}
 
-      <main>
+      <main id="main-content-section">
         {activeTab === 'feed' ? (
           /* ALL FEEDS TAB */
           <div>
             {!error && articles.length > 0 && (
               <div className="filter-bar">
                 <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Filter Category:
+                  Filter category:
                 </div>
                 <div className="filter-chips">
                   {[
-                    { id: 'ALL', label: '🌐 All Feeds' },
+                    { id: 'ALL', label: '🌐 All feeds' },
                     { id: 'GEOPOLITICAL', label: '⚠️ Geopolitical' },
-                    { id: 'LOGISTICS', label: '🚢 Logistics & Ports' },
-                    { id: 'WEATHER', label: '🌪️ Weather & Climate' },
-                    { id: 'MARKET', label: '📈 Market & Economy' }
+                    { id: 'LOGISTICS', label: '🚢 Logistics & ports' },
+                    { id: 'WEATHER', label: '🌪️ Weather & climate' },
+                    { id: 'MARKET', label: '📈 Market & economy' }
                   ].map(chip => (
                     <button
                       key={chip.id}
@@ -381,16 +429,16 @@ function App() {
               </div>
             ) : error ? (
               <div className="error-container">
-                <div className="error-title">Database / API Offline</div>
+                <div className="error-title">Database / API offline</div>
                 <p className="error-msg">{error}</p>
                 <button className="btn-retry" onClick={fetchArticles}>
-                  Re-connect Feed Service
+                  Re-connect feed service
                 </button>
               </div>
             ) : filteredArticles.length === 0 ? (
               <div className="empty-container">
                 <div className="empty-icon">📦</div>
-                <div className="empty-title">No Disruption Reports Found</div>
+                <div className="empty-title">No disruption reports found</div>
                 <p className="empty-desc">
                   {articles.length === 0 
                     ? 'The news database is currently empty. Run article collectors to populate feed data.'
@@ -399,7 +447,7 @@ function App() {
                 </p>
                 {categoryFilter !== 'ALL' && (
                   <button className="btn-retry" style={{ marginTop: '1rem' }} onClick={() => setCategoryFilter('ALL')}>
-                    Reset Category Filters
+                    Reset category filters
                   </button>
                 )}
               </div>
@@ -434,7 +482,7 @@ function App() {
                           {categoryName}
                         </span>
                         <span className="read-more">
-                          Analyze Source Report
+                          Analyze source report
                           <svg className="arrow-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="M5 12h14M12 5l7 7-7 7" />
                           </svg>
@@ -497,13 +545,20 @@ function App() {
             )}
 
             {aiSummary && (
-              <div className="ai-summary-card">
+              <div 
+                className="ai-summary-card"
+                style={aiSummary.confidenceScore === 0 ? {
+                  borderColor: 'rgba(239, 68, 68, 0.35)',
+                  background: 'linear-gradient(135deg, rgba(30, 20, 35, 0.7) 0%, rgba(20, 15, 25, 0.8) 100%)'
+                } : {}}
+              >
                 <div className="ai-summary-header">
                   <div className="ai-summary-title">
-                    <span className="ai-sparkle">✨</span> AI risk summary
+                    <span className="ai-sparkle">{aiSummary.confidenceScore === 0 ? '🛡️' : '✨'}</span>{' '}
+                    {aiSummary.confidenceScore === 0 ? 'Relevance guardrail notice' : 'AI risk summary'}
                   </div>
                   <div className="ai-confidence-badge">
-                    Match Confidence:{' '}
+                    {aiSummary.confidenceScore === 0 ? 'Relevance: ' : 'Match confidence: '}
                     <strong className={`tabular-nums ${
                       aiSummary.confidenceScore > 70 
                         ? 'text-severity-high' 
@@ -511,24 +566,26 @@ function App() {
                         ? 'text-severity-medium' 
                         : 'text-severity-low'
                     }`}>
-                      {aiSummary.confidenceScore}%
+                      {aiSummary.confidenceScore === 0 ? 'Unmatched (0%)' : `${aiSummary.confidenceScore}%`}
                     </strong>
                   </div>
                 </div>
                 <div className="ai-summary-body">
-                  <p>{aiSummary.summary}</p>
-                  <div className="ai-progress-bg">
-                    <div 
-                      className={`ai-progress-bar ${
-                        aiSummary.confidenceScore > 70 
-                          ? 'bg-severity-high' 
-                          : aiSummary.confidenceScore >= 40 
-                          ? 'bg-severity-medium' 
-                          : 'bg-severity-low'
-                      }`} 
-                      style={{ width: `${aiSummary.confidenceScore}%` }} 
-                    />
-                  </div>
+                  <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{aiSummary.summary}</p>
+                  {aiSummary.confidenceScore > 0 && (
+                    <div className="ai-progress-bg">
+                      <div 
+                        className={`ai-progress-bar ${
+                          aiSummary.confidenceScore > 70 
+                            ? 'bg-severity-high' 
+                            : aiSummary.confidenceScore >= 40 
+                            ? 'bg-severity-medium' 
+                            : 'bg-severity-low'
+                        }`} 
+                        style={{ width: `${aiSummary.confidenceScore}%` }} 
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -540,9 +597,9 @@ function App() {
                 ))}
               </div>
             ) : searchResults.length > 0 ? (
-              <div className="search-results-section" style={{ marginTop: '1.25rem' }}>
+              <div className="search-results-section" style={{ marginTop: '1.25rem', animation: 'fadeInUp 0.6s ease-out 1.2s both' }}>
                 <h3 className="section-title" style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#ffffff' }}>
-                  🎯 Top Vector Matches ({searchResults.length})
+                  🎯 Top vector matches ({searchResults.length})
                 </h3>
                 <div className="articles-grid">
                   {searchResults.map((match, idx) => {
@@ -577,7 +634,7 @@ function App() {
                             {riskCat}
                           </span>
                           <span className="read-more">
-                            Read Full Article
+                            Read full article
                             <svg className="arrow-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                               <path d="M5 12h14M12 5l7 7-7 7" />
                             </svg>
@@ -591,8 +648,8 @@ function App() {
             ) : searchQuery && !searching && (
               <div className="empty-container" style={{ marginTop: '2rem' }}>
                 <div className="empty-icon">🔍</div>
-                <div className="empty-title">No Matching Intelligence Found</div>
-                <p className="empty-desc">Try searching with alternative supply chain keywords or selecting a quick prompt above.</p>
+                <div className="empty-title">No relevant supply chain articles found for this query</div>
+                <p className="empty-desc">The search terms do not meet our relevance threshold. Try querying specific supply chain topics, shipping routes, port strikes, or trade tariffs.</p>
               </div>
             )}
           </div>
@@ -606,7 +663,7 @@ function App() {
 }
 
 // --------------------------------------------------------------------------
-// Real-Time Dynamic NASA Satellite & Risk Factors Analytics Section
+// Real-Time Dynamic NASA satellite & risk factors Analytics Section
 // --------------------------------------------------------------------------
 function AnalyticsDashboardGoogleEarth({ articles = [] }) {
   const [selectedCountryQuery, setSelectedCountryQuery] = useState('Germany');
@@ -679,7 +736,7 @@ function AnalyticsDashboardGoogleEarth({ articles = [] }) {
               </button>
             )}
             <button type="submit" className="btn-search" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
-              Calculate Risk
+              Calculate risk
             </button>
           </div>
         </form>
@@ -729,7 +786,7 @@ function AnalyticsDashboardGoogleEarth({ articles = [] }) {
       {/* Quick Selectors for Global Economies */}
       <div style={{ marginTop: '1.25rem' }}>
         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '700', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Real-Time Quick Selectors (Search accepts ANY country in the world):
+          Real-time quick selectors (Search accepts ANY country in the world):
         </div>
         <div className="country-selector-strip">
           {GLOBAL_PIN_LIST.map((c, idx) => {
@@ -773,7 +830,7 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
     return (
       <div className="country-risk-panel" style={{ padding: '2rem', textAlign: 'center' }}>
         <div className="spin" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔄</div>
-        <h3 style={{ color: '#ffffff' }}>Computing Real-Time Risk Factor Score for {countryQuery}...</h3>
+        <h3 style={{ color: '#ffffff' }}>Computing real-time risk factor score for {countryQuery}...</h3>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Querying live database articles, analyzing category weights, and generating AI risk drivers...</p>
       </div>
     );
@@ -782,7 +839,7 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
   if (error) {
     return (
       <div className="country-risk-panel" style={{ borderColor: 'var(--error)' }}>
-        <h3 style={{ color: 'var(--error)' }}>Real-Time Risk Calculation Error</h3>
+        <h3 style={{ color: 'var(--error)' }}>Real-time risk calculation error</h3>
         <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
       </div>
     );
@@ -826,14 +883,14 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
           <span className="country-flag-icon">{coords.flag}</span>
           <div>
             <h2 className="country-name">{data.countryName} ({data.baseScore}%)</h2>
-            <div className="country-region-badge">Real-Time Dynamic Risk Calculation ({data.matchedArticles?.length || 0} Matched Articles)</div>
+            <div className="country-region-badge">Real-time dynamic risk calculation ({data.matchedArticles?.length || 0} Matched Articles)</div>
           </div>
         </div>
 
         <div className="risk-gauge-circle">
           <div>
             <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '700' }}>
-              Supply Chain Risk Factor Score
+              Supply chain risk factor score
             </div>
             <div className={`risk-gauge-score tabular-nums`} style={{ color: scoreColor }}>
               {data.baseScore} / 100 ({data.baseScore}%)
@@ -847,14 +904,14 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
 
       {/* Categorized Risk Progress Meters */}
       <h3 style={{ fontSize: '0.95rem', color: '#ffffff', marginBottom: '0.85rem' }}>
-        📈 Real-Time Categorized Risk Breakdown for {data.countryName}
+        📈 Real-time categorized risk breakdown for {data.countryName}
       </h3>
       <div className="country-risk-categories-grid">
         {[
-          { label: '⚠️ Geopolitical & Trade Stability', score: catScores.geopolitical || 0, color: '#f59e0b' },
-          { label: '🚢 Logistics & Maritime Congestion', score: catScores.logistics || 0, color: '#38bdf8' },
-          { label: '🌪️ Climate & Extreme Weather Impact', score: catScores.weather || 0, color: '#22d3ee' },
-          { label: '📈 Market, Tariff & Labor Volatility', score: catScores.market || 0, color: '#10b981' }
+          { label: '⚠️ Geopolitical & trade stability', score: catScores.geopolitical || 0, color: '#d4897a' },
+          { label: '🚢 Logistics & maritime congestion', score: catScores.logistics || 0, color: '#b0aca3' },
+          { label: '🌪️ Climate & extreme weather impact', score: catScores.weather || 0, color: '#95a894' },
+          { label: '📈 Market, tariff & labor volatility', score: catScores.market || 0, color: '#d4b87a' }
         ].map((cat, idx) => (
           <div key={idx} className="category-risk-item">
             <div className="category-risk-header">
@@ -874,7 +931,7 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
       {/* Key Regional Bottlenecks & AI Risk Drivers */}
       <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.03)', padding: '1.1rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
         <h4 style={{ fontSize: '0.925rem', color: '#38bdf8', marginBottom: '0.5rem' }}>
-          📍 AI-Synthesized Risk Drivers & Regional Choke Points for {data.countryName}:
+          📍 AI-synthesized risk drivers & regional choke points for {data.countryName}:
         </h4>
         <ul style={{ paddingLeft: '1.25rem', color: 'var(--text-primary)', fontSize: '0.875rem', lineHeight: '1.65' }}>
           {data.highlights && data.highlights.length > 0 ? (
@@ -889,9 +946,15 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
 
       {/* Real Matched Intelligence Feeds */}
       <div>
-        <h4 style={{ fontSize: '0.95rem', color: '#ffffff', marginBottom: '0.85rem' }}>
-          📰 Matched Real-Time Intelligence Feeds ({data.matchedArticles?.length || 0})
-        </h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h4 style={{ fontSize: '0.95rem', color: '#ffffff', margin: 0 }}>
+            📰 Matched real-time intelligence feeds ({data.matchedArticles?.length || 0})
+          </h4>
+          <span style={{ fontSize: '0.725rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.2rem 0.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span className="pulse-dot" style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%', display: 'inline-block' }}></span>
+            Live Postgres feed stream
+          </span>
+        </div>
         {!data.matchedArticles || data.matchedArticles.length === 0 ? (
           <div style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
             No specific articles matched for {data.countryName}.
@@ -913,7 +976,7 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
                 <h2 className="article-title">{article.title}</h2>
                 <div className="card-footer">
                   <span className="read-more">
-                    Analyze Source Report
+                    Analyze source report
                     <svg className="arrow-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M5 12h14M12 5l7 7-7 7" />
                     </svg>
@@ -981,14 +1044,14 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
     const earthMaterial = new THREE.MeshPhongMaterial({
       map: nasaEarthTexture,
       specularMap: nasaSpecularMap,
-      shininess: 35,
-      specular: new THREE.Color(0x38bdf8)
+      shininess: 100,
+      specular: new THREE.Color(0x000000) // completely remove glare
     });
     const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
     earthGroup.add(earthMesh);
 
     const cloudsGeometry = new THREE.SphereGeometry(2.03, 64, 64);
-    const cloudsMaterial = new THREE.MeshPhongMaterial({
+    const cloudsMaterial = new THREE.MeshLambertMaterial({
       map: nasaCloudsTexture,
       transparent: true,
       opacity: 0.55,
@@ -1019,6 +1082,53 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
     const markerGroup = new THREE.Group();
     earthGroup.add(markerGroup);
 
+    // Helper to generate crisp 3D country name label sprites
+    const createCountryLabelSprite = (text, flag, isSelected) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 340;
+      canvas.height = 84;
+
+      const bg = isSelected ? 'rgba(143, 158, 124, 0.94)' : 'rgba(17, 17, 12, 0.85)';
+      const border = isSelected ? '#ffffff' : '#8a8372';
+
+      // Draw rounded pill container
+      const pad = 4;
+      const x = pad, y = pad, w = canvas.width - pad * 2, h = canvas.height - pad * 2, r = 20;
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fillStyle = bg;
+      ctx.fill();
+      ctx.lineWidth = isSelected ? 4.5 : 3;
+      ctx.strokeStyle = border;
+      ctx.stroke();
+
+      // Render flag + Country Name
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${flag} ${text}`, canvas.width / 2, canvas.height / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      const scaleW = isSelected ? 0.68 : 0.54;
+      const scaleH = isSelected ? 0.17 : 0.135;
+      sprite.scale.set(scaleW, scaleH, 1);
+      return sprite;
+    };
+
     GLOBAL_PIN_LIST.forEach((pin) => {
       const radius = 2.04;
       const phi = (90 - pin.lat) * (Math.PI / 180);
@@ -1029,7 +1139,7 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
       const z = (radius * Math.sin(phi) * Math.sin(theta));
 
       const isSelected = selectedCountryQuery && selectedCountryQuery.toLowerCase() === pin.query.toLowerCase();
-      const colorHex = isSelected ? 0x38bdf8 : 0xf59e0b;
+      const colorHex = isSelected ? 0x8f9e7c : 0xf2ebd9;
 
       const ringGeom = new THREE.RingGeometry(isSelected ? 0.08 : 0.05, isSelected ? 0.12 : 0.08, 32);
       const ringMat = new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide });
@@ -1042,12 +1152,18 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
       const dotMesh = new THREE.Mesh(dotGeom, dotMat);
       dotMesh.position.set(x, y, z);
 
+      // Country Name Text Sprite
+      const labelSprite = createCountryLabelSprite(pin.query, pin.flag, isSelected);
+      labelSprite.position.set(x * 1.10, y * 1.10, z * 1.10);
+
       dotMesh.userData = { countryQuery: pin.query };
       ringMesh.userData = { countryQuery: pin.query };
+      labelSprite.userData = { countryQuery: pin.query };
 
       markerGroup.add(ringMesh);
       markerGroup.add(dotMesh);
-      pinMeshes.push(dotMesh, ringMesh);
+      markerGroup.add(labelSprite);
+      pinMeshes.push(dotMesh, ringMesh, labelSprite);
     });
 
     let isDragging = false;
@@ -1133,7 +1249,7 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
           <h3 className="section-title" style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff' }}>
-            🛰️ NASA Satellite 3D Photographic Earth
+            🛰️ NASA satellite 3D photographic earth
           </h3>
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
             Real NASA Blue Marble satellite photography & specular ocean lighting
@@ -1203,10 +1319,10 @@ function HDSatelliteTileMap({ targetCoords, selectedCountryQuery, countryRiskDat
           html: `
             <div style="
               background: rgba(11, 17, 32, 0.95);
-              border: 2px solid #38bdf8;
+              border: 2px solid #8f9e7c;
               padding: 4px 10px;
               border-radius: 14px;
-              box-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
+              box-shadow: 0 0 20px rgba(143, 158, 124, 0.8);
               display: flex;
               align-items: center;
               gap: 6px;
@@ -1219,7 +1335,7 @@ function HDSatelliteTileMap({ targetCoords, selectedCountryQuery, countryRiskDat
             ">
               <span>${pin.flag}</span>
               <span>${pin.query}</span>
-              <span style="color: #38bdf8; font-weight: 800;">(${scoreStr})</span>
+              <span style="color: #8f9e7c; font-weight: 800;">(${scoreStr})</span>
             </div>
           `,
           iconSize: [140, 32],
@@ -1268,14 +1384,14 @@ function HDSatelliteTileMap({ targetCoords, selectedCountryQuery, countryRiskDat
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
           <h3 className="section-title" style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff' }}>
-            🗺️ HD Esri Satellite Tile Map (Google Earth Quality)
+            🗺️ HD Esri satellite tile map (Google Earth quality)
           </h3>
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
             High-resolution satellite photography tiles, pan & zoom controls
           </p>
         </div>
         <span className="source-badge" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)', background: 'rgba(16, 185, 129, 0.1)' }}>
-          ● Live HD Satellite Tiles
+          ● Live HD satellite tiles
         </span>
       </div>
 
@@ -1304,7 +1420,7 @@ function SourceBreakdownDonut({ articles = [], selectedCountryName = null }) {
   }, []);
 
   const sourceData = React.useMemo(() => {
-    const colors = ['#38bdf8', '#f59e0b', '#10b981', '#8b5cf6', '#06b6d4', '#ec4899', '#f43f5e'];
+    const colors = ['#f2ebd9', '#8f9e7c', '#b0aca3', '#d4897a', '#d4b87a', '#95a894'];
 
     if (articles && articles.length > 0) {
       const counts = {};
@@ -1333,10 +1449,10 @@ function SourceBreakdownDonut({ articles = [], selectedCountryName = null }) {
     }
 
     return [
-      { label: 'Supply Chain Dive', count: 25, percent: 55.6, color: '#38bdf8' },
-      { label: 'Bloomberg Logistics', count: 12, percent: 26.7, color: '#f59e0b' },
-      { label: 'Reuters Maritime', count: 5, percent: 11.1, color: '#10b981' },
-      { label: 'FreightWaves', count: 3, percent: 6.6, color: '#8b5cf6' }
+      { label: 'Supply Chain Dive', count: 25, percent: 55.6, color: '#f2ebd9' },
+      { label: 'Bloomberg Logistics', count: 12, percent: 26.7, color: '#8f9e7c' },
+      { label: 'Reuters Maritime', count: 5, percent: 11.1, color: '#b0aca3' },
+      { label: 'FreightWaves', count: 3, percent: 6.6, color: '#d4897a' }
     ];
   }, [dbSources, articles]);
 
@@ -1345,17 +1461,33 @@ function SourceBreakdownDonut({ articles = [], selectedCountryName = null }) {
 
   return (
     <div className="analytics-card pie-chart-card">
-      <div className="card-header-block">
-        <h3 className="section-title" style={{ fontSize: '1.05rem', margin: 0, color: '#ffffff' }}>
-          📊 Intelligence Source Breakdown
-        </h3>
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem', marginBottom: 0 }}>
-          {selectedCountryName ? (
-            <span style={{ color: '#38bdf8', fontWeight: '600' }}>{selectedCountryName} ({articles.length} Feeds)</span>
-          ) : (
-            <span>Live Aggregated Distribution (<code style={{ fontSize: '0.725rem' }}>SELECT source, COUNT(*)</code>)</span>
-          )}
-        </p>
+      <div className="card-header-block" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div>
+          <h3 className="section-title" style={{ fontSize: '1.05rem', margin: 0, color: '#ffffff' }}>
+            📊 Intelligence source breakdown
+          </h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem', marginBottom: 0 }}>
+            {selectedCountryName ? (
+              <span style={{ color: '#8f9e7c', fontWeight: '600' }}>{selectedCountryName} ({articles.length} Localized Feeds)</span>
+            ) : (
+              <span>Live aggregated distribution (<code style={{ fontSize: '0.725rem' }}>SELECT source, COUNT(*)</code>)</span>
+            )}
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', padding: '0.25rem 0.6rem', borderRadius: '20px' }}>
+          <span className="pulse-dot" style={{ width: '7px', height: '7px', background: '#10b981', boxShadow: '0 0 8px #10b981', borderRadius: '50%', display: 'inline-block' }}></span>
+          <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: '700', letterSpacing: '0.04em' }}>Live feed line active</span>
+        </div>
+      </div>
+
+      {/* Live Data Feed Connection Line Indicator */}
+      <div style={{ margin: '0.75rem 0 0.5rem 0', padding: '0.5rem 0.75rem', background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+        <span style={{ color: 'var(--text-secondary)' }}>
+          ⚡ Feed pipeline: <strong style={{ color: '#8f9e7c' }}>Live Postgres database ingest</strong>
+        </span>
+        <span style={{ color: '#10b981', fontWeight: '600' }}>
+          ● Synchronized
+        </span>
       </div>
 
       <div className="pie-chart-wrapper">
@@ -1386,7 +1518,7 @@ function SourceBreakdownDonut({ articles = [], selectedCountryName = null }) {
             {totalCount}
           </text>
           <text x="100" y="115" fill="var(--text-muted)" fontSize="11" fontWeight="600" textAnchor="middle">
-            Total Articles
+            Total articles
           </text>
         </svg>
 

@@ -1,0 +1,33 @@
+=== Empirical Cosine Similarity Scores (all-MiniLM-L6-v2) ===
+
+This data was generated to calibrate the AI risk summary relevance guardrails.
+The threshold values were set based on this distribution to prevent irrelevant
+queries (like "best pizza toppings") from generating confident LLM hallucinations.
+
+=== Relevant Supply Chain Queries ===
+Query: 'semiconductor shortage impacts' -> Top Score: 0.3831
+Query: 'Suez canal shipping delays' -> Top Score: 0.5332
+Query: 'Red sea maritime conflict' -> Top Score: 0.5068
+Query: 'auto manufacturing supply chain' -> Top Score: 0.5714
+Query: 'Taiwan chip factory disruption' -> Top Score: 0.4079
+Query: 'Port of Los Angeles backlog' -> Top Score: 0.5298
+Query: 'logistics and freight tariffs' -> Top Score: 0.7100
+Query: 'global container shipping prices' -> Top Score: 0.6613
+Query: 'hurricane impact on agriculture supply' -> Top Score: 0.3884
+Query: 'dockworker strike affecting transit' -> Top Score: 0.4064
+
+(Distribution: 0.38 - 0.71)
+
+=== Irrelevant Queries (Noise) ===
+Query: 'best pizza toppings' -> Top Score: 0.2483
+Query: 'how to bake sourdough bread' -> Top Score: 0.1462
+Query: 'cute puppy training tips' -> Top Score: 0.1636
+Query: 'top 10 romantic comedies' -> Top Score: 0.1486
+Query: 'how to learn to play the guitar' -> Top Score: 0.1088
+Query: 'symptoms of a common cold' -> Top Score: 0.2253
+Query: 'yoga poses for beginners' -> Top Score: 0.1730
+Query: 'best gaming laptops 2024' -> Top Score: 0.2399
+Query: 'history of the roman empire' -> Top Score: 0.2310
+Query: 'how to tie a tie' -> Top Score: 0.2143
+
+(Distribution: 0.10 - 0.25)

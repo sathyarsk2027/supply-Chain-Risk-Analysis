@@ -105,3 +105,4 @@ def embed_text(request: EmbedRequest):
     embedding = embedding_model.encode(request.text).tolist()
     return EmbedResponse(embedding=embedding)
 
+

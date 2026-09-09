@@ -14,8 +14,11 @@ public class NlpClient {
     private static final Logger logger = LoggerFactory.getLogger(NlpClient.class);
     private final RestTemplate restTemplate;
 
-    private String nlpServiceUrl = "https://supply-chain-nlp.onrender.com/extract";
-    private String nlpEmbedUrl = "https://supply-chain-nlp.onrender.com/embed";
+    @Value("${nlp.service.extract.url:http://localhost:8000/extract}")
+    private String nlpServiceUrl;
+
+    @Value("${nlp.service.embed.url:http://localhost:8000/embed}")
+    private String nlpEmbedUrl;
 
     public NlpClient() {
         this.restTemplate = new RestTemplate();

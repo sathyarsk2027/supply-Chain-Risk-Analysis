@@ -40,6 +40,10 @@ public class NewsArticleController {
         return newsArticleRepository.findSourceCounts();
     }
 
+    public static final double TOP_MATCH_RELEVANCE_THRESHOLD = 0.35;
+    public static final double BORDERLINE_RELEVANCE_THRESHOLD = 0.50;
+    public static final double ITEM_MATCH_RELEVANCE_THRESHOLD = 0.30;
+
     @PostMapping("/query")
     public ResponseEntity<?> searchArticles(@RequestBody QueryRequest request) {
         if (request == null || request.getQuery() == null || request.getQuery().trim().isEmpty()) {
@@ -58,9 +62,11 @@ public class NewsArticleController {
                 newsArticleRepository.findSimilarArticles(vectorString);
         logger.info("Semantic search results size: {}", searchResults.size());
 
-        // 3) Return the query, the top 5 matched articles and their similarity scores as JSON.
-        List<QueryResponse.Match> matches = searchResults.stream().map(result -> {
-            double score = 1.0 - (result.getCosineDistance() != null ? result.getCosineDistance() : 0.0);
+        // 3) Calculate raw cosine similarity score for each result (1.0 - cosineDistance)
+        List<QueryResponse.Match> allMatches = searchResults.stream().map(result -> {
+            double dist = result.getCosineDistance() != null ? result.getCosineDistance() : 1.0;
+            double score = Math.max(0.0, Math.min(1.0, 1.0 - dist));
+            score = Math.round(score * 10000.0) / 10000.0;
             return new QueryResponse.Match(
                     result.getTitle(),
                     result.getUrl(),
@@ -70,39 +76,65 @@ public class NewsArticleController {
             );
         }).collect(Collectors.toList());
 
-        double minScore = matches.stream().mapToDouble(QueryResponse.Match::getScore).min().orElse(0.0);
-        double maxScore = matches.stream().mapToDouble(QueryResponse.Match::getScore).max().orElse(1.0);
-        double range = maxScore - minScore;
+        // 4) Guardrail check: Verify if the top match meets the minimum relevance threshold
+        double topScore = allMatches.stream().mapToDouble(QueryResponse.Match::getScore).max().orElse(0.0);
 
-        List<QueryResponse.Match> displayMatches = matches.stream().map(m -> {
-            double normalized = range > 0.0001
-                ? 0.40 + ((m.getScore() - minScore) / range) * 0.55
-                : 0.70; // fallback if all scores are identical
-            return new QueryResponse.Match(
-                m.getTitle(), m.getUrl(), m.getSource(), m.getRiskCategory(), normalized
-            );
-        }).collect(Collectors.toList());
+        if (allMatches.isEmpty() || topScore < TOP_MATCH_RELEVANCE_THRESHOLD) {
+            logger.info("Query '{}' rejected by relevance guardrail (top score: {})", request.getQuery(), topScore);
+            QueryResponse guardrailResponse = new QueryResponse(request.getQuery(), java.util.Collections.emptyList());
+            guardrailResponse.setAiSummary(new QueryResponse.AiSummary(
+                    "This query doesn't appear related to supply chain disruptions in our current dataset.",
+                    0
+            ));
+            return ResponseEntity.ok(guardrailResponse);
+        }
+
+        // 5) Filter matches to retain only items meeting the item relevance threshold (limit 10)
+        List<QueryResponse.Match> displayMatches = allMatches.stream()
+                .filter(m -> m.getScore() >= ITEM_MATCH_RELEVANCE_THRESHOLD)
+                .limit(10)
+                .collect(Collectors.toList());
+
+        // Guardrail check 2: Minimum context items
+        if (displayMatches.size() < 3) {
+            logger.info("Query '{}' downgraded to hard cutoff due to insufficient context items ({} items)", request.getQuery(), displayMatches.size());
+            QueryResponse guardrailResponse = new QueryResponse(request.getQuery(), displayMatches);
+            guardrailResponse.setAiSummary(new QueryResponse.AiSummary(
+                    "This query doesn't appear related to supply chain disruptions in our current dataset.",
+                    0
+            ));
+            return ResponseEntity.ok(guardrailResponse);
+        }
 
         QueryResponse queryResponse = new QueryResponse(request.getQuery(), displayMatches);
 
-        // 4) Build context string (truncating rawContent to ~300 characters) and call Groq API
+        // 6) Build context string from relevant matches only and call Groq API
         try {
             StringBuilder contextBuilder = new StringBuilder();
-            for (int i = 0; i < searchResults.size(); i++) {
-                NewsArticleRepository.NewsArticleSearchResult result = searchResults.get(i);
-                String title = result.getTitle() != null ? result.getTitle() : "";
-                String riskCategory = result.getRiskCategory() != null ? result.getRiskCategory() : "Uncategorized";
-                String rawContent = result.getRawContent() != null ? result.getRawContent() : "";
-                if (rawContent.length() > 300) {
-                    rawContent = rawContent.substring(0, 300) + "...";
+            int count = 0;
+            for (NewsArticleRepository.NewsArticleSearchResult result : searchResults) {
+                double dist = result.getCosineDistance() != null ? result.getCosineDistance() : 1.0;
+                double score = Math.max(0.0, Math.min(1.0, 1.0 - dist));
+                if (score >= ITEM_MATCH_RELEVANCE_THRESHOLD) {
+                    count++;
+                    String title = result.getTitle() != null ? result.getTitle() : "";
+                    String riskCategory = result.getRiskCategory() != null ? result.getRiskCategory() : "Uncategorized";
+                    String rawContent = result.getRawContent() != null ? result.getRawContent() : "";
+                    if (rawContent.length() > 300) {
+                        rawContent = rawContent.substring(0, 300) + "...";
+                    }
+                    contextBuilder.append(String.format("Article %d: %s | Risk Category: %s\nContent: %s\n\n", count, title, riskCategory, rawContent));
                 }
-                contextBuilder.append(String.format("Article %d: %s | Risk Category: %s\nContent: %s\n\n", i + 1, title, riskCategory, rawContent));
             }
             String context = contextBuilder.toString();
 
             GroqClient.GroqResponse aiResponse = groqClient.generateSummary(request.getQuery(), context);
             if (aiResponse != null) {
-                queryResponse.setAiSummary(new QueryResponse.AiSummary(aiResponse.getSummary(), aiResponse.getConfidenceScore()));
+                String finalSummary = aiResponse.getSummary();
+                if (topScore < BORDERLINE_RELEVANCE_THRESHOLD) {
+                    finalSummary = "⚠️ **Low confidence — limited matching data.**\n\n" + finalSummary;
+                }
+                queryResponse.setAiSummary(new QueryResponse.AiSummary(finalSummary, aiResponse.getConfidenceScore()));
             }
         } catch (Exception e) {
             logger.error("Failed to generate AI summary for query: {}", request.getQuery(), e);
