@@ -1005,7 +1005,7 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
 // --------------------------------------------------------------------------
 // Real NASA Satellite Photography 3D Earth Globe Component
 // --------------------------------------------------------------------------
-function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSelectCountry }) {
+function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, countryRiskData, onSelectCountry }) {
   const mountRef = useRef(null);
   const earthGroupRef = useRef(null);
   const targetRotationRef = useRef({ x: 0, y: 0 });
@@ -1094,10 +1094,10 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
     earthGroup.add(markerGroup);
 
     // Helper to generate crisp 3D country name label sprites
-    const createCountryLabelSprite = (text, flag, isSelected) => {
+    const createCountryLabelSprite = (text, flag, isSelected, scoreStr) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = 340;
+      canvas.width = 380;
       canvas.height = 84;
 
       const bg = isSelected ? 'rgba(143, 158, 124, 0.94)' : 'rgba(17, 17, 12, 0.85)';
@@ -1123,18 +1123,32 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
       ctx.strokeStyle = border;
       ctx.stroke();
 
-      // Render flag + Country Name
-      ctx.fillStyle = '#ffffff';
+      // Render flag + Country Name + Score
       ctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
-      ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${flag} ${text}`, canvas.width / 2, canvas.height / 2);
+      
+      const mainText = `${flag} ${text} `;
+      const scoreText = `(${scoreStr})`;
+      
+      const mainWidth = ctx.measureText(mainText).width;
+      const scoreWidth = ctx.measureText(scoreText).width;
+      const totalWidth = mainWidth + scoreWidth;
+      
+      const startX = (canvas.width - totalWidth) / 2;
+      const textY = canvas.height / 2;
+      
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(mainText, startX, textY);
+      
+      ctx.fillStyle = isSelected ? '#ffffff' : '#8a8372';
+      ctx.fillText(scoreText, startX + mainWidth, textY);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.minFilter = THREE.LinearFilter;
       const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
       const sprite = new THREE.Sprite(spriteMaterial);
-      const scaleW = isSelected ? 0.68 : 0.54;
+      const scaleW = isSelected ? 0.76 : 0.61;
       const scaleH = isSelected ? 0.17 : 0.135;
       sprite.scale.set(scaleW, scaleH, 1);
       return sprite;
@@ -1152,6 +1166,15 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
       const isSelected = selectedCountryQuery && selectedCountryQuery.toLowerCase() === pin.query.toLowerCase();
       const colorHex = isSelected ? 0x8f9e7c : 0xf2ebd9;
 
+      let scoreStr = `${pin.baseScore}%`;
+      if (isSelected && countryRiskData) {
+        if (countryRiskData.hasData && countryRiskData.baseScore !== null) {
+          scoreStr = `${countryRiskData.baseScore}%`;
+        } else if (!countryRiskData.hasData) {
+          scoreStr = 'N/A';
+        }
+      }
+
       const ringGeom = new THREE.RingGeometry(isSelected ? 0.08 : 0.05, isSelected ? 0.12 : 0.08, 32);
       const ringMat = new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide });
       const ringMesh = new THREE.Mesh(ringGeom, ringMat);
@@ -1164,7 +1187,7 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
       dotMesh.position.set(x, y, z);
 
       // Country Name Text Sprite
-      const labelSprite = createCountryLabelSprite(pin.query, pin.flag, isSelected);
+      const labelSprite = createCountryLabelSprite(pin.query, pin.flag, isSelected, scoreStr);
       labelSprite.position.set(x * 1.10, y * 1.10, z * 1.10);
 
       dotMesh.userData = { countryQuery: pin.query };
@@ -1253,7 +1276,7 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, onSe
       }
       renderer.dispose();
     };
-  }, [selectedCountryQuery, onSelectCountry]);
+  }, [selectedCountryQuery, countryRiskData, onSelectCountry]);
 
   return (
     <div className="analytics-card globe-card">
