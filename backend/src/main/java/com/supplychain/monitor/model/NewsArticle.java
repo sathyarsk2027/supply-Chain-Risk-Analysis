@@ -20,11 +20,13 @@ public class NewsArticle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(length = 1024)
     private String title;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 2048)
     private String url;
 
+    @Column(length = 512)
     private String source;
 
     private Instant publishedAt;
