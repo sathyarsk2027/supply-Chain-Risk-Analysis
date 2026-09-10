@@ -61,22 +61,7 @@ public class NewsArticleController {
 
         // FALLBACK: If NLP embedding failed, use keyword search and return results directly
         if (embedding == null) {
-            List<NewsArticle> keywordResults = newsArticleRepository.findByKeyword(request.getQuery());
-            List<QueryResponse.Match> kwMatches = keywordResults.stream().map(article ->
-                new QueryResponse.Match(
-                    article.getTitle(),
-                    article.getUrl(),
-                    article.getSource(),
-                    article.getRiskCategory(),
-                    0.6
-                )
-            ).collect(Collectors.toList());
-            QueryResponse kwResponse = new QueryResponse(request.getQuery(), kwMatches);
-            if (kwMatches.isEmpty()) {
-                kwResponse.setAiSummary(new QueryResponse.AiSummary(
-                    "No relevant supply chain articles found for this query. Try different keywords.", 0));
-            }
-            return ResponseEntity.ok(kwResponse);
+            return keywordFallbackResponse(request.getQuery());
         }
 
 
@@ -104,13 +89,8 @@ public class NewsArticleController {
         double topScore = allMatches.stream().mapToDouble(QueryResponse.Match::getScore).max().orElse(0.0);
 
         if (allMatches.isEmpty() || topScore < TOP_MATCH_RELEVANCE_THRESHOLD) {
-            logger.info("Query '{}' rejected by relevance guardrail (top score: {})", request.getQuery(), topScore);
-            QueryResponse guardrailResponse = new QueryResponse(request.getQuery(), java.util.Collections.emptyList());
-            guardrailResponse.setAiSummary(new QueryResponse.AiSummary(
-                    "This query doesn't appear related to supply chain disruptions in our current dataset.",
-                    0
-            ));
-            return ResponseEntity.ok(guardrailResponse);
+            logger.info("Semantic search below threshold (top score: {}), trying keyword fallback", topScore);
+            return keywordFallbackResponse(request.getQuery());
         }
 
         // 5) Filter matches to retain only items meeting the item relevance threshold (limit 10)
@@ -165,6 +145,36 @@ public class NewsArticleController {
         }
 
         return ResponseEntity.ok(queryResponse);
+    }
+
+    private ResponseEntity<?> keywordFallbackResponse(String query) {
+        // Split query into individual words and search for each, then de-duplicate
+        String[] words = query.trim().toLowerCase().split("\\s+");
+        java.util.Map<String, NewsArticle> seen = new java.util.LinkedHashMap<>();
+        for (String word : words) {
+            if (word.length() < 3) continue; // skip tiny words like "is", "to"
+            List<NewsArticle> results = newsArticleRepository.findByKeyword(word);
+            for (NewsArticle a : results) {
+                if (a.getUrl() != null) seen.putIfAbsent(a.getUrl(), a);
+            }
+        }
+        List<QueryResponse.Match> kwMatches = seen.values().stream()
+            .limit(10)
+            .map(article -> new QueryResponse.Match(
+                article.getTitle(),
+                article.getUrl(),
+                article.getSource(),
+                article.getRiskCategory(),
+                0.6
+            ))
+            .collect(Collectors.toList());
+
+        QueryResponse kwResponse = new QueryResponse(query, kwMatches);
+        if (kwMatches.isEmpty()) {
+            kwResponse.setAiSummary(new QueryResponse.AiSummary(
+                "No articles found for this query. The database may still be building up article embeddings. Try again in a few minutes.", 0));
+        }
+        return ResponseEntity.ok(kwResponse);
     }
 
     public static class QueryRequest {
