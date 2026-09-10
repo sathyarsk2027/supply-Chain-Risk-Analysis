@@ -63,6 +63,8 @@ public class NewsApiClient {
             }
 
             int savedCount = 0;
+            int enrichmentCount = 0;
+            final int MAX_ENRICHMENTS_PER_CYCLE = 5;
             for (NewsApiArticle apiArticle : response.articles) {
                 if (apiArticle.url == null || apiArticle.url.isEmpty()) {
                     continue;
@@ -92,7 +94,8 @@ public class NewsApiClient {
                     NewsArticle savedArticle = newsArticleRepository.save(article);
                     savedCount++;
 
-                    if (savedArticle != null) {
+                    if (savedArticle != null && enrichmentCount < MAX_ENRICHMENTS_PER_CYCLE) {
+                        enrichmentCount++;
                         // Extract and enrich using NLP service
                         String contentToAnalyze = savedArticle.getRawContent();
                         if (contentToAnalyze == null || contentToAnalyze.isEmpty()) {
@@ -142,7 +145,7 @@ public class NewsApiClient {
                             }
                         }
 
-                        // Add delay to prevent rate limiting
+                        // Delay between NLP calls to avoid rate limiting
                         try {
                             Thread.sleep(1000);
                         } catch (InterruptedException ie) {

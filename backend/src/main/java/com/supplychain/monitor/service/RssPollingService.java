@@ -95,6 +95,8 @@ public class RssPollingService {
         logger.info("Found {} entries in RSS feed for '{}'", entries.size(), sourceName);
 
         int savedCount = 0;
+        int enrichmentCount = 0; // Cap NLP calls to avoid 429 rate limiting on Render free tier
+        final int MAX_ENRICHMENTS_PER_CYCLE = 5;
         for (SyndEntry entry : entries) {
             String url = entry.getLink();
             if (url == null || url.trim().isEmpty()) {
@@ -133,7 +135,8 @@ public class RssPollingService {
                 NewsArticle savedArticle = newsArticleRepository.save(article);
                 savedCount++;
 
-                if (savedArticle != null) {
+                if (savedArticle != null && enrichmentCount < MAX_ENRICHMENTS_PER_CYCLE) {
+                    enrichmentCount++;
                     // Extract and enrich using NLP service
                     String contentToAnalyze = savedArticle.getRawContent();
                     if (contentToAnalyze == null || contentToAnalyze.trim().isEmpty()) {
@@ -182,13 +185,13 @@ public class RssPollingService {
                             logger.error("Failed to save enriched RSS article ID {} to database: {}", savedArticle.getId(), e.getMessage());
                         }
                     }
-                }
-                
-                // Add delay to prevent rate limiting
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
+
+                    // Delay between NLP calls to avoid rate limiting
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
             }
         }
