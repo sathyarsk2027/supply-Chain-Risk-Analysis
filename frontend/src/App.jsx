@@ -1028,7 +1028,7 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, coun
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.z = 5.2;
+    camera.position.z = 5.4; // Slightly zoomed out, but larger than 6.5
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
@@ -1060,6 +1060,18 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, coun
     });
     const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
     earthGroup.add(earthMesh);
+
+    // Ocean tint overlay using specular map as alpha mask (oceans are white, land is black)
+    const oceanGeometry = new THREE.SphereGeometry(2.001, 64, 64);
+    const oceanMaterial = new THREE.MeshBasicMaterial({
+      color: 0x0ea5e9, // light blue
+      transparent: true,
+      opacity: 0.45,
+      alphaMap: nasaSpecularMap,
+      depthWrite: false
+    });
+    const oceanMesh = new THREE.Mesh(oceanGeometry, oceanMaterial);
+    earthGroup.add(oceanMesh);
 
     const cloudsGeometry = new THREE.SphereGeometry(2.03, 64, 64);
     const cloudsMaterial = new THREE.MeshLambertMaterial({
@@ -1150,8 +1162,9 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, coun
       texture.minFilter = THREE.LinearFilter;
       const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
       const sprite = new THREE.Sprite(spriteMaterial);
-      const scaleW = isSelected ? 0.76 : 0.61;
-      const scaleH = isSelected ? 0.17 : 0.135;
+      // Increased label size by ~25%
+      const scaleW = isSelected ? 0.95 : 0.76;
+      const scaleH = isSelected ? 0.21 : 0.17;
       sprite.scale.set(scaleW, scaleH, 1);
       return sprite;
     };
