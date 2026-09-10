@@ -64,12 +64,11 @@ public class NewsArticleController {
             List<NewsArticle> keywordResults = newsArticleRepository.findByKeyword(request.getQuery());
             List<QueryResponse.Match> kwMatches = keywordResults.stream().map(article ->
                 new QueryResponse.Match(
-                    article.getId(),
                     article.getTitle(),
                     article.getUrl(),
                     article.getSource(),
                     article.getRiskCategory(),
-                    0.6 // reasonable default score for keyword match
+                    0.6
                 )
             ).collect(Collectors.toList());
             QueryResponse kwResponse = new QueryResponse(request.getQuery(), kwMatches);
