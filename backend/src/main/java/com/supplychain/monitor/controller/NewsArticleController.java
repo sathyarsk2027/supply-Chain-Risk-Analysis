@@ -173,6 +173,32 @@ public class NewsArticleController {
         if (kwMatches.isEmpty()) {
             kwResponse.setAiSummary(new QueryResponse.AiSummary(
                 "No articles found for this query. The database may still be building up article embeddings. Try again in a few minutes.", 0));
+        } else {
+            // Generate AI summary for keyword matches
+            try {
+                StringBuilder contextBuilder = new StringBuilder();
+                int count = 0;
+                for (NewsArticle article : seen.values()) {
+                    if (count >= 10) break;
+                    count++;
+                    String title = article.getTitle() != null ? article.getTitle() : "";
+                    String riskCategory = article.getRiskCategory() != null ? article.getRiskCategory() : "Uncategorized";
+                    String rawContent = article.getRawContent() != null ? article.getRawContent() : "";
+                    if (rawContent.length() > 300) {
+                        rawContent = rawContent.substring(0, 300) + "...";
+                    }
+                    contextBuilder.append(String.format("Article %d: %s | Risk Category: %s\nContent: %s\n\n", count, title, riskCategory, rawContent));
+                }
+                String context = contextBuilder.toString();
+                GroqClient.GroqResponse aiResponse = groqClient.generateSummary(query, context);
+                if (aiResponse != null) {
+                    kwResponse.setAiSummary(new QueryResponse.AiSummary(
+                        "⚠️ **Keyword fallback search.**\n\n" + aiResponse.getSummary(), aiResponse.getConfidenceScore()
+                    ));
+                }
+            } catch (Exception e) {
+                logger.error("Failed to generate AI summary for keyword fallback query: {}", query, e);
+            }
         }
         return ResponseEntity.ok(kwResponse);
     }
