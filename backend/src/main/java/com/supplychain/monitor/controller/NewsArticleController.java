@@ -51,15 +51,35 @@ public class NewsArticleController {
         }
 
         // 1) Call the NLP service's POST /embed endpoint to get an embedding vector for the query text.
-        float[] embedding;
+        //    If NLP service is unavailable (e.g. 429 rate limit), fall back to keyword search.
+        float[] embedding = null;
         try {
             embedding = nlpClient.getEmbedding(request.getQuery());
-            if (embedding == null) {
-                return ResponseEntity.internalServerError().body("Failed to generate embedding (Returned null)");
-            }
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(e.getMessage());
+            logger.warn("NLP service unavailable, falling back to keyword search. Reason: {}", e.getMessage());
         }
+
+        // FALLBACK: If NLP embedding failed, use keyword search and return results directly
+        if (embedding == null) {
+            List<NewsArticle> keywordResults = newsArticleRepository.findByKeyword(request.getQuery());
+            List<QueryResponse.Match> kwMatches = keywordResults.stream().map(article ->
+                new QueryResponse.Match(
+                    article.getId(),
+                    article.getTitle(),
+                    article.getUrl(),
+                    article.getSource(),
+                    article.getRiskCategory(),
+                    0.6 // reasonable default score for keyword match
+                )
+            ).collect(Collectors.toList());
+            QueryResponse kwResponse = new QueryResponse(request.getQuery(), kwMatches);
+            if (kwMatches.isEmpty()) {
+                kwResponse.setAiSummary(new QueryResponse.AiSummary(
+                    "No relevant supply chain articles found for this query. Try different keywords.", 0));
+            }
+            return ResponseEntity.ok(kwResponse);
+        }
+
 
         // 2) Run a native SQL query using pgvector's cosine distance operator (embedding <=> ?)
         String vectorString = java.util.Arrays.toString(embedding);
