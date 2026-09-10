@@ -95,8 +95,6 @@ public class RssPollingService {
         logger.info("Found {} entries in RSS feed for '{}'", entries.size(), sourceName);
 
         int savedCount = 0;
-        int enrichmentCount = 0; // Cap NLP calls to avoid 429 rate limiting on Render free tier
-        final int MAX_ENRICHMENTS_PER_CYCLE = 5;
         for (SyndEntry entry : entries) {
             String url = entry.getLink();
             if (url == null || url.trim().isEmpty()) {
@@ -106,7 +104,7 @@ public class RssPollingService {
 
             if (!newsArticleRepository.existsByUrl(url)) {
                 String title = entry.getTitle();
-                
+
                 Instant publishedAt = Instant.now();
                 Date pubDate = entry.getPublishedDate();
                 if (pubDate == null) {
@@ -132,67 +130,9 @@ public class RssPollingService {
                         Instant.now()
                 );
 
-                NewsArticle savedArticle = newsArticleRepository.save(article);
+                // Save article without NLP enrichment — NLP service is reserved for search queries
+                newsArticleRepository.save(article);
                 savedCount++;
-
-                if (savedArticle != null && enrichmentCount < MAX_ENRICHMENTS_PER_CYCLE) {
-                    enrichmentCount++;
-                    // Extract and enrich using NLP service
-                    String contentToAnalyze = savedArticle.getRawContent();
-                    if (contentToAnalyze == null || contentToAnalyze.trim().isEmpty()) {
-                        contentToAnalyze = savedArticle.getTitle();
-                    }
-
-                    boolean needsUpdate = false;
-
-                    if (contentToAnalyze != null && !contentToAnalyze.trim().isEmpty()) {
-                        try {
-                            NlpClient.NlpResponse nlpResponse = nlpClient.extractEntities(contentToAnalyze);
-                            if (nlpResponse != null) {
-                                savedArticle.setRiskCategory(nlpResponse.category);
-                                NewsApiClient.EntityData entityData = new NewsApiClient.EntityData(
-                                        nlpResponse.companies,
-                                        nlpResponse.locations,
-                                        nlpResponse.dates
-                                );
-                                savedArticle.setEntities(objectMapper.writeValueAsString(entityData));
-                                needsUpdate = true;
-                                logger.debug("Successfully enriched RSS article ID {} with category: {}", savedArticle.getId(), nlpResponse.category);
-                            }
-                        } catch (Exception e) {
-                            logger.warn("Failed to enrich RSS article ID {}: {}", savedArticle.getId(), e.getMessage());
-                        }
-                    }
-
-                    // Generate vector embedding using article title
-                    if (savedArticle.getTitle() != null && !savedArticle.getTitle().trim().isEmpty()) {
-                        try {
-                            float[] embedding = nlpClient.getEmbedding(savedArticle.getTitle());
-                            if (embedding != null) {
-                                savedArticle.setEmbedding(new PGvector(embedding));
-                                needsUpdate = true;
-                                logger.debug("Successfully generated embedding for RSS article ID {}", savedArticle.getId());
-                            }
-                        } catch (Exception e) {
-                            logger.warn("Failed to generate embedding for RSS article ID {}: {}", savedArticle.getId(), e.getMessage());
-                        }
-                    }
-
-                    if (needsUpdate) {
-                        try {
-                            newsArticleRepository.save(savedArticle);
-                        } catch (Exception e) {
-                            logger.error("Failed to save enriched RSS article ID {} to database: {}", savedArticle.getId(), e.getMessage());
-                        }
-                    }
-
-                    // Delay between NLP calls to avoid rate limiting
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
             }
         }
 
