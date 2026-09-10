@@ -1127,11 +1127,11 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, coun
       ctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
       ctx.textBaseline = 'middle';
       
-      const mainText = `${flag} ${text} `;
-      const scoreText = `(${scoreStr})`;
+      const mainText = `${flag} ${text}`;
+      const scoreText = scoreStr ? ` (${scoreStr})` : '';
       
       const mainWidth = ctx.measureText(mainText).width;
-      const scoreWidth = ctx.measureText(scoreText).width;
+      const scoreWidth = scoreText ? ctx.measureText(scoreText).width : 0;
       const totalWidth = mainWidth + scoreWidth;
       
       const startX = (canvas.width - totalWidth) / 2;
@@ -1141,8 +1141,10 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, coun
       ctx.fillStyle = '#ffffff';
       ctx.fillText(mainText, startX, textY);
       
-      ctx.fillStyle = isSelected ? '#ffffff' : '#8a8372';
-      ctx.fillText(scoreText, startX + mainWidth, textY);
+      if (scoreText) {
+        ctx.fillStyle = isSelected ? '#ffffff' : '#8a8372';
+        ctx.fillText(scoreText, startX + mainWidth, textY);
+      }
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.minFilter = THREE.LinearFilter;
@@ -1166,7 +1168,7 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, coun
       const isSelected = selectedCountryQuery && selectedCountryQuery.toLowerCase() === pin.query.toLowerCase();
       const colorHex = isSelected ? 0x8f9e7c : 0xf2ebd9;
 
-      let scoreStr = `${pin.baseScore}%`;
+      let scoreStr = '';
       if (isSelected && countryRiskData) {
         if (countryRiskData.hasData && countryRiskData.baseScore !== null) {
           scoreStr = `${countryRiskData.baseScore}%`;
