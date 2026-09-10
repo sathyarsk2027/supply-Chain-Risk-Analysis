@@ -1012,7 +1012,7 @@ function RealNASASatellite3DGlobeCard({ targetCoords, selectedCountryQuery, coun
 
   useEffect(() => {
     if (targetCoords) {
-      const targetY = -((targetCoords.lng * Math.PI) / 180);
+      const targetY = -((targetCoords.lng + 90) * Math.PI) / 180;
       const targetX = (targetCoords.lat * Math.PI) / 180 * 0.4;
       targetRotationRef.current = { x: targetX, y: targetY };
     }
