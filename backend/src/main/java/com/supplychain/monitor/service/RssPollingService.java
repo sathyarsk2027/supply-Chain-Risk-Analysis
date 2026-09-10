@@ -183,6 +183,13 @@ public class RssPollingService {
                         }
                     }
                 }
+                
+                // Add delay to prevent rate limiting
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
 

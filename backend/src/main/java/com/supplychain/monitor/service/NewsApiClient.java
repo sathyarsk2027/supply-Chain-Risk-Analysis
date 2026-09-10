@@ -141,6 +141,13 @@ public class NewsApiClient {
                                 logger.error("Failed to save enriched article ID {} to database: {}", savedArticle.getId(), e.getMessage());
                             }
                         }
+
+                        // Add delay to prevent rate limiting
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                        }
                     }
                 }
             }
