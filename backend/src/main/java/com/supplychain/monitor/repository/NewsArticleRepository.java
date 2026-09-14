@@ -10,6 +10,7 @@ import java.util.List;
 @Repository
 public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> {
     boolean existsByUrl(String url);
+    List<NewsArticle> findAllByOrderByPublishedAtDesc();
 
     @Query(value = "SELECT id, title, url, source, risk_category AS riskCategory, raw_content AS rawContent, " +
                    "(embedding <=> CAST(:embedding AS vector)) AS cosineDistance " +

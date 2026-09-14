@@ -76,7 +76,7 @@ public class CountryRiskController {
 
     @GetMapping("/active")
     public ResponseEntity<List<Map<String, Object>>> getActiveCountries() {
-        List<NewsArticle> allArticles = newsArticleRepository.findAll();
+        List<NewsArticle> allArticles = newsArticleRepository.findAllByOrderByPublishedAtDesc();
         List<Map<String, Object>> activePins = new ArrayList<>();
         
         for (CountryPin pin : ALL_COUNTRIES) {
@@ -144,7 +144,7 @@ public class CountryRiskController {
 
         // If still under 4 articles, supplement with overall database feeds to guarantee rich feeds
         if (matchedArticles.size() < 4) {
-            List<NewsArticle> allArticles = newsArticleRepository.findAll();
+            List<NewsArticle> allArticles = newsArticleRepository.findAllByOrderByPublishedAtDesc();
             if (allArticles != null && !allArticles.isEmpty()) {
                 List<NewsArticle> sortedAll = allArticles.stream()
                         .sorted(Comparator.comparing(NewsArticle::getPublishedAt, Comparator.nullsLast(Comparator.reverseOrder())))

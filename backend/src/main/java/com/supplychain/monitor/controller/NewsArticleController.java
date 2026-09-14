@@ -32,7 +32,7 @@ public class NewsArticleController {
 
     @GetMapping("/articles")
     public List<NewsArticle> getAllArticles() {
-        return newsArticleRepository.findAll();
+        return newsArticleRepository.findAllByOrderByPublishedAtDesc();
     }
 
     @GetMapping("/articles/sources")
