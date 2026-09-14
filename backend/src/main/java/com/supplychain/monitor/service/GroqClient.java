@@ -101,10 +101,11 @@ public class GroqClient {
             return generateSimulatedSummary(query, context);
         }
 
-        String userPrompt = "Query: " + query + "\n\nContext articles:\n" + context + "\n\n" +
-                "Based on the context articles and the query, perform a deep analysis of the risk based on current world news. " +
+        String currentDate = java.time.LocalDate.now().toString();
+        String userPrompt = "Today's Date: " + currentDate + "\n\nQuery: " + query + "\n\nContext articles:\n" + context + "\n\n" +
+                "Based ONLY on the provided context articles (which represent today's news) and the query, perform a deep analysis of the risk. " +
                 "Return a JSON object with the following fields:\n" +
-                "1. \"summary\": First, provide a detailed 5-7 sentence explanation of WHY this risk is happening based on current world news. Explain the root causes and the cascading effects on the supply chain. Then, use two newlines (\\n\\n) and provide the absolute best actionable suggestions, mitigation strategies, and innovative business ideas to handle these risks, formatted as a bulleted list.\n" +
+                "1. \"summary\": First, explicitly state today's date (" + currentDate + "). Then provide a detailed 5-7 sentence explanation of WHY this risk is happening based ONLY on the provided news. Explain the root causes and the cascading effects on the supply chain. Then, use two newlines (\\n\\n) and provide the absolute best actionable suggestions, mitigation strategies, and innovative business ideas to handle these risks, formatted as a bulleted list.\n" +
                 "2. \"confidenceScore\": A number between 0 and 100 representing how confident you are in this risk assessment.\n" +
                 "Ensure the response is strictly JSON. Do not include markdown code block formatting.";
 

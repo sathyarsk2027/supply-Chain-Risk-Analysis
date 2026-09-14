@@ -88,10 +88,7 @@ public class NewsArticleController {
         // 4) Guardrail check: Verify if the top match meets the minimum relevance threshold
         double topScore = allMatches.stream().mapToDouble(QueryResponse.Match::getScore).max().orElse(0.0);
 
-        if (allMatches.isEmpty() || topScore < TOP_MATCH_RELEVANCE_THRESHOLD) {
-            logger.info("Semantic search below threshold (top score: {}), trying keyword fallback", topScore);
-            return keywordFallbackResponse(request.getQuery());
-        }
+
 
         // 5) Filter matches to retain only items meeting the item relevance threshold (limit 10)
         List<QueryResponse.Match> displayMatches = allMatches.stream()

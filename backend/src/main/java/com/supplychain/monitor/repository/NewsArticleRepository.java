@@ -16,6 +16,7 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
                    "(embedding <=> CAST(:embedding AS vector)) AS cosineDistance " +
                    "FROM news_articles " +
                    "WHERE embedding IS NOT NULL " +
+                   "AND published_at >= CURRENT_DATE " +
                    "ORDER BY embedding <=> CAST(:embedding AS vector) ASC " +
                    "LIMIT 15", nativeQuery = true)
     List<NewsArticleSearchResult> findSimilarArticles(@Param("embedding") String embedding);
