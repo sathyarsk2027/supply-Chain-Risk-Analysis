@@ -73,8 +73,8 @@ Because Render's free tier is strictly limited to **512MB RAM**, we must deploy 
    - `POSTGRES_PASSWORD`: `[YOUR-PASSWORD]`
    - `NEWSAPI_KEY`: `[your-newsapi-key]`
    - `GROQ_API_KEY`: `[your-groq-key]`
-   - `nlp.service.extract.url`: `https://[nlp-service-url].onrender.com/extract` *(Use the URL from Step 2)*
-   - `nlp.service.embed.url`: `https://[nlp-service-url].onrender.com/embed` *(Use the URL from Step 2)*
+   - `NLP_SERVICE_EXTRACT_URL`: `https://[nlp-service-url].onrender.com/extract` *(Use the URL from Step 2)*
+   - `NLP_SERVICE_EMBED_URL`: `https://[nlp-service-url].onrender.com/embed` *(Use the URL from Step 2)*
 4. Click **Create Web Service**.
 5. Copy the Backend URL once deployed (e.g., `https://supply-chain-backend.onrender.com`).
 

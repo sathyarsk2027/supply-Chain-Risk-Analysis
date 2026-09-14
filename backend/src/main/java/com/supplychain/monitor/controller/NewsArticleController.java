@@ -40,9 +40,9 @@ public class NewsArticleController {
         return newsArticleRepository.findSourceCounts();
     }
 
-    public static final double TOP_MATCH_RELEVANCE_THRESHOLD = 0.35;
-    public static final double BORDERLINE_RELEVANCE_THRESHOLD = 0.50;
-    public static final double ITEM_MATCH_RELEVANCE_THRESHOLD = 0.30;
+    public static final double TOP_MATCH_RELEVANCE_THRESHOLD = 0.20;
+    public static final double BORDERLINE_RELEVANCE_THRESHOLD = 0.30;
+    public static final double ITEM_MATCH_RELEVANCE_THRESHOLD = 0.15;
 
     @PostMapping("/query")
     public ResponseEntity<?> searchArticles(@RequestBody QueryRequest request) {
