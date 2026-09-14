@@ -17,9 +17,13 @@
   --text-muted: #8a8372;
   
   --accent-olive: #8f9e7c;
-  --accent-cyan: #8f9e7c; /* mapping old usages to olive */
+  --accent-cyan: #38bdf8;
   --accent-indigo: #8f9e7c;
   --accent-purple: #8f9e7c;
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
 
   --grid-line: rgba(255, 255, 255, 0.1);
 }
@@ -1497,3 +1501,121 @@ button {
   background: var(--bg-primary) !important;
   border: 1px dashed var(--text-muted) !important;
 }
+
+/* Realistic SVG Icon & Button Stability Styles */
+.custom-svg-icon {
+  transition: stroke 0.2s ease;
+  transform: translateZ(0);
+}
+
+button, .btn-refresh {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.google-earth-search-box .earth-search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(17, 17, 12, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.2rem 0.25rem 0.2rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.25s ease;
+}
+
+.google-earth-search-box .earth-search-input-wrapper:focus-within {
+  border-color: var(--accent-olive);
+  box-shadow: 0 0 16px rgba(143, 158, 124, 0.25);
+}
+
+.search-icon-badge {
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.google-earth-search-box .earth-search-input-wrapper:focus-within .search-icon-badge {
+  border-color: var(--accent-olive) !important;
+  background: rgba(143, 158, 124, 0.25) !important;
+  transform: scale(1.05);
+}
+
+.btn-search {
+  transition: all 0.2s ease !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+}
+
+.btn-search:hover {
+  background: #a3b88c !important;
+  box-shadow: 0 0 12px rgba(143, 158, 124, 0.4);
+}
+
+.map-view-switcher {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.map-view-btn {
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--grid-line);
+  padding: 0.4rem 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.map-view-btn.active {
+  background: var(--accent-olive) !important;
+  color: var(--bg-primary) !important;
+  border-color: var(--accent-olive) !important;
+  font-weight: 700 !important;
+}
+
+.map-view-btn:hover:not(.active) {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1.2s linear infinite;
+}
+
+/* Blinking Red Live Satellite Indicator Dot */
+.pulse-dot-red {
+  width: 7px;
+  height: 7px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ef4444;
+  display: inline-block;
+  animation: pulse-red-blink 1.2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-red-blink {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 4px #ef4444;
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.75);
+    box-shadow: 0 0 10px #ef4444;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 4px #ef4444;
+  }
+}
+
