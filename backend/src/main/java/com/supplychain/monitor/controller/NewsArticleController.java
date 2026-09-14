@@ -100,7 +100,7 @@ public class NewsArticleController {
                 .collect(Collectors.toList());
 
         // Guardrail check 2: Minimum context items
-        if (displayMatches.size() < 3) {
+        if (displayMatches.isEmpty()) {
             logger.info("Query '{}' downgraded to hard cutoff due to insufficient context items ({} items)", request.getQuery(), displayMatches.size());
             QueryResponse guardrailResponse = new QueryResponse(request.getQuery(), displayMatches);
             guardrailResponse.setAiSummary(new QueryResponse.AiSummary(
