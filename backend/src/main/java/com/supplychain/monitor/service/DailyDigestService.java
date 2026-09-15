@@ -2,13 +2,9 @@ package com.supplychain.monitor.service;
 
 import com.supplychain.monitor.model.NewsArticle;
 import com.supplychain.monitor.repository.NewsArticleRepository;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -76,16 +72,13 @@ public class DailyDigestService {
 
     private final NewsArticleRepository newsArticleRepository;
     private final GroqClient groqClient;
-    private final JavaMailSender mailSender;
+    // We removed JavaMailSender to use Resend API directly over HTTPS
 
     @Value("${digest.recipient.email:}")
     private String recipientEmail;
 
-    @Value("${digest.sender.name:Supply Chain Risk Monitor}")
-    private String senderName;
-
-    @Value("${spring.mail.username:}")
-    private String senderEmail;
+    @Value("${resend.api.key:}")
+    private String resendApiKey;
 
     @Value("${digest.dashboard.url:http://localhost:5173}")
     private String dashboardUrl;
@@ -93,12 +86,9 @@ public class DailyDigestService {
     // Simple date-based deduplication to prevent double-sends
     private volatile String lastSentDate = "";
 
-    public DailyDigestService(NewsArticleRepository newsArticleRepository,
-                              GroqClient groqClient,
-                              JavaMailSender mailSender) {
+    public DailyDigestService(NewsArticleRepository newsArticleRepository, GroqClient groqClient) {
         this.newsArticleRepository = newsArticleRepository;
         this.groqClient = groqClient;
-        this.mailSender = mailSender;
     }
 
     // --------------------------------------------------------------------------
@@ -258,30 +248,44 @@ public class DailyDigestService {
     }
 
     // --------------------------------------------------------------------------
-    // Email Delivery
+    // Email Delivery (via Resend API over HTTPS)
     // --------------------------------------------------------------------------
     private boolean sendEmail(String subject, String htmlBody) {
         if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
             logger.warn("DIGEST_RECIPIENT_EMAIL is not configured. Skipping email delivery.");
             return false;
         }
-        if (senderEmail == null || senderEmail.trim().isEmpty()) {
-            logger.warn("DIGEST_GMAIL_ADDRESS is not configured. Skipping email delivery.");
+        if (resendApiKey == null || resendApiKey.trim().isEmpty()) {
+            logger.warn("RESEND_API_KEY is not configured. Skipping email delivery.");
             return false;
         }
 
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(senderEmail, senderName);
-            helper.setTo(recipientEmail.trim());
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true); // true = isHtml
-            mailSender.send(message);
-            logger.info("Daily digest email sent successfully to {}", recipientEmail);
-            return true;
-        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
-            logger.error("Failed to send daily digest email: {}", e.getMessage(), e);
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + resendApiKey.trim());
+
+            java.util.Map<String, Object> payload = java.util.Map.of(
+                "from", "onboarding@resend.dev",
+                "to", recipientEmail.trim(),
+                "subject", subject,
+                "html", htmlBody
+            );
+
+            org.springframework.http.HttpEntity<java.util.Map<String, Object>> request = new org.springframework.http.HttpEntity<>(payload, headers);
+            
+            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity("https://api.resend.com/emails", request, String.class);
+            
+            if (response.getStatusCode().is2xxSuccessful()) {
+                logger.info("Daily digest email sent successfully via Resend to {}", recipientEmail);
+                return true;
+            } else {
+                logger.error("Failed to send email via Resend. Status: {}", response.getStatusCode());
+                return false;
+            }
+        } catch (Exception e) {
+            logger.error("Failed to send daily digest email via Resend: {}", e.getMessage(), e);
             return false;
         }
     }
