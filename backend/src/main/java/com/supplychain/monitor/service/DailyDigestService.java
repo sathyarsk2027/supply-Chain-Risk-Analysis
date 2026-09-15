@@ -320,12 +320,12 @@ public class DailyDigestService {
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Bearer " + resendApiKey.trim());
 
-            java.util.Map<String, Object> payload = java.util.Map.of(
-                "from", "onboarding@resend.dev",
-                "to", recipientEmail.trim(),
-                "subject", subject,
-                "html", htmlBody
-            );
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("from", "Supply Chain Intelligence <onboarding@resend.dev>");
+            payload.put("to", recipientEmail.trim());
+            payload.put("subject", subject);
+            payload.put("html", htmlBody);
+            payload.put("reply_to", recipientEmail.trim());
 
             org.springframework.http.HttpEntity<java.util.Map<String, Object>> request = new org.springframework.http.HttpEntity<>(payload, headers);
             
