@@ -59,9 +59,11 @@ public class NewsArticleController {
             logger.warn("NLP service unavailable, falling back to keyword search. Reason: {}", e.getMessage());
         }
 
-        // FALLBACK: If NLP embedding failed, use keyword search and return results directly
+        // FALLBACK: If NLP embedding failed, return empty matches so the guardrail triggers gracefully
         if (embedding == null) {
-            return keywordFallbackResponse(request.getQuery());
+            QueryResponse emptyResponse = new QueryResponse(request.getQuery(), java.util.Collections.emptyList());
+            emptyResponse.setAiSummary(new QueryResponse.AiSummary("Semantic AI search is currently waking up or unavailable. Please try again in a few minutes.", 0));
+            return ResponseEntity.ok(emptyResponse);
         }
 
 
@@ -73,26 +75,25 @@ public class NewsArticleController {
 
         // 3) Calculate raw cosine similarity score for each result (1.0 - cosineDistance)
         List<QueryResponse.Match> allMatches = searchResults.stream().map(result -> {
-            double dist = result.getCosineDistance() != null ? result.getCosineDistance() : 1.0;
-            double score = Math.max(0.0, Math.min(1.0, 1.0 - dist));
-            score = Math.round(score * 10000.0) / 10000.0;
+            double composite = result.getCompositeScore() != null ? result.getCompositeScore() : 0.0;
+            double finalScore = Math.round(composite * 10000.0) / 10000.0;
             return new QueryResponse.Match(
                     result.getTitle(),
                     result.getUrl(),
                     result.getSource(),
                     result.getRiskCategory(),
-                    score
+                    finalScore,
+                    result.getPublishedAt()
             );
         }).collect(Collectors.toList());
 
         // 4) Guardrail check: Verify if the top match meets the minimum relevance threshold
         double topScore = allMatches.stream().mapToDouble(QueryResponse.Match::getScore).max().orElse(0.0);
 
-
-
         // 5) Filter matches to retain only items meeting the item relevance threshold (limit 10)
+        // NOTE: The relevance threshold (1.0 - cosineDistance >= 0.15) is now strictly enforced in the SQL query
+        // before time-decay ranking is applied, ensuring no irrelevant results slip through.
         List<QueryResponse.Match> displayMatches = allMatches.stream()
-                .filter(m -> m.getScore() >= ITEM_MATCH_RELEVANCE_THRESHOLD)
                 .limit(10)
                 .collect(Collectors.toList());
 
@@ -114,18 +115,15 @@ public class NewsArticleController {
             StringBuilder contextBuilder = new StringBuilder();
             int count = 0;
             for (NewsArticleRepository.NewsArticleSearchResult result : searchResults) {
-                double dist = result.getCosineDistance() != null ? result.getCosineDistance() : 1.0;
-                double score = Math.max(0.0, Math.min(1.0, 1.0 - dist));
-                if (score >= ITEM_MATCH_RELEVANCE_THRESHOLD) {
-                    count++;
-                    String title = result.getTitle() != null ? result.getTitle() : "";
-                    String riskCategory = result.getRiskCategory() != null ? result.getRiskCategory() : "Uncategorized";
-                    String rawContent = result.getRawContent() != null ? result.getRawContent() : "";
-                    if (rawContent.length() > 300) {
-                        rawContent = rawContent.substring(0, 300) + "...";
-                    }
-                    contextBuilder.append(String.format("Article %d: %s | Risk Category: %s\nContent: %s\n\n", count, title, riskCategory, rawContent));
+                if (count >= 10) break;
+                count++;
+                String title = result.getTitle() != null ? result.getTitle() : "";
+                String riskCategory = result.getRiskCategory() != null ? result.getRiskCategory() : "Uncategorized";
+                String rawContent = result.getRawContent() != null ? result.getRawContent() : "";
+                if (rawContent.length() > 300) {
+                    rawContent = rawContent.substring(0, 300) + "...";
                 }
+                contextBuilder.append(String.format("Article %d: %s | Risk Category: %s\nContent: %s\n\n", count, title, riskCategory, rawContent));
             }
             String context = contextBuilder.toString();
 
@@ -162,7 +160,8 @@ public class NewsArticleController {
                 article.getUrl(),
                 article.getSource(),
                 article.getRiskCategory(),
-                0.6
+                0.6,
+                article.getPublishedAt()
             ))
             .collect(Collectors.toList());
 
@@ -291,16 +290,18 @@ public class NewsArticleController {
             private String source;
             private String riskCategory;
             private double score;
+            private java.time.Instant publishedAt;
 
             public Match() {
             }
 
-            public Match(String title, String url, String source, String riskCategory, double score) {
+            public Match(String title, String url, String source, String riskCategory, double score, java.time.Instant publishedAt) {
                 this.title = title;
                 this.url = url;
                 this.source = source;
                 this.riskCategory = riskCategory;
                 this.score = score;
+                this.publishedAt = publishedAt;
             }
 
             public String getTitle() {
@@ -317,6 +318,14 @@ public class NewsArticleController {
 
             public void setUrl(String url) {
                 this.url = url;
+            }
+
+            public java.time.Instant getPublishedAt() {
+                return publishedAt;
+            }
+
+            public void setPublishedAt(java.time.Instant publishedAt) {
+                this.publishedAt = publishedAt;
             }
 
             public String getSource() {

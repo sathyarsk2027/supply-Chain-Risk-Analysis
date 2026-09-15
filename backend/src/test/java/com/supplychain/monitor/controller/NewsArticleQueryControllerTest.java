@@ -86,6 +86,16 @@ class NewsArticleQueryControllerTest {
             public Double getCosineDistance() {
                 return 0.15;
             }
+
+            @Override
+            public java.time.Instant getPublishedAt() {
+                return java.time.Instant.now();
+            }
+
+            @Override
+            public Double getCompositeScore() {
+                return 0.85;
+            }
         };
 
         when(newsArticleRepository.findSimilarArticles(any())).thenReturn(List.of(mockResult));
@@ -149,6 +159,16 @@ class NewsArticleQueryControllerTest {
             public Double getCosineDistance() {
                 return 0.15;
             }
+
+            @Override
+            public java.time.Instant getPublishedAt() {
+                return java.time.Instant.now();
+            }
+
+            @Override
+            public Double getCompositeScore() {
+                return 0.85;
+            }
         };
 
         when(newsArticleRepository.findSimilarArticles(any())).thenReturn(List.of(mockResult));
@@ -178,6 +198,8 @@ class NewsArticleQueryControllerTest {
             @Override public String getRiskCategory() { return "Other"; }
             @Override public String getRawContent() { return "Content..."; }
             @Override public Double getCosineDistance() { return 0.85; }
+            @Override public java.time.Instant getPublishedAt() { return java.time.Instant.now(); }
+            @Override public Double getCompositeScore() { return 0.15; }
         };
 
         when(newsArticleRepository.findSimilarArticles(any())).thenReturn(List.of(mockIrrelevantResult));

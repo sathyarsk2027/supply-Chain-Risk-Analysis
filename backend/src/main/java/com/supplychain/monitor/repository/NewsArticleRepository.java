@@ -12,12 +12,20 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
     boolean existsByUrl(String url);
     List<NewsArticle> findAllByOrderByPublishedAtDesc();
 
-    @Query(value = "SELECT id, title, url, source, risk_category AS riskCategory, raw_content AS rawContent, " +
-                   "(embedding <=> CAST(:embedding AS vector)) AS cosineDistance " +
+    @Query(value = "SELECT * FROM news_articles WHERE fetched_at >= :startTime AND fetched_at < :endTime ORDER BY published_at DESC", nativeQuery = true)
+    List<NewsArticle> findArticlesIngestedBetween(@Param("startTime") java.time.Instant startTime, @Param("endTime") java.time.Instant endTime);
+
+    @Query(value = "SELECT id, title, url, source, risk_category AS riskCategory, raw_content AS rawContent, published_at AS publishedAt, " +
+                   "(embedding <=> CAST(:embedding AS vector)) AS cosineDistance, " +
+                   "( " +
+                   "  ((1.0 - (embedding <=> CAST(:embedding AS vector))) * 0.7) + " +
+                   "  (EXP(-(EXTRACT(EPOCH FROM (CURRENT_DATE - published_at)) / 86400.0) / 7.0) * 0.3) " +
+                   ") AS compositeScore " +
                    "FROM news_articles " +
                    "WHERE embedding IS NOT NULL " +
-                   "AND published_at >= CURRENT_DATE " +
-                   "ORDER BY embedding <=> CAST(:embedding AS vector) ASC " +
+                   "AND published_at >= CURRENT_DATE - INTERVAL '14 days' " +
+                   "AND (1.0 - (embedding <=> CAST(:embedding AS vector))) >= 0.15 " +
+                   "ORDER BY compositeScore DESC " +
                    "LIMIT 15", nativeQuery = true)
     List<NewsArticleSearchResult> findSimilarArticles(@Param("embedding") String embedding);
 
@@ -41,7 +49,9 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
         String getSource();
         String getRiskCategory();
         String getRawContent();
+        java.time.Instant getPublishedAt();
         Double getCosineDistance();
+        Double getCompositeScore();
     }
 
     interface SourceCountProjection {

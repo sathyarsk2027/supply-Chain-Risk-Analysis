@@ -674,7 +674,7 @@ function App() {
                 </div>
                 <div className="ai-summary-body">
                   <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{aiSummary.summary}</p>
-                  <AIMatchConfidenceTelemetry confidence={aiSummary.confidenceScore} />
+                  <AIMatchConfidenceTelemetry confidence={searchResults.length > 0 ? Math.round(searchResults[0].score * 100) : aiSummary.confidenceScore} />
                 </div>
               </div>
             )}
@@ -715,9 +715,12 @@ function App() {
                           <span className="source-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <FileTextIcon size={13} color="#8f9e7c" /> {match.source || 'Source'}
                           </span>
-                          <span className={`${badgeSeverityClass} tabular-nums`}>
-                            {matchPercent}% Match
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className="time-stamp">{match.publishedAt ? formatDate(match.publishedAt) : ''}</span>
+                            <span className={`${badgeSeverityClass} tabular-nums`}>
+                              {matchPercent}% Match
+                            </span>
+                          </div>
                         </div>
                         <h2 className="article-title">{match.title}</h2>
                         <div className="card-footer">

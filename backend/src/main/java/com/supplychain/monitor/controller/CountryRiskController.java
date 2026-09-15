@@ -3,6 +3,7 @@ package com.supplychain.monitor.controller;
 import com.supplychain.monitor.model.NewsArticle;
 import com.supplychain.monitor.repository.NewsArticleRepository;
 import com.supplychain.monitor.service.GroqClient;
+import com.supplychain.monitor.service.RiskScoreCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -172,43 +173,9 @@ public class CountryRiskController {
             return ResponseEntity.ok(emptyResp);
         }
 
-        // 1. Recency-weighted mathematical risk score calculation
-        Instant now = Instant.now();
-        double totalWeightedVolume = 0.0;
-
-        Map<String, Double> categoryWeights = new HashMap<>();
-        categoryWeights.put("GEOPOLITICAL", 0.0);
-        categoryWeights.put("LOGISTICS", 0.0);
-        categoryWeights.put("WEATHER", 0.0);
-        categoryWeights.put("MARKET", 0.0);
-
-        for (NewsArticle article : matchedArticles) {
-            long daysOld = 0;
-            if (article.getPublishedAt() != null) {
-                daysOld = ChronoUnit.DAYS.between(article.getPublishedAt(), now);
-                if (daysOld < 0) daysOld = 0;
-            }
-            
-            // Half-life decay over 7 days: w = exp(-days / 7)
-            double weight = Math.exp(-((double) daysOld) / 7.0);
-            totalWeightedVolume += weight;
-
-            String cat = article.getRiskCategory() != null ? article.getRiskCategory().toUpperCase() : "LOGISTICS";
-            if (cat.contains("GEO")) {
-                categoryWeights.put("GEOPOLITICAL", categoryWeights.get("GEOPOLITICAL") + weight);
-            } else if (cat.contains("WEATHER") || cat.contains("CLIMATE")) {
-                categoryWeights.put("WEATHER", categoryWeights.get("WEATHER") + weight);
-            } else if (cat.contains("MARKET") || cat.contains("FINANCE") || cat.contains("PRICE")) {
-                categoryWeights.put("MARKET", categoryWeights.get("MARKET") + weight);
-            } else {
-                categoryWeights.put("LOGISTICS", categoryWeights.get("LOGISTICS") + weight);
-            }
-        }
-
-        // Bounded risk factor score formula (15 - 100)
-        int overallScore = (int) Math.min(100, Math.round(28.0 * Math.log(1.0 + totalWeightedVolume)));
-        if (overallScore < 15) overallScore = 15;
-
+        // 1. Recency-weighted mathematical risk score calculation (delegated to shared utility)
+        RiskScoreCalculator.RiskResult riskResult = RiskScoreCalculator.compute(matchedArticles);
+        int overallScore = riskResult.getScore();
         String status;
         if (overallScore >= 80) {
             status = "HIGH RISK (CRITICAL)";
@@ -219,17 +186,7 @@ public class CountryRiskController {
         } else {
             status = "LOW RISK";
         }
-
-        // Calculate 4 sub-category scores (%) relative to overall risk
-        Map<String, Integer> categoryScores = new HashMap<>();
-        for (String catKey : List.of("GEOPOLITICAL", "LOGISTICS", "WEATHER", "MARKET")) {
-            double catW = categoryWeights.getOrDefault(catKey, 0.0);
-            int catScore = 0;
-            if (totalWeightedVolume > 0) {
-                catScore = (int) Math.min(100, Math.round((catW / totalWeightedVolume) * overallScore + 12.0));
-            }
-            categoryScores.put(catKey.toLowerCase(), catScore);
-        }
+        Map<String, Integer> categoryScores = riskResult.getCategoryScores();
 
         // 2. Synthesize dynamic Key Regional Risk Drivers from actual matched article titles
         List<String> highlights = generateRiskDriversFromArticles(countryQuery, matchedArticles);
