@@ -152,8 +152,7 @@ public class DailyDigestService {
         logger.info("Total articles ingested in digest window: {}", allArticles.size());
 
         if (allArticles.isEmpty()) {
-            logger.warn("Daily digest skipped — zero articles ingested in the previous 24h window. Possible ingestion gap.");
-            return new DigestResult("skipped", "Zero articles ingested in digest window. No email sent.", null, 0, null);
+            logger.warn("Zero articles ingested in the previous 24h window. Sending empty digest.");
         }
 
         // 2. Split into India-focused and Global buckets
