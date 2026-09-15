@@ -224,30 +224,81 @@ public class DailyDigestService {
             contextBuilder.append(String.format("Article %d: %s | Category: %s\nContent: %s\n\n", count, title, riskCategory, rawContent));
         }
 
-        String currentDate = LocalDate.now(IST).toString();
-        String digestPrompt = "Today's date: " + currentDate + ". " +
-                "Summarize the following supply chain news articles from the past 24 hours that are relevant to " + sectionLabel + ". " +
-                "Write a single cohesive narrative paragraph (NOT a list of headlines) explaining the key events, " +
-                "their root causes, and their potential impact on supply chains. " +
-                "If the data is thin, say so honestly. Keep it under 150 words.";
-
         try {
-            // Pass only the section label as 'query' so the fallback doesn't echo the full prompt
             GroqClient.GroqResponse response = groqClient.generateSummary(sectionLabel, contextBuilder.toString());
-            if (response != null && response.getSummary() != null && !response.getSummary().trim().isEmpty()) {
+            if (response != null && response.getSummary() != null && !response.getSummary().trim().isEmpty()
+                    && !response.getSummary().contains("localized adjustments and emerging risk factors")) {
                 return response.getSummary().trim();
             }
         } catch (Exception e) {
             logger.error("Groq AI summary generation failed for {}: {}", sectionLabel, e.getMessage());
         }
 
-        // Fallback: build a proper headline summary instead of echoing raw prompts
-        StringBuilder fallback = new StringBuilder();
-        fallback.append("Key headlines from the past 24 hours:\n");
-        articles.stream()
-                .limit(5)
-                .forEach(a -> fallback.append("• ").append(a.getTitle() != null ? a.getTitle() : "Untitled").append("\n"));
-        return fallback.toString().trim();
+        // Smart data-driven fallback: analyze actual article data
+        return buildDataDrivenSummary(articles, sectionLabel);
+    }
+
+    /**
+     * Builds an intelligent summary by analyzing article titles, categories, and sources.
+     * This replaces the generic "localized adjustments" canned text with actual data insights.
+     */
+    private String buildDataDrivenSummary(List<NewsArticle> articles, String sectionLabel) {
+        // Count categories
+        Map<String, Integer> catCounts = new LinkedHashMap<>();
+        Map<String, Integer> sourceCounts = new LinkedHashMap<>();
+        for (NewsArticle a : articles) {
+            String cat = a.getRiskCategory() != null ? a.getRiskCategory().toLowerCase() : "other";
+            catCounts.merge(cat, 1, Integer::sum);
+            String src = a.getSource() != null ? a.getSource() : "Unknown";
+            sourceCounts.merge(src, 1, Integer::sum);
+        }
+
+        // Find dominant category
+        String dominantCat = catCounts.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("general");
+
+        // Find top source
+        String topSource = sourceCounts.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(e -> e.getKey() + " (" + e.getValue() + " articles)")
+                .orElse("various sources");
+
+        // Get top 3 article titles for specificity
+        List<String> topTitles = articles.stream()
+                .limit(3)
+                .map(a -> a.getTitle() != null ? a.getTitle() : "Untitled")
+                .collect(Collectors.toList());
+
+        StringBuilder sb = new StringBuilder();
+        String dateStr = LocalDate.now(IST).format(DATE_DISPLAY);
+
+        sb.append("As of ").append(dateStr).append(", our monitoring systems ingested ")
+          .append(articles.size()).append(" articles relevant to ").append(sectionLabel).append(". ");
+
+        // Category insight
+        if ("logistics".equals(dominantCat)) {
+            sb.append("The dominant theme is logistics and freight operations, indicating active movements in shipping lanes, port operations, and cargo management. ");
+        } else if ("geopolitical".equals(dominantCat) || dominantCat.contains("geo")) {
+            sb.append("Geopolitical developments dominate the coverage, signaling potential regulatory shifts, trade policy changes, or regional tensions affecting supply routes. ");
+        } else if ("weather".equals(dominantCat)) {
+            sb.append("Weather and climate events are the primary focus, with environmental disruptions potentially impacting port access, transit times, and infrastructure stability. ");
+        } else if ("market".equals(dominantCat)) {
+            sb.append("Market and financial dynamics lead the coverage, suggesting evolving commercial pressures on supply chain cost structures. ");
+        } else {
+            sb.append("Coverage spans multiple risk categories, reflecting a complex and evolving operational landscape. ");
+        }
+
+        sb.append("Primary intelligence sourced from ").append(topSource).append(".");
+
+        // Top stories
+        sb.append("\n\nKey stories driving the risk assessment:\n");
+        for (int i = 0; i < topTitles.size(); i++) {
+            sb.append("• ").append(topTitles.get(i)).append("\n");
+        }
+
+        return sb.toString().trim();
     }
 
     // --------------------------------------------------------------------------
@@ -326,11 +377,15 @@ public class DailyDigestService {
         int wxScore = catScores.getOrDefault("weather", 0);
         int mktScore = catScores.getOrDefault("market", 0);
 
-        String chartUrl = buildChartUrl(geoScore, logScore, wxScore, mktScore);
+        // Build inline HTML bar chart (works in all email clients, no external images)
+        String chartHtml = buildInlineBarChart(geoScore, logScore, wxScore, mktScore);
 
         // Build top headlines section from recent articles
         List<NewsArticle> recentArticles = newsArticleRepository.findAllByOrderByPublishedAtDesc();
         String topHeadlinesHtml = buildTopHeadlinesHtml(recentArticles, 5);
+
+        // Source distribution stats
+        String sourceStatsHtml = buildSourceStatsHtml(recentArticles);
 
         // Risk gauge bar segments
         int filledSegments = riskScore / 10;
@@ -340,6 +395,9 @@ public class DailyDigestService {
             String border = i < filledSegments ? riskBadgeColor : "#2a3a2e";
             gaugeBar.append("<td style=\"width:10%;height:8px;background:" + segColor + ";border:1px solid " + border + ";\"></td>");
         }
+
+        // Total articles stat
+        int totalArticles = indiaCount + globalCount;
 
         return "<!DOCTYPE html>" +
                 "<html lang=\"en\">" +
@@ -360,25 +418,38 @@ public class DailyDigestService {
                 "</div></td></tr></table>" +
                 "</td></tr>" +
 
+                // ═══════════ QUICK STATS BAR ═══════════
+                "<tr><td style=\"padding:16px 32px 4px;\">" +
+                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"8\" style=\"border-collapse:separate;\"><tr>" +
+                "<td style=\"background:#0a120d;border:1px solid #1a2820;border-radius:8px;padding:12px;text-align:center;width:33%;\">" +
+                "<p style=\"margin:0;font-size:9px;color:#5e7254;text-transform:uppercase;letter-spacing:0.1em;\">Articles Scanned</p>" +
+                "<p style=\"margin:4px 0 0;font-size:22px;font-weight:900;color:#a3b898;\">" + totalArticles + "</p></td>" +
+                "<td style=\"background:#0a120d;border:1px solid #1a2820;border-radius:8px;padding:12px;text-align:center;width:33%;\">" +
+                "<p style=\"margin:0;font-size:9px;color:#5e7254;text-transform:uppercase;letter-spacing:0.1em;\">India Focus</p>" +
+                "<p style=\"margin:4px 0 0;font-size:22px;font-weight:900;color:#f59e0b;\">" + indiaCount + "</p></td>" +
+                "<td style=\"background:#0a120d;border:1px solid #1a2820;border-radius:8px;padding:12px;text-align:center;width:33%;\">" +
+                "<p style=\"margin:0;font-size:9px;color:#5e7254;text-transform:uppercase;letter-spacing:0.1em;\">Risk Score</p>" +
+                "<p style=\"margin:4px 0 0;font-size:22px;font-weight:900;color:" + riskBadgeColor + ";\">" + riskScore + "</p></td>" +
+                "</tr></table></td></tr>" +
+
                 // ═══════════ RISK GAUGE SECTION ═══════════
-                "<tr><td style=\"padding:24px 32px 8px;\">" +
+                "<tr><td style=\"padding:12px 32px 8px;\">" +
                 "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:linear-gradient(135deg,#0a120d 0%,#101a14 100%);border:1px solid " + riskBadgeColor + "33;border-radius:12px;\">" +
                 "<tr><td style=\"padding:20px 24px;\">" +
                 "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
-                "<td style=\"width:60%;\">" +
+                "<td style=\"width:55%;\">" +
                 "<p style=\"margin:0;font-size:10px;font-weight:700;color:#5e7254;text-transform:uppercase;letter-spacing:0.12em;\">India Risk Assessment</p>" +
                 "<p style=\"margin:8px 0 0 0;font-size:36px;font-weight:900;color:" + riskBadgeColor + ";line-height:1;\">" + riskScore + "<span style=\"font-size:16px;color:#5e7254;font-weight:400;\">/100</span></p>" +
                 "<p style=\"margin:6px 0 0 0;font-size:14px;font-weight:700;color:" + riskBadgeColor + ";\">" + riskEmoji + " " + riskLabel + "</p>" +
                 elevatedLine +
                 "</td>" +
-                "<td style=\"width:40%;vertical-align:top;text-align:right;\">" +
-                "<div style=\"display:inline-block;text-align:left;\">" +
-                "<p style=\"margin:0 0 6px 0;font-size:9px;color:#5e7254;text-transform:uppercase;letter-spacing:0.1em;\">Threat Categories</p>" +
+                "<td style=\"width:45%;vertical-align:top;\">" +
+                "<p style=\"margin:0 0 8px 0;font-size:9px;color:#5e7254;text-transform:uppercase;letter-spacing:0.1em;\">Threat Categories</p>" +
                 "<p style=\"margin:0;font-size:11px;color:#8fa882;\">🔥 Geopolitical: <span style=\"color:" + (geoScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:700;\">" + geoScore + "</span></p>" +
                 "<p style=\"margin:2px 0;font-size:11px;color:#8fa882;\">🚢 Logistics: <span style=\"color:" + (logScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:700;\">" + logScore + "</span></p>" +
                 "<p style=\"margin:2px 0;font-size:11px;color:#8fa882;\">🌊 Weather: <span style=\"color:" + (wxScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:700;\">" + wxScore + "</span></p>" +
                 "<p style=\"margin:0;font-size:11px;color:#8fa882;\">📊 Market: <span style=\"color:" + (mktScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:700;\">" + mktScore + "</span></p>" +
-                "</div></td></tr>" +
+                "</td></tr>" +
                 // Gauge bar
                 "<tr><td colspan=\"2\" style=\"padding:14px 0 0 0;\">" +
                 "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"2\" style=\"border-collapse:separate;\"><tr>" + gaugeBar.toString() + "</tr></table>" +
@@ -386,10 +457,13 @@ public class DailyDigestService {
                 "</td></tr></table>" +
                 "</td></tr>" +
 
-                // ═══════════ RISK DISTRIBUTION CHART ═══════════
+                // ═══════════ RISK DISTRIBUTION CHART (INLINE HTML) ═══════════
                 "<tr><td style=\"padding:16px 32px 8px;\">" +
-                "<p style=\"margin:0 0 10px 0;font-size:11px;font-weight:700;color:#5e7254;text-transform:uppercase;letter-spacing:0.1em;\">📊 Risk Distribution Analysis</p>" +
-                "<img src=\"" + chartUrl + "\" width=\"100%\" style=\"display:block;border-radius:8px;border:1px solid #1e3024;\" alt=\"Risk Distribution Chart\">" +
+                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border:1px solid #1a2820;\">" +
+                "<tr><td style=\"padding:18px 22px;\">" +
+                "<h2 style=\"margin:0 0 16px 0;font-size:14px;font-weight:800;color:#a3b898;text-transform:uppercase;letter-spacing:0.06em;\">📊 Risk Distribution Analysis</h2>" +
+                chartHtml +
+                "</td></tr></table>" +
                 "</td></tr>" +
 
                 // ═══════════ INDIA FOCUS ═══════════
@@ -436,24 +510,87 @@ public class DailyDigestService {
     }
 
     /**
-     * Builds a QuickChart.io URL for a horizontal bar chart showing risk category distribution.
+     * Builds a pure HTML inline bar chart representing the risk distribution.
+     * This avoids external image blocking issues in email clients like Gmail.
      */
-    private String buildChartUrl(int geo, int log, int wx, int mkt) {
-        String chartConfig = "{type:'horizontalBar',data:{labels:['Geopolitical','Logistics','Weather','Market']," +
-                "datasets:[{label:'Risk Score',data:[" + geo + "," + log + "," + wx + "," + mkt + "]," +
-                "backgroundColor:['rgba(239,68,68,0.7)','rgba(245,158,11,0.7)','rgba(59,130,246,0.7)','rgba(34,197,94,0.7)']," +
-                "borderColor:['#ef4444','#f59e0b','#3b82f6','#22c55e'],borderWidth:1}]}," +
-                "options:{legend:{display:false},scales:{xAxes:[{ticks:{beginAtZero:true,max:100,fontColor:'#8fa882'}," +
-                "gridLines:{color:'#1e3024'}}],yAxes:[{ticks:{fontColor:'#a3b898',fontSize:12}," +
-                "gridLines:{display:false}}]},layout:{padding:10}}}";
+    private String buildInlineBarChart(int geo, int log, int wx, int mkt) {
+        // Calculate percentages (avoid div by 0)
+        int total = geo + log + wx + mkt;
+        if (total == 0) return "<p style=\"color:#5e7254;font-size:12px;\">Not enough data to calculate distribution.</p>";
 
-        try {
-            String encoded = java.net.URLEncoder.encode(chartConfig, "UTF-8");
-            return "https://quickchart.io/chart?c=" + encoded + "&backgroundColor=%230f1612&width=560&height=200";
-        } catch (Exception e) {
-            logger.warn("Failed to encode chart URL: {}", e.getMessage());
-            return "";
+        int geoPct = Math.min(100, (geo * 100) / total);
+        int logPct = Math.min(100, (log * 100) / total);
+        int wxPct  = Math.min(100, (wx * 100) / total);
+        int mktPct = Math.min(100, (mkt * 100) / total);
+
+        // Ensure visible bars even for small non-zero values
+        if (geo > 0 && geoPct < 5) geoPct = 5;
+        if (log > 0 && logPct < 5) logPct = 5;
+        if (wx > 0 && wxPct < 5) wxPct = 5;
+        if (mkt > 0 && mktPct < 5) mktPct = 5;
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"8\" style=\"font-size:11px;\">");
+        
+        // Geopolitical
+        sb.append("<tr><td style=\"width:20%;color:#8fa882;font-weight:600;\">Geopolitical</td>");
+        sb.append("<td style=\"width:70%;\"><div style=\"width:100%;background:#1e2a22;border-radius:4px;overflow:hidden;height:12px;\">");
+        sb.append("<div style=\"width:").append(geoPct).append("%;height:100%;background:#ef4444;\"></div></div></td>");
+        sb.append("<td style=\"width:10%;color:#ef4444;text-align:right;font-weight:700;\">").append(geo).append("</td></tr>");
+
+        // Logistics
+        sb.append("<tr><td style=\"width:20%;color:#8fa882;font-weight:600;\">Logistics</td>");
+        sb.append("<td style=\"width:70%;\"><div style=\"width:100%;background:#1e2a22;border-radius:4px;overflow:hidden;height:12px;\">");
+        sb.append("<div style=\"width:").append(logPct).append("%;height:100%;background:#f59e0b;\"></div></div></td>");
+        sb.append("<td style=\"width:10%;color:#f59e0b;text-align:right;font-weight:700;\">").append(log).append("</td></tr>");
+
+        // Weather
+        sb.append("<tr><td style=\"width:20%;color:#8fa882;font-weight:600;\">Weather</td>");
+        sb.append("<td style=\"width:70%;\"><div style=\"width:100%;background:#1e2a22;border-radius:4px;overflow:hidden;height:12px;\">");
+        sb.append("<div style=\"width:").append(wxPct).append("%;height:100%;background:#3b82f6;\"></div></div></td>");
+        sb.append("<td style=\"width:10%;color:#3b82f6;text-align:right;font-weight:700;\">").append(wx).append("</td></tr>");
+
+        // Market
+        sb.append("<tr><td style=\"width:20%;color:#8fa882;font-weight:600;\">Market</td>");
+        sb.append("<td style=\"width:70%;\"><div style=\"width:100%;background:#1e2a22;border-radius:4px;overflow:hidden;height:12px;\">");
+        sb.append("<div style=\"width:").append(mktPct).append("%;height:100%;background:#22c55e;\"></div></div></td>");
+        sb.append("<td style=\"width:10%;color:#22c55e;text-align:right;font-weight:700;\">").append(mkt).append("</td></tr>");
+
+        sb.append("</table>");
+        return sb.toString();
+    }
+
+    /**
+     * Analyzes recent articles and builds a breakdown of top news sources.
+     */
+    private String buildSourceStatsHtml(List<NewsArticle> articles) {
+        if (articles == null || articles.isEmpty()) return "";
+
+        Map<String, Integer> sourceCounts = new LinkedHashMap<>();
+        for (NewsArticle a : articles) {
+            String src = a.getSource() != null ? a.getSource() : "Unknown";
+            sourceCounts.merge(src, 1, Integer::sum);
         }
+
+        List<Map.Entry<String, Integer>> sortedSources = sourceCounts.entrySet().stream()
+                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+                .limit(4)
+                .collect(Collectors.toList());
+
+        if (sortedSources.isEmpty()) return "";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<p style=\"margin:16px 0 6px 0;font-size:9px;color:#5e7254;text-transform:uppercase;letter-spacing:0.1em;\">Top Sources</p>");
+        sb.append("<div style=\"font-size:10px;color:#8fa882;\">");
+        
+        List<String> items = new java.util.ArrayList<>();
+        for (Map.Entry<String, Integer> e : sortedSources) {
+            items.add("<b>" + escapeHtml(e.getKey()) + "</b> (" + e.getValue() + ")");
+        }
+        sb.append(String.join(" &bull; ", items));
+        sb.append("</div>");
+
+        return sb.toString();
     }
 
     /**
