@@ -52,8 +52,15 @@ public final class RiskScoreCalculator {
             }
         }
 
+        // Cap the weighted volume to prevent article-count inflation.
+        // Above 30 weighted articles, additional volume has diminishing returns.
+        double cappedVolume = Math.min(totalWeightedVolume, 30.0);
+
         // Bounded risk factor score formula (15 - 100)
-        int overallScore = (int) Math.min(100, Math.round(28.0 * Math.log(1.0 + totalWeightedVolume)));
+        // Scaling factor 18 gives a more realistic spread:
+        //   5 articles  → ~32    20 articles → ~55    30+ articles → ~62 (base)
+        // Severity categories push the score higher via category weights below.
+        int overallScore = (int) Math.min(100, Math.round(18.0 * Math.log(1.0 + cappedVolume)));
         if (overallScore < 15) overallScore = 15;
 
         String status;
