@@ -146,7 +146,7 @@ function AIMatchConfidenceTelemetry({ confidence }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700' }}>
           <TargetIcon size={14} color={scoreColor} />
-          <span>Vector Match Telemetry Lock:</span>
+          <span>AI Relevance Score:</span>
           <span style={{ color: scoreColor, fontWeight: '800' }}>{confidence}%</span>
         </div>
         <div style={{ fontSize: '0.7rem', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>

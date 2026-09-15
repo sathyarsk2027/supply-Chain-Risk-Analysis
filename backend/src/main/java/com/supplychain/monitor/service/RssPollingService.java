@@ -130,7 +130,27 @@ public class RssPollingService {
                         Instant.now()
                 );
 
-                // Save article without NLP enrichment — NLP service is reserved for search queries
+                // Use NLP service to generate embeddings so new articles show up in Semantic Search
+                String contentToAnalyze = rawContent;
+                if (contentToAnalyze == null || contentToAnalyze.isEmpty()) {
+                    contentToAnalyze = title;
+                }
+
+                try {
+                    float[] embedding = nlpClient.getEmbedding(contentToAnalyze);
+                    if (embedding != null) {
+                        article.setEmbedding(new PGvector(embedding));
+                    }
+                    
+                    // Also get risk category
+                    NlpClient.NlpResponse nlpResult = nlpClient.extractEntities(contentToAnalyze);
+                    if (nlpResult != null && nlpResult.category != null && !nlpResult.category.isEmpty()) {
+                        article.setRiskCategory(nlpResult.category);
+                    }
+                } catch (Exception e) {
+                    logger.warn("Failed NLP enrichment for RSS article '{}': {}", title, e.getMessage());
+                }
+
                 newsArticleRepository.save(article);
                 savedCount++;
             }
