@@ -102,7 +102,11 @@ public class RssPollingService {
             }
             url = url.trim();
 
-            if (!newsArticleRepository.existsByUrl(url)) {
+            java.util.Optional<NewsArticle> existingOpt = newsArticleRepository.findByUrl(url);
+            NewsArticle article;
+            boolean isNew = false;
+
+            if (existingOpt.isEmpty()) {
                 String title = entry.getTitle();
 
                 Instant publishedAt = Instant.now();
@@ -121,7 +125,7 @@ public class RssPollingService {
                     rawContent = entry.getContents().get(0).getValue();
                 }
 
-                NewsArticle article = new NewsArticle(
+                article = new NewsArticle(
                         title,
                         url,
                         sourceName,
@@ -129,11 +133,17 @@ public class RssPollingService {
                         rawContent,
                         Instant.now()
                 );
+                isNew = true;
+            } else {
+                article = existingOpt.get();
+            }
 
-                // Use NLP service to generate embeddings so new articles show up in Semantic Search
-                String contentToAnalyze = rawContent;
+            // Use NLP service to generate embeddings so new articles show up in Semantic Search
+            // Also retroactively generate embeddings for existing articles that lack them
+            if (isNew || article.getEmbedding() == null) {
+                String contentToAnalyze = article.getRawContent();
                 if (contentToAnalyze == null || contentToAnalyze.isEmpty()) {
-                    contentToAnalyze = title;
+                    contentToAnalyze = article.getTitle();
                 }
 
                 try {
@@ -148,11 +158,13 @@ public class RssPollingService {
                         article.setRiskCategory(nlpResult.category);
                     }
                 } catch (Exception e) {
-                    logger.warn("Failed NLP enrichment for RSS article '{}': {}", title, e.getMessage());
+                    logger.warn("Failed NLP enrichment for RSS article '{}': {}", article.getTitle(), e.getMessage());
                 }
 
                 newsArticleRepository.save(article);
-                savedCount++;
+                if (isNew) {
+                    savedCount++;
+                }
             }
         }
 

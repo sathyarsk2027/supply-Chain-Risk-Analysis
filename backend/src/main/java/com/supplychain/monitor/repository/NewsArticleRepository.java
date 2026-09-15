@@ -10,6 +10,7 @@ import java.util.List;
 @Repository
 public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> {
     boolean existsByUrl(String url);
+    java.util.Optional<NewsArticle> findByUrl(String url);
     List<NewsArticle> findAllByOrderByPublishedAtDesc();
 
     @Query(value = "SELECT * FROM news_articles WHERE fetched_at >= :startTime AND fetched_at < :endTime ORDER BY published_at DESC", nativeQuery = true)
