@@ -59,11 +59,9 @@ public class NewsArticleController {
             logger.warn("NLP service unavailable, falling back to keyword search. Reason: {}", e.getMessage());
         }
 
-        // FALLBACK: If NLP embedding failed, return empty matches so the guardrail triggers gracefully
+        // FALLBACK: If NLP embedding failed, seamlessly fall back to keyword search
         if (embedding == null) {
-            QueryResponse emptyResponse = new QueryResponse(request.getQuery(), java.util.Collections.emptyList());
-            emptyResponse.setAiSummary(new QueryResponse.AiSummary("Semantic AI search is currently waking up or unavailable. Please try again in a few minutes.", 0));
-            return ResponseEntity.ok(emptyResponse);
+            return (ResponseEntity<QueryResponse>) keywordFallbackResponse(request.getQuery());
         }
 
 
