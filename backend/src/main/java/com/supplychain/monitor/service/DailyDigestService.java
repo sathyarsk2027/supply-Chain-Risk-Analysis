@@ -395,113 +395,108 @@ public class DailyDigestService {
                 "<body style=\"margin:0;padding:0;background:#060a08;font-family:'Segoe UI',Arial,sans-serif;\">" +
                 "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#060a08;\">" +
                 "<tr><td align=\"center\" style=\"padding:24px 16px;\">" +
-                "<table role=\"presentation\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0c1210;border-radius:16px;border:1px solid #1a2820;overflow:hidden;\">" +
+                "<table role=\"presentation\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0c1210;border-radius:14px;border:1px solid #1a2820;overflow:hidden;\">" +
 
-                // ═══════════ HEADER ═══════════
-                "<tr><td style=\"background:linear-gradient(135deg,#0a1610 0%,#12201a 50%,#0c1210 100%);padding:30px 32px 22px;border-bottom:2px solid #1e3024;\">" +
+                // HEADER
+                "<tr><td style=\"padding:32px 36px 24px;border-bottom:2px solid #1e3024;\">" +
                 "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
-                "<td><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
-                "<td style=\"background:linear-gradient(135deg,#f59e0b,#f97316);width:36px;height:36px;border-radius:10px;text-align:center;vertical-align:middle;font-size:18px;\">&#9889;</td>" +
-                "<td style=\"padding-left:12px;\"><h1 style=\"margin:0;font-size:19px;font-weight:800;color:#d4e4c8;letter-spacing:0.06em;\">SUPPLY CHAIN INTELLIGENCE</h1>" +
-                "<p style=\"margin:3px 0 0 0;font-size:12px;color:#5e7254;font-weight:500;\">Daily Risk Report &mdash; " + dateDisplay + "</p></td>" +
-                "</tr></table></td>" +
-                "<td align=\"right\" style=\"vertical-align:top;\"><div style=\"background:#0a120d;border:1px solid #1e3024;border-radius:8px;padding:8px 14px;\">" +
-                "<p style=\"margin:0;font-size:9px;color:#5e7254;text-transform:uppercase;letter-spacing:0.12em;\">Report ID</p>" +
-                "<p style=\"margin:2px 0 0;font-size:13px;color:#8fa882;font-family:monospace;font-weight:700;\">#SCR-" + LocalDate.now(IST).format(DateTimeFormatter.ofPattern("yyMMdd")) + "</p>" +
+                "<td>" +
+                "<p style=\"margin:0;font-size:11px;font-weight:700;color:" + riskBadgeColor + ";text-transform:uppercase;letter-spacing:0.2em;\">Daily Risk Report</p>" +
+                "<h1 style=\"margin:6px 0 0 0;font-size:22px;font-weight:800;color:#d4e4c8;letter-spacing:0.02em;\">Supply Chain Intelligence</h1>" +
+                "<p style=\"margin:6px 0 0 0;font-size:12px;color:#4a6440;\">" + dateDisplay + "</p></td>" +
+                "<td align=\"right\" style=\"vertical-align:top;\"><div style=\"background:#0a120d;border:1px solid #1e3024;border-radius:6px;padding:8px 14px;\">" +
+                "<p style=\"margin:0;font-size:8px;color:#4a6440;text-transform:uppercase;letter-spacing:0.15em;\">Report</p>" +
+                "<p style=\"margin:2px 0 0;font-size:14px;color:#8fa882;font-family:'Courier New',monospace;font-weight:700;\">#SCR-" + LocalDate.now(IST).format(DateTimeFormatter.ofPattern("yyMMdd")) + "</p>" +
                 "</div></td></tr></table>" +
                 "</td></tr>" +
 
-                // ═══════════ QUICK STATS BAR ═══════════
-                "<tr><td style=\"padding:16px 32px 4px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"8\" style=\"border-collapse:separate;\"><tr>" +
-                // Articles Scanned
-                "<td style=\"background:linear-gradient(180deg,#0e1a14 0%,#0a120d 100%);border:1px solid #1a2820;border-radius:10px;padding:14px 12px;text-align:center;width:33%;\">" +
-                "<p style=\"margin:0;font-size:9px;color:#5e7254;text-transform:uppercase;letter-spacing:0.12em;\">&#128202; Articles Scanned</p>" +
-                "<p style=\"margin:6px 0 0;font-size:26px;font-weight:900;color:#a3b898;\">" + totalArticles + "</p></td>" +
-                // India Focus
-                "<td style=\"background:linear-gradient(180deg,#1a1408 0%,#0a120d 100%);border:1px solid #2a2010;border-radius:10px;padding:14px 12px;text-align:center;width:33%;\">" +
-                "<p style=\"margin:0;font-size:9px;color:#b8860b;text-transform:uppercase;letter-spacing:0.12em;\">&#127470;&#127475; India Focus</p>" +
-                "<p style=\"margin:6px 0 0;font-size:26px;font-weight:900;color:#f59e0b;\">" + indiaCount + "</p></td>" +
-                // Risk Score
-                "<td style=\"background:linear-gradient(180deg,#1a0e0e 0%,#0a120d 100%);border:1px solid " + riskBadgeColor + "33;border-radius:10px;padding:14px 12px;text-align:center;width:33%;\">" +
-                "<p style=\"margin:0;font-size:9px;color:" + riskBadgeColor + ";text-transform:uppercase;letter-spacing:0.12em;\">&#9888;&#65039; Risk Score</p>" +
-                "<p style=\"margin:6px 0 0;font-size:26px;font-weight:900;color:" + riskBadgeColor + ";\">" + riskScore + "</p></td>" +
+                // STAT CARDS
+                "<tr><td style=\"padding:20px 36px 8px;\">" +
+                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"10\" style=\"border-collapse:separate;\"><tr>" +
+                "<td style=\"background:#0a120d;border-radius:8px;padding:18px 12px;text-align:center;width:33%;border-top:3px solid #5e7254;\">" +
+                "<p style=\"margin:0;font-size:28px;font-weight:900;color:#a3b898;line-height:1;\">" + totalArticles + "</p>" +
+                "<p style=\"margin:6px 0 0;font-size:9px;color:#4a6440;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;\">articles scanned</p></td>" +
+                "<td style=\"background:#0a120d;border-radius:8px;padding:18px 12px;text-align:center;width:33%;border-top:3px solid #f59e0b;\">" +
+                "<p style=\"margin:0;font-size:28px;font-weight:900;color:#f59e0b;line-height:1;\">" + indiaCount + "</p>" +
+                "<p style=\"margin:6px 0 0;font-size:9px;color:#4a6440;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;\">india focus</p></td>" +
+                "<td style=\"background:#0a120d;border-radius:8px;padding:18px 12px;text-align:center;width:33%;border-top:3px solid " + riskBadgeColor + ";\">" +
+                "<p style=\"margin:0;font-size:28px;font-weight:900;color:" + riskBadgeColor + ";line-height:1;\">" + riskScore + "</p>" +
+                "<p style=\"margin:6px 0 0;font-size:9px;color:#4a6440;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;\">risk score</p></td>" +
                 "</tr></table></td></tr>" +
 
-                // ═══════════ RISK GAUGE SECTION ═══════════
-                "<tr><td style=\"padding:12px 32px 8px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:linear-gradient(135deg,#0a120d 0%,#101a14 100%);border:1px solid " + riskBadgeColor + "33;border-radius:12px;\">" +
+                // RISK ASSESSMENT
+                "<tr><td style=\"padding:12px 36px 8px;\">" +
+                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border-left:4px solid " + riskBadgeColor + ";\">" +
                 "<tr><td style=\"padding:22px 24px;\">" +
                 "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
-                "<td style=\"width:55%;\">" +
-                "<p style=\"margin:0;font-size:10px;font-weight:700;color:#5e7254;text-transform:uppercase;letter-spacing:0.12em;\">&#127919; India Risk Assessment</p>" +
-                "<p style=\"margin:10px 0 0 0;font-size:40px;font-weight:900;color:" + riskBadgeColor + ";line-height:1;\">" + riskScore + "<span style=\"font-size:16px;color:#5e7254;font-weight:400;\">/100</span></p>" +
-                "<p style=\"margin:8px 0 0 0;font-size:14px;font-weight:700;color:" + riskBadgeColor + ";\">" + riskEmoji + " " + riskLabel + "</p>" +
+                "<td style=\"width:50%;\">" +
+                "<p style=\"margin:0;font-size:9px;font-weight:700;color:#4a6440;text-transform:uppercase;letter-spacing:0.15em;\">India Risk Assessment</p>" +
+                "<p style=\"margin:10px 0 0 0;font-size:42px;font-weight:900;color:" + riskBadgeColor + ";line-height:1;\">" + riskScore + "<span style=\"font-size:16px;color:#3e5234;font-weight:400;\">/100</span></p>" +
+                "<p style=\"margin:8px 0 0 0;\"><span style=\"display:inline-block;padding:3px 12px;background:" + riskBadgeColor + "18;color:" + riskBadgeColor + ";font-size:11px;font-weight:700;border-radius:4px;letter-spacing:0.04em;\">" + riskLabel + "</span></p>" +
                 elevatedLine +
                 "</td>" +
-                "<td style=\"width:45%;vertical-align:top;padding-left:16px;\">" +
-                "<p style=\"margin:0 0 10px 0;font-size:9px;color:#5e7254;text-transform:uppercase;letter-spacing:0.12em;\">Threat Categories</p>" +
-                "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"4\" style=\"font-size:12px;\">" +
-                "<tr><td style=\"color:#ef4444;font-size:14px;width:22px;\">&#9632;</td><td style=\"color:#8fa882;\">Geopolitical</td><td style=\"color:" + (geoScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:800;text-align:right;padding-left:12px;\">" + geoScore + "</td></tr>" +
-                "<tr><td style=\"color:#f59e0b;font-size:14px;\">&#9632;</td><td style=\"color:#8fa882;\">Logistics</td><td style=\"color:" + (logScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:800;text-align:right;\">" + logScore + "</td></tr>" +
-                "<tr><td style=\"color:#3b82f6;font-size:14px;\">&#9632;</td><td style=\"color:#8fa882;\">Weather</td><td style=\"color:" + (wxScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:800;text-align:right;\">" + wxScore + "</td></tr>" +
-                "<tr><td style=\"color:#22c55e;font-size:14px;\">&#9632;</td><td style=\"color:#8fa882;\">Market</td><td style=\"color:" + (mktScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:800;text-align:right;\">" + mktScore + "</td></tr>" +
+                "<td style=\"width:50%;vertical-align:top;padding-left:20px;\">" +
+                "<p style=\"margin:0 0 12px 0;font-size:9px;color:#4a6440;text-transform:uppercase;letter-spacing:0.15em;font-weight:700;\">Threat Breakdown</p>" +
+                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"font-size:12px;\">" +
+                "<tr><td style=\"padding:4px 0;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:8px;height:8px;background:#ef4444;border-radius:2px;\"></td><td style=\"padding-left:8px;color:#8fa882;\">Geopolitical</td></tr></table></td><td style=\"text-align:right;color:" + (geoScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:800;font-family:'Courier New',monospace;\">" + geoScore + "</td></tr>" +
+                "<tr><td style=\"padding:4px 0;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:8px;height:8px;background:#f59e0b;border-radius:2px;\"></td><td style=\"padding-left:8px;color:#8fa882;\">Logistics</td></tr></table></td><td style=\"text-align:right;color:" + (logScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:800;font-family:'Courier New',monospace;\">" + logScore + "</td></tr>" +
+                "<tr><td style=\"padding:4px 0;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:8px;height:8px;background:#3b82f6;border-radius:2px;\"></td><td style=\"padding-left:8px;color:#8fa882;\">Weather</td></tr></table></td><td style=\"text-align:right;color:" + (wxScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:800;font-family:'Courier New',monospace;\">" + wxScore + "</td></tr>" +
+                "<tr><td style=\"padding:4px 0;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:8px;height:8px;background:#22c55e;border-radius:2px;\"></td><td style=\"padding-left:8px;color:#8fa882;\">Market</td></tr></table></td><td style=\"text-align:right;color:" + (mktScore > 40 ? "#f59e0b" : "#6b8c5e") + ";font-weight:800;font-family:'Courier New',monospace;\">" + mktScore + "</td></tr>" +
                 "</table></td></tr>" +
-                // Gauge bar
                 "<tr><td colspan=\"2\" style=\"padding:16px 0 0 0;\">" +
                 "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"2\" style=\"border-collapse:separate;\"><tr>" + gaugeBar.toString() + "</tr></table>" +
                 "</td></tr></table>" +
                 "</td></tr></table>" +
                 "</td></tr>" +
 
-                // ═══════════ RISK DISTRIBUTION CHART ═══════════
-                "<tr><td style=\"padding:16px 32px 8px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border:1px solid #1a2820;\">" +
-                "<tr><td style=\"padding:20px 22px;\">" +
-                "<h2 style=\"margin:0 0 16px 0;font-size:14px;font-weight:800;color:#a3b898;text-transform:uppercase;letter-spacing:0.06em;\">&#128200; Risk Distribution Analysis</h2>" +
+                // RISK DISTRIBUTION
+                "<tr><td style=\"padding:16px 36px 8px;\">" +
+                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border-left:4px solid #5e7254;\">" +
+                "<tr><td style=\"padding:20px 24px;\">" +
+                "<h2 style=\"margin:0 0 16px 0;font-size:13px;font-weight:800;color:#a3b898;text-transform:uppercase;letter-spacing:0.1em;\">Risk Distribution</h2>" +
                 chartHtml +
                 "</td></tr></table>" +
                 "</td></tr>" +
 
-                // ═══════════ INDIA INTELLIGENCE ═══════════
-                "<tr><td style=\"padding:20px 32px 16px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border:1px solid #1a2820;\">" +
-                "<tr><td style=\"padding:20px 22px;\">" +
-                "<h2 style=\"margin:0 0 14px 0;font-size:14px;font-weight:800;color:#a3b898;text-transform:uppercase;letter-spacing:0.06em;\">&#127470;&#127475; India Intelligence</h2>" +
+                // INDIA INTELLIGENCE
+                "<tr><td style=\"padding:16px 36px 12px;\">" +
+                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border-left:4px solid #f59e0b;\">" +
+                "<tr><td style=\"padding:22px 24px;\">" +
+                "<h2 style=\"margin:0 0 4px 0;font-size:13px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;\">India Intelligence</h2>" +
+                "<p style=\"margin:0 0 14px 0;font-size:10px;color:#4a6440;\">" + indiaCount + " articles analyzed</p>" +
                 "<p style=\"margin:0;font-size:13px;line-height:1.85;color:#b8c8ae;\">" + indiaHtml + "</p>" +
-                "<p style=\"margin:14px 0 0 0;font-size:11px;color:#3e5234;font-style:italic;\">Analysis based on " + indiaCount + " article" + (indiaCount != 1 ? "s" : "") + " ingested in the past 24h</p>" +
                 "</td></tr></table>" +
                 "</td></tr>" +
 
-                // ═══════════ GLOBAL SITUATION ═══════════
-                "<tr><td style=\"padding:4px 32px 16px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border:1px solid #1a2820;\">" +
-                "<tr><td style=\"padding:20px 22px;\">" +
-                "<h2 style=\"margin:0 0 14px 0;font-size:14px;font-weight:800;color:#a3b898;text-transform:uppercase;letter-spacing:0.06em;\">&#127758; Global Situation</h2>" +
+                // GLOBAL SITUATION
+                "<tr><td style=\"padding:4px 36px 12px;\">" +
+                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border-left:4px solid #3b82f6;\">" +
+                "<tr><td style=\"padding:22px 24px;\">" +
+                "<h2 style=\"margin:0 0 4px 0;font-size:13px;font-weight:800;color:#3b82f6;text-transform:uppercase;letter-spacing:0.1em;\">Global Situation</h2>" +
+                "<p style=\"margin:0 0 14px 0;font-size:10px;color:#4a6440;\">" + globalCount + " articles analyzed</p>" +
                 "<p style=\"margin:0;font-size:13px;line-height:1.85;color:#b8c8ae;\">" + globalHtml + "</p>" +
-                "<p style=\"margin:14px 0 0 0;font-size:11px;color:#3e5234;font-style:italic;\">Analysis based on " + globalCount + " article" + (globalCount != 1 ? "s" : "") + " ingested in the past 24h</p>" +
                 "</td></tr></table>" +
                 "</td></tr>" +
 
-                // ═══════════ TOP HEADLINES ═══════════
-                "<tr><td style=\"padding:4px 32px 20px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border:1px solid #1a2820;\">" +
-                "<tr><td style=\"padding:20px 22px;\">" +
-                "<h2 style=\"margin:0 0 6px 0;font-size:14px;font-weight:800;color:#a3b898;text-transform:uppercase;letter-spacing:0.06em;\">&#128278; Top Headlines</h2>" +
-                "<p style=\"margin:0 0 14px 0;font-size:10px;color:#3e5234;\">Click any headline to read the full article</p>" +
+                // TOP HEADLINES
+                "<tr><td style=\"padding:4px 36px 20px;\">" +
+                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;border-left:4px solid #8fa882;\">" +
+                "<tr><td style=\"padding:22px 24px;\">" +
+                "<h2 style=\"margin:0 0 4px 0;font-size:13px;font-weight:800;color:#a3b898;text-transform:uppercase;letter-spacing:0.1em;\">Top Headlines</h2>" +
+                "<p style=\"margin:0 0 16px 0;font-size:10px;color:#4a6440;\">Click to read the full story</p>" +
                 topHeadlinesHtml +
                 "</td></tr></table>" +
                 "</td></tr>" +
 
-                // ═══════════ CTA BUTTON ═══════════
-                "<tr><td style=\"padding:8px 32px 28px;\" align=\"center\">" +
-                "<a href=\"" + dashboardUrl + "\" target=\"_blank\" style=\"display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#6b8c5e 0%,#8fa882 100%);color:#0a0f0d;font-size:14px;font-weight:800;text-decoration:none;border-radius:10px;letter-spacing:0.05em;text-transform:uppercase;\">&#128640; Open Live Dashboard</a>" +
+                // CTA BUTTON
+                "<tr><td style=\"padding:8px 36px 28px;\" align=\"center\">" +
+                "<a href=\"" + dashboardUrl + "\" target=\"_blank\" style=\"display:inline-block;padding:14px 44px;background:#d4e4c8;color:#0a0f0d;font-size:13px;font-weight:800;text-decoration:none;border-radius:8px;letter-spacing:0.06em;text-transform:uppercase;\">OPEN LIVE DASHBOARD</a>" +
                 "</td></tr>" +
 
-                // ═══════════ FOOTER ═══════════
-                "<tr><td style=\"padding:18px 32px;background:#070b09;border-top:1px solid #1a2820;\">" +
+                // FOOTER
+                "<tr><td style=\"padding:18px 36px;border-top:1px solid #1a2820;\">" +
                 "<p style=\"margin:0;font-size:10px;color:#3e5234;text-align:center;\">" +
-                "Generated at " + LocalTime.now(IST).format(DateTimeFormatter.ofPattern("HH:mm")) + " IST &middot; Report #SCR-" + LocalDate.now(IST).format(DateTimeFormatter.ofPattern("yyMMdd")) + " &middot; Powered by Groq AI + pgvector</p>" +
+                "Generated at " + LocalTime.now(IST).format(DateTimeFormatter.ofPattern("HH:mm")) + " IST &middot; #SCR-" + LocalDate.now(IST).format(DateTimeFormatter.ofPattern("yyMMdd")) + " &middot; Groq AI + pgvector</p>" +
                 "</td></tr>" +
 
                 "</table></td></tr></table></body></html>";
@@ -596,7 +591,7 @@ public class DailyDigestService {
      */
     private String buildTopHeadlinesHtml(List<NewsArticle> articles, int limit) {
         if (articles == null || articles.isEmpty()) {
-            return "<p style=\"font-size:12px;color:#5e7254;\">No recent headlines available.</p>";
+            return "<p style=\"font-size:12px;color:#4a6440;\">No recent headlines available.</p>";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -609,28 +604,20 @@ public class DailyDigestService {
             String url = article.getUrl() != null ? article.getUrl() : "#";
             String category = article.getRiskCategory() != null ? article.getRiskCategory().toUpperCase() : "NEWS";
 
-            String catColor = "#5e7254";
-            String catIcon = "&#9679;";
-            if (category.contains("GEO")) { catColor = "#ef4444"; catIcon = "&#9632;"; }
-            else if (category.contains("WEATHER")) { catColor = "#3b82f6"; catIcon = "&#9632;"; }
-            else if (category.contains("MARKET")) { catColor = "#22c55e"; catIcon = "&#9632;"; }
-            else if (category.contains("LOG")) { catColor = "#f59e0b"; catIcon = "&#9632;"; }
+            String accentColor = "#5e7254";
+            if (category.contains("GEO")) accentColor = "#ef4444";
+            else if (category.contains("WEATHER")) accentColor = "#3b82f6";
+            else if (category.contains("MARKET")) accentColor = "#22c55e";
+            else if (category.contains("LOG")) accentColor = "#f59e0b";
 
-            String borderBottom = count < Math.min(articles.size(), limit) ? "border-bottom:1px solid #1a2820;" : "";
-
-            sb.append("<div style=\"padding:12px 0;" + borderBottom + "\">");
+            sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:8px;\"><tr>");
+            sb.append("<td style=\"background:#0e1814;border-left:3px solid " + accentColor + ";border-radius:4px;padding:12px 16px;\">");
             sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>");
-            // Number badge
-            sb.append("<td style=\"width:28px;vertical-align:top;padding-top:2px;\"><div style=\"width:22px;height:22px;background:" + catColor + "22;border:1px solid " + catColor + "44;border-radius:6px;text-align:center;line-height:22px;font-size:10px;font-weight:800;color:" + catColor + ";\">" + count + "</div></td>");
-            // Title + source
-            sb.append("<td style=\"padding-left:10px;\"><a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:13px;color:#d4e4c8;text-decoration:none;font-weight:600;line-height:1.4;\">").append(title).append("</a>");
-            sb.append("<br><span style=\"font-size:10px;color:#3e5234;\">").append(source).append("</span></td>");
-            // Category badge + arrow
-            sb.append("<td align=\"right\" style=\"vertical-align:top;white-space:nowrap;padding-left:8px;\">");
-            sb.append("<span style=\"display:inline-block;padding:3px 10px;background:" + catColor + "18;color:" + catColor + ";font-size:9px;font-weight:700;border-radius:4px;border:1px solid " + catColor + "33;text-transform:uppercase;letter-spacing:0.04em;\">" + catIcon + " ").append(category).append("</span>");
-            sb.append("<br><a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:10px;color:#5e7254;text-decoration:none;float:right;margin-top:6px;\">Read &#8594;</a>");
-            sb.append("</td>");
-            sb.append("</tr></table></div>");
+            sb.append("<td><a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:13px;color:#d4e4c8;text-decoration:none;font-weight:600;line-height:1.45;\">").append(title).append("</a>");
+            sb.append("<br><span style=\"font-size:10px;color:#4a6440;\">" + source + " &middot; " + category + "</span></td>");
+            sb.append("<td align=\"right\" style=\"vertical-align:middle;padding-left:12px;white-space:nowrap;\">");
+            sb.append("<a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:11px;color:" + accentColor + ";text-decoration:none;font-weight:700;\">Read &rarr;</a>");
+            sb.append("</td></tr></table></td></tr></table>");
         }
         return sb.toString();
     }
