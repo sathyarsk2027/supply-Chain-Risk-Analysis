@@ -92,10 +92,10 @@ public class DailyDigestService {
     }
 
     // --------------------------------------------------------------------------
-    // Backup @Scheduled cron — fires at 6:00 AM IST (00:30 UTC) daily.
+    // Backup @Scheduled cron — fires at 6:00 AM IST daily.
     // Primary trigger is the external cron-job.org HTTP call to /api/digest/trigger.
     // --------------------------------------------------------------------------
-    @Scheduled(cron = "0 30 0 * * *", zone = "Asia/Kolkata")
+    @Scheduled(cron = "0 0 6 * * *", zone = "Asia/Kolkata")
     public void scheduledDigest() {
         logger.info("@Scheduled daily digest cron firing at 6:00 AM IST...");
         try {

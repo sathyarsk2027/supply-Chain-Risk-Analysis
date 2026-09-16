@@ -34,6 +34,15 @@ public class DigestController {
     }
 
     /**
+     * Wake-up ping endpoint. Used to wake up the Render free tier container
+     * ~2 minutes before the actual cron job runs, avoiding timeout failures.
+     */
+    @GetMapping("/ping")
+    public ResponseEntity<?> ping() {
+        return ResponseEntity.ok(Map.of("status", "awake", "message", "Server is ready."));
+    }
+
+    /**
      * External cron trigger — called by cron-job.org at 6:00 AM IST daily.
      * If DIGEST_TRIGGER_SECRET is configured, requires matching Authorization header.
      */
