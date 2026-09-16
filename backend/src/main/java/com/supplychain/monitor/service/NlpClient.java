@@ -33,20 +33,21 @@ public class NlpClient {
     }
 
     public NlpResponse extractEntities(String text) {
-        int maxRetries = 4;
-        int delayMs = 1500;
+        int maxRetries = 6;
+        int delayMs = 2000;
         
         for (int i = 0; i < maxRetries; i++) {
             try {
                 ExtractRequest request = new ExtractRequest(text);
                 return restTemplate.postForObject(nlpServiceUrl, request, NlpResponse.class);
             } catch (org.springframework.web.client.HttpStatusCodeException e) {
-                if (e.getStatusCode().value() == 429) {
+                int status = e.getStatusCode().value();
+                if (status == 429 || status == 502 || status == 503 || status == 504) {
                     if (i == maxRetries - 1) {
-                        logger.error("Rate limit exceeded for NLP extract service after {} retries.", maxRetries);
+                        logger.error("Service unavailable/rate limited for NLP extract service after {} retries.", maxRetries);
                         return null;
                     }
-                    logger.warn("429 Too Many Requests from NLP extract service. Retrying in {} ms...", delayMs);
+                    logger.warn("HTTP {} from NLP extract service. Retrying in {} ms...", status, delayMs);
                     try {
                         Thread.sleep(delayMs);
                     } catch (InterruptedException ie) {
@@ -59,16 +60,26 @@ public class NlpClient {
                     return null;
                 }
             } catch (Exception e) {
-                logger.warn("Failed to reach NLP service at {}. Error: {}", nlpServiceUrl, e.getMessage());
-                return null;
+                if (i == maxRetries - 1) {
+                    logger.warn("Failed to reach NLP service at {} after {} retries. Error: {}", nlpServiceUrl, maxRetries, e.getMessage());
+                    return null;
+                }
+                logger.warn("Connection/Timeout error from NLP extract service. Retrying in {} ms... Error: {}", delayMs, e.getMessage());
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
+                delayMs *= 2;
             }
         }
         return null;
     }
 
     public float[] getEmbedding(String text) throws Exception {
-        int maxRetries = 4;
-        int delayMs = 1500;
+        int maxRetries = 6;
+        int delayMs = 2000;
         
         for (int i = 0; i < maxRetries; i++) {
             try {
@@ -76,12 +87,13 @@ public class NlpClient {
                 EmbedResponse response = restTemplate.postForObject(nlpEmbedUrl, request, EmbedResponse.class);
                 return (response != null) ? response.embedding : null;
             } catch (org.springframework.web.client.HttpStatusCodeException e) {
-                if (e.getStatusCode().value() == 429) {
+                int status = e.getStatusCode().value();
+                if (status == 429 || status == 502 || status == 503 || status == 504) {
                     if (i == maxRetries - 1) {
-                        logger.error("Rate limit exceeded for NLP embed service after {} retries.", maxRetries);
-                        throw new Exception("NLP Service Error (" + nlpEmbedUrl + "): 429 Too Many Requests");
+                        logger.error("Service unavailable/rate limited for NLP embed service after {} retries.", maxRetries);
+                        throw new Exception("NLP Service Error (" + nlpEmbedUrl + "): HTTP " + status);
                     }
-                    logger.warn("429 Too Many Requests from NLP embed service. Retrying in {} ms...", delayMs);
+                    logger.warn("HTTP {} from NLP embed service. Retrying in {} ms...", status, delayMs);
                     try {
                         Thread.sleep(delayMs);
                     } catch (InterruptedException ie) {
@@ -94,8 +106,19 @@ public class NlpClient {
                     throw new Exception("NLP Service Error (" + nlpEmbedUrl + "): " + e.getMessage());
                 }
             } catch (Exception e) {
-                logger.error("Failed to retrieve embedding from NLP service at {}. Error: {}", nlpEmbedUrl, e.getMessage());
-                throw new Exception("NLP Service Error (" + nlpEmbedUrl + "): " + e.getMessage());
+                // Catch connection refused, timeouts, etc (often happens on cold starts)
+                if (i == maxRetries - 1) {
+                    logger.error("Failed to retrieve embedding from NLP service at {} after {} retries. Error: {}", nlpEmbedUrl, maxRetries, e.getMessage());
+                    throw new Exception("NLP Service Error (" + nlpEmbedUrl + "): " + e.getMessage());
+                }
+                logger.warn("Connection/Timeout error from NLP embed service (could be waking up). Retrying in {} ms... Error: {}", delayMs, e.getMessage());
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new Exception("Interrupted during NLP retry backoff");
+                }
+                delayMs *= 2; // Exponential backoff
             }
         }
         return null;
