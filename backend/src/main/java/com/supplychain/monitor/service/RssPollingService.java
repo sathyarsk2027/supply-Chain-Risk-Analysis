@@ -158,14 +158,22 @@ public class RssPollingService {
                         article.setRiskCategory(nlpResult.category);
                     }
                     
-                    // Sleep briefly to prevent rate-limiting the NLP service
+                    // Sleep briefly to prevent rate-limiting the NLP service (2 seconds)
                     try {
-                        Thread.sleep(250);
+                        Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
                 } catch (Exception e) {
                     logger.warn("Failed NLP enrichment for RSS article '{}': {}", article.getTitle(), e.getMessage());
+                    if (e.getMessage() != null && e.getMessage().contains("429")) {
+                        logger.warn("NLP Service rate limit hit. Cooling down for 30 seconds before next article...");
+                        try {
+                            Thread.sleep(30000); // 30 second cooldown
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
                 }
 
                 newsArticleRepository.save(article);
