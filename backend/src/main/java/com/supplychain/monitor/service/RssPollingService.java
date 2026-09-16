@@ -157,6 +157,13 @@ public class RssPollingService {
                     if (nlpResult != null && nlpResult.category != null && !nlpResult.category.isEmpty()) {
                         article.setRiskCategory(nlpResult.category);
                     }
+                    
+                    // Sleep briefly to prevent rate-limiting the NLP service
+                    try {
+                        Thread.sleep(250);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                 } catch (Exception e) {
                     logger.warn("Failed NLP enrichment for RSS article '{}': {}", article.getTitle(), e.getMessage());
                 }
