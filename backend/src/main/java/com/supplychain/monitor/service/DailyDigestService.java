@@ -121,19 +121,9 @@ public class DailyDigestService {
             return new DigestResult("already_sent", "Digest already sent for " + todayStr, null, 0, null);
         }
 
-        // Determine time window
-        Instant windowStart;
-        Instant windowEnd;
-        if (forceRun) {
-            // For manual test: previous 24h from now
-            windowEnd = Instant.now();
-            windowStart = windowEnd.minus(Duration.ofHours(24));
-        } else {
-            // For scheduled: yesterday 00:00 IST to today 00:00 IST
-            LocalDate yesterday = today.minusDays(1);
-            windowStart = yesterday.atStartOfDay(IST).toInstant();
-            windowEnd = today.atStartOfDay(IST).toInstant();
-        }
+        // Determine time window — always use rolling 24h from now
+        Instant windowEnd = Instant.now();
+        Instant windowStart = windowEnd.minus(Duration.ofHours(24));
 
         logger.info("Generating daily digest for window: {} to {}", windowStart, windowEnd);
 
@@ -181,7 +171,7 @@ public class DailyDigestService {
         String globalSummary = generateSectionSummary(globalArticles, "global supply chain");
 
         // 6. Build HTML email
-        String dateDisplay = today.minusDays(forceRun ? 0 : 1).format(DATE_DISPLAY);
+        String dateDisplay = today.format(DATE_DISPLAY);
         String subjectLine = "Supply Chain Risk Digest — " + dateDisplay;
         String htmlBody = buildHtmlEmail(dateDisplay, indiaRisk, elevatedCountries,
                 indiaSummary, indiaArticles.size(), globalSummary, globalArticles.size());
