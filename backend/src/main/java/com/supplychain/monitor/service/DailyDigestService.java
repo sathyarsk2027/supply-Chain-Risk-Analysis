@@ -80,6 +80,12 @@ public class DailyDigestService {
     @Value("${resend.api.key:}")
     private String resendApiKey;
 
+    @Value("${spring.mail.username:}")
+    private String gmailUsername;
+
+    @Value("${spring.mail.password:}")
+    private String gmailPassword;
+
     @Value("${digest.dashboard.url:http://localhost:5173}")
     private String dashboardUrl;
 
@@ -299,39 +305,73 @@ public class DailyDigestService {
             logger.warn("DIGEST_RECIPIENT_EMAIL is not configured. Skipping email delivery.");
             return false;
         }
-        if (resendApiKey == null || resendApiKey.trim().isEmpty()) {
-            logger.warn("RESEND_API_KEY is not configured. Skipping email delivery.");
-            return false;
-        }
 
-        try {
-            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + resendApiKey.trim());
+        // Tier 1: Try Resend API (HTTPS)
+        if (resendApiKey != null && !resendApiKey.trim().isEmpty()) {
+            try {
+                org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+                headers.set("Authorization", "Bearer " + resendApiKey.trim());
 
-            java.util.Map<String, Object> payload = new java.util.HashMap<>();
-            payload.put("from", "Supply Chain Intelligence <onboarding@resend.dev>");
-            payload.put("to", recipientEmail.trim());
-            payload.put("subject", subject);
-            payload.put("html", htmlBody);
-            payload.put("reply_to", recipientEmail.trim());
+                java.util.Map<String, Object> payload = new java.util.HashMap<>();
+                payload.put("from", "Supply Chain Intelligence <onboarding@resend.dev>");
+                payload.put("to", recipientEmail.trim());
+                payload.put("subject", subject);
+                payload.put("html", htmlBody);
+                payload.put("reply_to", recipientEmail.trim());
 
-            org.springframework.http.HttpEntity<java.util.Map<String, Object>> request = new org.springframework.http.HttpEntity<>(payload, headers);
-            
-            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity("https://api.resend.com/emails", request, String.class);
-            
-            if (response.getStatusCode().is2xxSuccessful()) {
-                logger.info("Daily digest email sent successfully via Resend to {}", recipientEmail);
-                return true;
-            } else {
-                logger.error("Failed to send email via Resend. Status: {}", response.getStatusCode());
-                return false;
+                org.springframework.http.HttpEntity<java.util.Map<String, Object>> request = new org.springframework.http.HttpEntity<>(payload, headers);
+                org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity("https://api.resend.com/emails", request, String.class);
+
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    logger.info("Daily digest email sent successfully via Resend to {}", recipientEmail);
+                    return true;
+                } else {
+                    logger.warn("Resend API returned non-2xx status: {}. Attempting fallback...", response.getStatusCode());
+                }
+            } catch (Exception e) {
+                logger.warn("Resend API delivery failed: {}. Attempting Gmail SMTP fallback...", e.getMessage());
             }
-        } catch (Exception e) {
-            logger.error("Failed to send daily digest email via Resend: {}", e.getMessage(), e);
-            return false;
         }
+
+        // Tier 2: Fallback to Gmail SMTP if configured
+        if (gmailUsername != null && !gmailUsername.trim().isEmpty()
+                && gmailPassword != null && !gmailPassword.trim().isEmpty()) {
+            try {
+                org.springframework.mail.javamail.JavaMailSenderImpl mailSender = new org.springframework.mail.javamail.JavaMailSenderImpl();
+                mailSender.setHost("smtp.gmail.com");
+                mailSender.setPort(587);
+                mailSender.setUsername(gmailUsername.trim());
+                mailSender.setPassword(gmailPassword.trim().replace(" ", "")); // remove spaces in app password
+
+                java.util.Properties props = mailSender.getJavaMailProperties();
+                props.put("mail.transport.protocol", "smtp");
+                props.put("mail.smtp.auth", "true");
+                props.put("mail.smtp.starttls.enable", "true");
+                props.put("mail.smtp.connectiontimeout", "10000");
+                props.put("mail.smtp.timeout", "10000");
+
+                jakarta.mail.internet.MimeMessage message = mailSender.createMimeMessage();
+                org.springframework.mail.javamail.MimeMessageHelper helper =
+                        new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(new jakarta.mail.internet.InternetAddress(gmailUsername.trim(), "Supply Chain Intelligence"));
+                helper.setTo(recipientEmail.trim());
+                helper.setSubject(subject);
+                helper.setText(htmlBody, true);
+                helper.setReplyTo(recipientEmail.trim());
+
+                mailSender.send(message);
+                logger.info("Daily digest email sent successfully via Gmail SMTP to {}", recipientEmail);
+                return true;
+            } catch (Exception e) {
+                logger.error("Gmail SMTP fallback delivery also failed: {}", e.getMessage(), e);
+            }
+        } else {
+            logger.warn("Neither RESEND_API_KEY nor valid Gmail SMTP credentials (username/password) are available.");
+        }
+
+        return false;
     }
 
     // --------------------------------------------------------------------------

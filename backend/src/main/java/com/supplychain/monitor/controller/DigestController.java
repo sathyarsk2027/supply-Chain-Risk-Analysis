@@ -44,17 +44,22 @@ public class DigestController {
 
     /**
      * External cron trigger — called by cron-job.org at 6:00 AM IST daily.
-     * If DIGEST_TRIGGER_SECRET is configured, requires matching Authorization header.
+     * Supports both POST and GET.
+     * If DIGEST_TRIGGER_SECRET is configured, accepts either Authorization header or ?secret= query param.
      */
-    @PostMapping("/trigger")
-    public ResponseEntity<?> triggerDigest(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    @RequestMapping(value = "/trigger", method = {RequestMethod.POST, RequestMethod.GET})
+    public ResponseEntity<?> triggerDigest(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "secret", required = false) String secretParam) {
         // Security check
         if (triggerSecret != null && !triggerSecret.trim().isEmpty()) {
             String expectedAuth = "Bearer " + triggerSecret.trim();
-            if (authHeader == null || !authHeader.equals(expectedAuth)) {
+            boolean isAuthorized = (authHeader != null && authHeader.equals(expectedAuth))
+                    || (secretParam != null && secretParam.trim().equals(triggerSecret.trim()));
+            if (!isAuthorized) {
                 logger.warn("Unauthorized digest trigger attempt.");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Unauthorized", "message", "Invalid or missing Authorization header."));
+                        .body(Map.of("error", "Unauthorized", "message", "Invalid or missing Authorization header or secret parameter."));
             }
         }
 
@@ -76,10 +81,10 @@ public class DigestController {
 
     /**
      * Manual test trigger — always runs immediately, ignores deduplication.
-     * Uses previous 24h from now (not fixed yesterday window).
+     * Supports both POST and GET (can be opened in any browser).
      * Returns full digest content in response body for inspection.
      */
-    @PostMapping("/send-now")
+    @RequestMapping(value = "/send-now", method = {RequestMethod.POST, RequestMethod.GET})
     public ResponseEntity<?> sendNow() {
         logger.info("Manual digest send-now endpoint called.");
         try {

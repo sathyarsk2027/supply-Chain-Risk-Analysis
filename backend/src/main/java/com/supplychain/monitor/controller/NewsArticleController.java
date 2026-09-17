@@ -61,7 +61,7 @@ public class NewsArticleController {
 
         // FALLBACK: If NLP embedding failed, seamlessly fall back to keyword search
         if (embedding == null) {
-            return (ResponseEntity<QueryResponse>) keywordFallbackResponse(request.getQuery());
+            return keywordFallbackResponse(request.getQuery());
         }
 
 
