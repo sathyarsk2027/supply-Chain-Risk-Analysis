@@ -19,15 +19,15 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
     @Query(value = "SELECT id, title, url, source, risk_category AS riskCategory, raw_content AS rawContent, published_at AS publishedAt, " +
                    "(embedding <=> CAST(:embedding AS vector)) AS cosineDistance, " +
                    "( " +
-                   "  ((1.0 - (embedding <=> CAST(:embedding AS vector))) * 0.7) + " +
-                   "  (EXP(-(EXTRACT(EPOCH FROM (CURRENT_DATE - published_at)) / 86400.0) / 7.0) * 0.3) " +
+                   "  ((1.0 - (embedding <=> CAST(:embedding AS vector))) * 0.85) + " +
+                   "  (EXP(-(EXTRACT(EPOCH FROM (CURRENT_DATE - published_at)) / 86400.0) / 7.0) * 0.15) " +
                    ") AS compositeScore " +
                    "FROM news_articles " +
                    "WHERE embedding IS NOT NULL " +
                    "AND published_at >= CURRENT_DATE - INTERVAL '14 days' " +
-                   "AND (1.0 - (embedding <=> CAST(:embedding AS vector))) >= 0.15 " +
+                   "AND (1.0 - (embedding <=> CAST(:embedding AS vector))) >= 0.25 " +
                    "ORDER BY compositeScore DESC " +
-                   "LIMIT 15", nativeQuery = true)
+                   "LIMIT 30", nativeQuery = true)
     List<NewsArticleSearchResult> findSimilarArticles(@Param("embedding") String embedding);
 
     @Query(value = "SELECT source AS source, COUNT(*) AS count FROM news_articles GROUP BY source", nativeQuery = true)
