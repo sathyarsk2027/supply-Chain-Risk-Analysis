@@ -32,7 +32,11 @@ public class GroqClient {
     private String apiUrl;
 
     public GroqClient() {
-        this.restTemplate = new RestTemplate();
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);  // 5s connect timeout
+        factory.setReadTimeout(15000);    // 15s read timeout (LLM generation can take a few seconds)
+        this.restTemplate = new RestTemplate(factory);
     }
 
     @jakarta.annotation.PostConstruct
@@ -69,23 +73,19 @@ public class GroqClient {
 
         String lowerQuery = query.toLowerCase();
         String summary;
-        int score = 78;
+        // Use -1 as sentinel so the caller fills in the actual top-match score from search results
+        int score = -1;
 
         if (lowerQuery.contains("semiconductor") || lowerQuery.contains("tariff")) {
             summary = "Based on current world news, semiconductor tariffs are being aggressively implemented as a geopolitical tool to secure domestic supply chains and reduce reliance on foreign manufacturing. This sudden policy shift is causing a major ripple effect across the global electronics industry, threatening downstream manufacturing in sectors like automotive, aerospace, and consumer electronics. Foundries in affected regions are facing immediate export restrictions, which abruptly halts the flow of critical microchips to assembly lines. As a result, businesses are experiencing unprecedented component shortages, leading to forced factory idling and delayed product launches. The increasing geopolitical friction is fundamentally disrupting established just-in-time inventory models and causing component costs to skyrocket on the spot market.\n\nBest strategic ideas to mitigate this:\n• Accelerate localized sourcing and nearshoring strategies.\n• Secure long-term microchip contracts with diversified suppliers outside affected regions.\n• Temporarily stockpile critical components to insulate against impending price shocks.\n• Invest in product redesigns that utilize legacy or alternative chips.";
-            score = 82;
         } else if (lowerQuery.contains("panama") || lowerQuery.contains("drought")) {
             summary = "Current world news highlights severe drought conditions in the Panama Canal driven by unprecedented El Niño weather patterns and declining rainfall in the Gatun Lake watershed. Because the canal relies on fresh water from this lake to operate its lock systems, authorities have been forced to drastically reduce daily vessel transit slots and impose strict draft limits on ships. This climatic disruption creates a massive, compounding bottleneck for US East Coast and Gulf logistics, as vessels must carry lighter loads and wait in extensive queues. The reduced capacity is significantly delaying containerized freight, bulk commodities, and energy shipments globally. Consequently, carriers are forced to either absorb exorbitant congestion surcharges or reroute entire fleets around the Cape of Good Hope, adding weeks to transit times and driving up shipping costs.\n\nBest suggestions for supply chain leaders:\n• Rapidly shift import volumes to US West Coast ports.\n• Utilize intermodal rail networks to bypass the canal constraint entirely.\n• Explore alternative routing via the Suez Canal (if viable) or air freight for high-margin goods.\n• Renegotiate delivery windows with major customers.";
-            score = 88;
         } else if (lowerQuery.contains("red sea") || lowerQuery.contains("rerout")) {
             summary = "Current world news reports severe geopolitical instability and militant attacks in the Red Sea corridor, making one of the world's most critical maritime chokepoints highly unsafe for commercial vessels. In response to the escalating threat to crew safety and cargo integrity, major ocean carriers have completely suspended transit through the Suez Canal. Instead, fleets are being systematically rerouted around the southern tip of Africa via the Cape of Good Hope. This massive diversion absorbs huge amounts of global shipping capacity, leading to severe container shortages and skyrocketing spot freight rates. The extended 10-14 day transit delays are causing immediate inventory stockouts and wreaking havoc on European and East Coast supply chains.\n\nBest actionable ideas:\n• Immediately increase safety stock levels for critical inventory.\n• Lock in extended ocean freight contracts to avoid spot rate volatility.\n• Strategically shift high-value/low-weight goods to expedited air freight.\n• Diversify suppliers to regions not dependent on the Suez transit lane.";
-            score = 92;
         } else if (lowerQuery.contains("strike") || lowerQuery.contains("port")) {
             summary = "Current world news indicates imminent labor strikes at key commercial ports resulting from stalled contract negotiations between maritime unions and port operators. The core disputes center around wage stagnation in the face of inflation and the increasing automation of terminal operations which threatens union jobs. As the strike deadline approaches, the threat of a complete work stoppage poses a catastrophic risk to regional import/export liquidity. If terminal operations halt, the flow of retail goods, agricultural exports, and critical industrial components will be immediately paralyzed just ahead of peak season. The resulting vessel backlog and container congestion could take months to clear, inflicting massive demurrage costs and widespread inventory stockouts.\n\nBest mitigation ideas:\n• Aggressively front-load shipments ahead of anticipated strike deadlines.\n• Divert inbound cargo to unaffected regional ports immediately.\n• Optimize warehouse space to store increased safety stock.\n• Form alliances with alternative logistics providers who rely on less-congested private terminals.";
-            score = 85;
         } else {
             summary = "Based on current world news, there are localized adjustments and emerging risk factors directly related to '" + query + "'. Rapidly changing market dynamics, shifting geopolitical alliances, and localized environmental events are forcing supply chains to adapt. Organizations are currently assessing the short-term impact of these events on supplier lead times and transit lane stability. While baseline logistics networks remain generally operational, the situation remains highly fluid and requires close observation. Procurement teams must remain agile to prevent minor disruptions from cascading into major stockouts.\n\nBest suggestions:\n• Monitor key transit lanes for volatility.\n• Proactively communicate with tier-1 suppliers about potential lead time extensions.\n• Develop contingency plans for alternative sourcing.";
-            score = 65;
         }
 
         return new GroqResponse(summary, score);
