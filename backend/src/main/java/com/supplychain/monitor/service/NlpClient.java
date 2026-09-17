@@ -21,7 +21,11 @@ public class NlpClient {
     private String nlpEmbedUrl;
 
     public NlpClient() {
-        this.restTemplate = new RestTemplate();
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = 
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(2500); // 2.5s connect timeout
+        factory.setReadTimeout(3500);    // 3.5s read timeout
+        this.restTemplate = new RestTemplate(factory);
     }
 
     public void setNlpServiceUrl(String nlpServiceUrl) {
@@ -33,8 +37,8 @@ public class NlpClient {
     }
 
     public NlpResponse extractEntities(String text) {
-        int maxRetries = 6;
-        int delayMs = 2000;
+        int maxRetries = 2;
+        int delayMs = 800;
         
         for (int i = 0; i < maxRetries; i++) {
             try {
@@ -44,84 +48,48 @@ public class NlpClient {
                 int status = e.getStatusCode().value();
                 if (status == 429 || status == 502 || status == 503 || status == 504) {
                     if (i == maxRetries - 1) {
-                        logger.error("Service unavailable/rate limited for NLP extract service after {} retries.", maxRetries);
+                        logger.warn("NLP extract service unavailable (HTTP {}) after {} retries.", status, maxRetries);
                         return null;
                     }
-                    logger.warn("HTTP {} from NLP extract service. Retrying in {} ms...", status, delayMs);
                     try {
                         Thread.sleep(delayMs);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         return null;
                     }
-                    delayMs *= 2; // Exponential backoff
+                    delayMs = 1200;
                 } else {
                     logger.warn("Failed to reach NLP service at {}. Error: {}", nlpServiceUrl, e.getMessage());
                     return null;
                 }
             } catch (Exception e) {
                 if (i == maxRetries - 1) {
-                    logger.warn("Failed to reach NLP service at {} after {} retries. Error: {}", nlpServiceUrl, maxRetries, e.getMessage());
+                    logger.warn("Failed to reach NLP service at {} after {} retries: {}", nlpServiceUrl, maxRetries, e.getMessage());
                     return null;
                 }
-                logger.warn("Connection/Timeout error from NLP extract service. Retrying in {} ms... Error: {}", delayMs, e.getMessage());
                 try {
                     Thread.sleep(delayMs);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     return null;
                 }
-                delayMs *= 2;
+                delayMs = 1200;
             }
         }
         return null;
     }
 
-    public float[] getEmbedding(String text) throws Exception {
-        int maxRetries = 6;
-        int delayMs = 2000;
-        
-        for (int i = 0; i < maxRetries; i++) {
-            try {
-                EmbedRequest request = new EmbedRequest(text);
-                EmbedResponse response = restTemplate.postForObject(nlpEmbedUrl, request, EmbedResponse.class);
-                return (response != null) ? response.embedding : null;
-            } catch (org.springframework.web.client.HttpStatusCodeException e) {
-                int status = e.getStatusCode().value();
-                if (status == 429 || status == 502 || status == 503 || status == 504) {
-                    if (i == maxRetries - 1) {
-                        logger.error("Service unavailable/rate limited for NLP embed service after {} retries.", maxRetries);
-                        throw new Exception("NLP Service Error (" + nlpEmbedUrl + "): HTTP " + status);
-                    }
-                    logger.warn("HTTP {} from NLP embed service. Retrying in {} ms...", status, delayMs);
-                    try {
-                        Thread.sleep(delayMs);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        throw new Exception("Interrupted during NLP retry backoff");
-                    }
-                    delayMs *= 2; // Exponential backoff
-                } else {
-                    logger.error("Failed to retrieve embedding from NLP service at {}. Error: {}", nlpEmbedUrl, e.getMessage());
-                    throw new Exception("NLP Service Error (" + nlpEmbedUrl + "): " + e.getMessage());
-                }
-            } catch (Exception e) {
-                // Catch connection refused, timeouts, etc (often happens on cold starts)
-                if (i == maxRetries - 1) {
-                    logger.error("Failed to retrieve embedding from NLP service at {} after {} retries. Error: {}", nlpEmbedUrl, maxRetries, e.getMessage());
-                    throw new Exception("NLP Service Error (" + nlpEmbedUrl + "): " + e.getMessage());
-                }
-                logger.warn("Connection/Timeout error from NLP embed service (could be waking up). Retrying in {} ms... Error: {}", delayMs, e.getMessage());
-                try {
-                    Thread.sleep(delayMs);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new Exception("Interrupted during NLP retry backoff");
-                }
-                delayMs *= 2; // Exponential backoff
-            }
+    public float[] getEmbedding(String text) {
+        // Fast single attempt: If Python NLP service on Render is cold/sleeping,
+        // fail fast in 2.5s to prevent search UI hanging, and immediately switch to instant keyword search.
+        try {
+            EmbedRequest request = new EmbedRequest(text);
+            EmbedResponse response = restTemplate.postForObject(nlpEmbedUrl, request, EmbedResponse.class);
+            return (response != null) ? response.embedding : null;
+        } catch (Exception e) {
+            logger.warn("NLP embed service unavailable or timed out at {}. Fast fallback triggered: {}", nlpEmbedUrl, e.getMessage());
+            return null;
         }
-        return null;
     }
 
     public static class ExtractRequest {

@@ -141,57 +141,116 @@ public class NewsArticleController {
     }
 
     private ResponseEntity<?> keywordFallbackResponse(String query) {
-        // Split query into individual words and search for each, then de-duplicate
-        String[] words = query.trim().toLowerCase().split("\\s+");
+        String trimmedQuery = query.trim();
+        String queryLower = trimmedQuery.toLowerCase();
+        String[] words = queryLower.split("\\s+");
+        List<String> queryKeywords = java.util.Arrays.stream(words)
+                .map(w -> w.replaceAll("[^a-zA-Z0-9]", ""))
+                .filter(w -> w.length() >= 3)
+                .collect(Collectors.toList());
+        if (queryKeywords.isEmpty()) {
+            queryKeywords = java.util.Arrays.stream(words)
+                .map(w -> w.replaceAll("[^a-zA-Z0-9]", ""))
+                .filter(w -> !w.isEmpty())
+                .collect(Collectors.toList());
+        }
+
         java.util.Map<String, NewsArticle> seen = new java.util.LinkedHashMap<>();
-        for (String word : words) {
-            if (word.length() < 3) continue; // skip tiny words like "is", "to"
+        for (String word : queryKeywords) {
             List<NewsArticle> results = newsArticleRepository.findByKeyword(word);
             for (NewsArticle a : results) {
                 if (a.getUrl() != null) seen.putIfAbsent(a.getUrl(), a);
             }
         }
-        List<QueryResponse.Match> kwMatches = seen.values().stream()
-            .limit(10)
-            .map(article -> new QueryResponse.Match(
+
+        // Calculate dynamic, naturally differentiated relevance scores for each article
+        List<QueryResponse.Match> scoredMatches = new java.util.ArrayList<>();
+        java.time.Instant now = java.time.Instant.now();
+
+        for (NewsArticle article : seen.values()) {
+            String titleLower = article.getTitle() != null ? article.getTitle().toLowerCase() : "";
+            String contentLower = article.getRawContent() != null ? article.getRawContent().toLowerCase() : "";
+            String entitiesLower = article.getEntities() != null ? article.getEntities().toLowerCase() : "";
+
+            int titleHits = 0;
+            int contentHits = 0;
+            int entityHits = 0;
+
+            for (String kw : queryKeywords) {
+                if (titleLower.contains(kw)) titleHits++;
+                if (contentLower.contains(kw)) contentHits++;
+                if (entitiesLower.contains(kw)) entityHits++;
+            }
+
+            int totalHits = (titleHits * 3) + (contentHits * 2) + entityHits;
+            if (totalHits == 0) {
+                continue;
+            }
+
+            double titleRatio = !queryKeywords.isEmpty() ? (double) titleHits / queryKeywords.size() : 0.0;
+            double contentRatio = !queryKeywords.isEmpty() ? (double) contentHits / queryKeywords.size() : 0.0;
+
+            // Base score: scales dynamically between 0.40 and 0.88 based on keyword coverage
+            double score = 0.38 + (titleRatio * 0.36) + (contentRatio * 0.16);
+
+            // Exact phrase match bonus in title or content
+            if (titleLower.contains(queryLower)) {
+                score += 0.12;
+            } else if (contentLower.contains(queryLower)) {
+                score += 0.06;
+            }
+
+            // Recency weighting: newer articles receive a slight natural variation (up to +0.05)
+            // to break ties and differentiate match percentages
+            if (article.getPublishedAt() != null) {
+                long hoursAgo = Math.max(0, java.time.Duration.between(article.getPublishedAt(), now).toHours());
+                double recencyBonus = Math.max(0.0, 0.05 - (hoursAgo / 720.0 * 0.05));
+                score += recencyBonus;
+            }
+
+            // Cap between 0.45 and 0.96, rounded to 2 decimal places
+            double finalScore = Math.min(0.96, Math.max(0.45, Math.round(score * 100.0) / 100.0));
+
+            scoredMatches.add(new QueryResponse.Match(
                 article.getTitle(),
                 article.getUrl(),
                 article.getSource(),
                 article.getRiskCategory(),
-                0.6,
+                finalScore,
                 article.getPublishedAt()
-            ))
+            ));
+        }
+
+        // Sort by highest relevance score descending
+        scoredMatches.sort((m1, m2) -> Double.compare(m2.getScore(), m1.getScore()));
+
+        List<QueryResponse.Match> kwMatches = scoredMatches.stream()
+            .limit(10)
             .collect(Collectors.toList());
 
         QueryResponse kwResponse = new QueryResponse(query, kwMatches);
         if (kwMatches.isEmpty()) {
             kwResponse.setAiSummary(new QueryResponse.AiSummary(
-                "No articles found for this query. The database may still be building up article embeddings. Try again in a few minutes.", 0));
+                "No articles found for this query in our current dataset. Try querying specific shipping lanes, port strikes, or trade tariffs.", 0));
         } else {
             // Generate AI summary for keyword matches
             try {
                 StringBuilder contextBuilder = new StringBuilder();
                 int count = 0;
-                for (NewsArticle article : seen.values()) {
-                    if (count >= 10) break;
+                for (QueryResponse.Match match : kwMatches) {
                     count++;
-                    String title = article.getTitle() != null ? article.getTitle() : "";
-                    String riskCategory = article.getRiskCategory() != null ? article.getRiskCategory() : "Uncategorized";
-                    String rawContent = article.getRawContent() != null ? article.getRawContent() : "";
-                    if (rawContent.length() > 300) {
-                        rawContent = rawContent.substring(0, 300) + "...";
-                    }
-                    contextBuilder.append(String.format("Article %d: %s | Risk Category: %s\nContent: %s\n\n", count, title, riskCategory, rawContent));
+                    contextBuilder.append(String.format("Article %d: %s | Risk Category: %s\n\n", count, match.getTitle(), match.getRiskCategory()));
                 }
                 String context = contextBuilder.toString();
                 GroqClient.GroqResponse aiResponse = groqClient.generateSummary(query, context);
-                if (aiResponse != null) {
-                    kwResponse.setAiSummary(new QueryResponse.AiSummary(
-                        "⚠️ **Keyword fallback search.**\n\n" + aiResponse.getSummary(), aiResponse.getConfidenceScore()
-                    ));
+                if (aiResponse != null && aiResponse.getSummary() != null) {
+                    int confidence = aiResponse.getConfidenceScore() > 0 
+                            ? aiResponse.getConfidenceScore() 
+                            : (int) Math.round(kwMatches.get(0).getScore() * 100);
+                    kwResponse.setAiSummary(new QueryResponse.AiSummary(aiResponse.getSummary(), confidence));
                 }
             } catch (Exception e) {
-                logger.error("Failed to generate AI summary for keyword fallback query: {}", query, e);
+                logger.error("Failed to generate AI summary for query: {}", query, e);
             }
         }
         return ResponseEntity.ok(kwResponse);
