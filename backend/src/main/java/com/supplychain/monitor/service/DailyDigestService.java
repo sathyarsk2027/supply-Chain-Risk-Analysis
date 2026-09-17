@@ -338,17 +338,21 @@ public class DailyDigestService {
         // Tier 2: Fallback to Gmail SMTP if configured
         if (gmailUsername != null && !gmailUsername.trim().isEmpty()
                 && gmailPassword != null && !gmailPassword.trim().isEmpty()) {
+            String cleanPassword = gmailPassword.trim().replace(" ", "");
+
+            // Attempt A: Port 587 with STARTTLS
             try {
                 org.springframework.mail.javamail.JavaMailSenderImpl mailSender = new org.springframework.mail.javamail.JavaMailSenderImpl();
                 mailSender.setHost("smtp.gmail.com");
                 mailSender.setPort(587);
                 mailSender.setUsername(gmailUsername.trim());
-                mailSender.setPassword(gmailPassword.trim().replace(" ", "")); // remove spaces in app password
+                mailSender.setPassword(cleanPassword);
 
                 java.util.Properties props = mailSender.getJavaMailProperties();
                 props.put("mail.transport.protocol", "smtp");
                 props.put("mail.smtp.auth", "true");
                 props.put("mail.smtp.starttls.enable", "true");
+                props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
                 props.put("mail.smtp.connectiontimeout", "10000");
                 props.put("mail.smtp.timeout", "10000");
 
@@ -362,10 +366,42 @@ public class DailyDigestService {
                 helper.setReplyTo(recipientEmail.trim());
 
                 mailSender.send(message);
-                logger.info("Daily digest email sent successfully via Gmail SMTP to {}", recipientEmail);
+                logger.info("Daily digest email sent successfully via Gmail SMTP (port 587) to {}", recipientEmail);
                 return true;
             } catch (Exception e) {
-                logger.error("Gmail SMTP fallback delivery also failed: {}", e.getMessage(), e);
+                logger.warn("Gmail SMTP port 587 delivery failed: {}. Retrying with Port 465 SSL...", e.getMessage());
+            }
+
+            // Attempt B: Port 465 with direct SSL
+            try {
+                org.springframework.mail.javamail.JavaMailSenderImpl mailSenderSsl = new org.springframework.mail.javamail.JavaMailSenderImpl();
+                mailSenderSsl.setHost("smtp.gmail.com");
+                mailSenderSsl.setPort(465);
+                mailSenderSsl.setUsername(gmailUsername.trim());
+                mailSenderSsl.setPassword(cleanPassword);
+
+                java.util.Properties propsSsl = mailSenderSsl.getJavaMailProperties();
+                propsSsl.put("mail.transport.protocol", "smtps");
+                propsSsl.put("mail.smtp.auth", "true");
+                propsSsl.put("mail.smtp.ssl.enable", "true");
+                propsSsl.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+                propsSsl.put("mail.smtp.connectiontimeout", "10000");
+                propsSsl.put("mail.smtp.timeout", "10000");
+
+                jakarta.mail.internet.MimeMessage message = mailSenderSsl.createMimeMessage();
+                org.springframework.mail.javamail.MimeMessageHelper helper =
+                        new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(new jakarta.mail.internet.InternetAddress(gmailUsername.trim(), "Supply Chain Intelligence"));
+                helper.setTo(recipientEmail.trim());
+                helper.setSubject(subject);
+                helper.setText(htmlBody, true);
+                helper.setReplyTo(recipientEmail.trim());
+
+                mailSenderSsl.send(message);
+                logger.info("Daily digest email sent successfully via Gmail SMTP (port 465 SSL) to {}", recipientEmail);
+                return true;
+            } catch (Exception e) {
+                logger.error("Gmail SMTP port 465 SSL delivery also failed: {}", e.getMessage(), e);
             }
         } else {
             logger.warn("Neither RESEND_API_KEY nor valid Gmail SMTP credentials (username/password) are available.");

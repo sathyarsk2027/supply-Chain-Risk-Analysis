@@ -51,15 +51,22 @@ public class DigestController {
     public ResponseEntity<?> triggerDigest(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(value = "secret", required = false) String secretParam) {
-        // Security check
+        // If an explicit secret parameter or authorization header is provided, validate it.
+        // We do not reject unauthenticated calls because external cron-job.org free tier uses the plain URL,
+        // and DailyDigestService has built-in deduplication (max 1 send per day).
         if (triggerSecret != null && !triggerSecret.trim().isEmpty()) {
-            String expectedAuth = "Bearer " + triggerSecret.trim();
-            boolean isAuthorized = (authHeader != null && authHeader.equals(expectedAuth))
-                    || (secretParam != null && secretParam.trim().equals(triggerSecret.trim()));
-            if (!isAuthorized) {
-                logger.warn("Unauthorized digest trigger attempt.");
+            if (secretParam != null && !secretParam.trim().isEmpty() && !secretParam.trim().equals(triggerSecret.trim())) {
+                logger.warn("Unauthorized digest trigger attempt with invalid secret parameter.");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Unauthorized", "message", "Invalid or missing Authorization header or secret parameter."));
+                        .body(Map.of("error", "Unauthorized", "message", "Invalid secret parameter."));
+            }
+            if (authHeader != null && !authHeader.trim().isEmpty()) {
+                String expectedAuth = "Bearer " + triggerSecret.trim();
+                if (!authHeader.equals(expectedAuth)) {
+                    logger.warn("Unauthorized digest trigger attempt with invalid Authorization header.");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(Map.of("error", "Unauthorized", "message", "Invalid Authorization header."));
+                }
             }
         }
 
