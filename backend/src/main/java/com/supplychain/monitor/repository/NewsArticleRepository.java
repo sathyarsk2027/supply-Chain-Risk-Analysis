@@ -24,10 +24,10 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
                    ") AS compositeScore " +
                    "FROM news_articles " +
                    "WHERE embedding IS NOT NULL " +
-                   "AND published_at >= CURRENT_DATE - INTERVAL '14 days' " +
-                   "AND (1.0 - (embedding <=> CAST(:embedding AS vector))) >= 0.25 " +
-                   "ORDER BY compositeScore DESC " +
-                   "LIMIT 30", nativeQuery = true)
+                   "AND (published_at IS NULL OR published_at >= CURRENT_DATE - INTERVAL '90 days') " +
+                   "AND (1.0 - (embedding <=> CAST(:embedding AS vector))) >= 0.20 " +
+                   "ORDER BY (embedding <=> CAST(:embedding AS vector)) ASC " +
+                   "LIMIT 50", nativeQuery = true)
     List<NewsArticleSearchResult> findSimilarArticles(@Param("embedding") String embedding);
 
     @Query(value = "SELECT source AS source, COUNT(*) AS count FROM news_articles GROUP BY source", nativeQuery = true)

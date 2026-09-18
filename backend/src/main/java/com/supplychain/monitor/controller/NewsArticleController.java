@@ -46,15 +46,61 @@ public class NewsArticleController {
 
     private static final java.util.Set<String> STOP_WORDS = java.util.Set.of(
             "the", "a", "an", "and", "or", "in", "on", "at", "to", "for", "with", "by", "from",
-            "is", "are", "was", "were", "be", "been", "of", "that", "this", "it", "as", "about", "into"
+            "is", "are", "was", "were", "be", "been", "of", "that", "this", "it", "as", "about", "into",
+            "what", "how", "when", "where", "which", "who", "why", "can", "could", "should", "would",
+            "will", "all", "any", "some", "both", "each", "more", "most", "other", "such", "than", "too"
+    );
+
+    private static final java.util.Set<String> DOMAIN_GENERIC_WORDS = java.util.Set.of(
+            "supply", "chain", "chains", "risk", "risks", "global", "news", "report", "update", "disruption", "disruptions"
     );
 
     private String normalizeTitle(String title) {
-        if (title == null) return "";
-        // Strip trailing source names like " - The Tribune", " | Reuters", " - Devdiscourse"
-        String cleaned = title.replaceAll("\\s*[-|–—]\\s*[^-|–—]+$", "").trim();
-        // Remove all non-alphanumeric characters and lowercase
+        if (title == null || title.trim().isEmpty()) return "";
+        String cleaned = title.trim();
+        // Correctly strip publisher suffixes: " - The Tribune", " | Reuters", " — Devdiscourse", " – Bloomberg"
+        cleaned = cleaned.replaceFirst("\\s+[-–—|]\\s+[^\\-–—|]+$", "").trim();
+        cleaned = cleaned.replaceAll("[.]{2,}$", "").trim();
         return cleaned.toLowerCase().replaceAll("[^a-z0-9]", "");
+    }
+
+    private String normalizeUrl(String url) {
+        if (url == null || url.trim().isEmpty()) return "";
+        String clean = url.trim().toLowerCase();
+        int queryIdx = clean.indexOf('?');
+        if (queryIdx != -1) {
+            clean = clean.substring(0, queryIdx);
+        }
+        while (clean.endsWith("/")) {
+            clean = clean.substring(0, clean.length() - 1);
+        }
+        return clean;
+    }
+
+    private boolean isDuplicateCandidate(String normTitle, String normUrl,
+                                         java.util.List<String> seenNormTitles,
+                                         java.util.Set<String> seenNormUrls) {
+        if (!normUrl.isEmpty() && seenNormUrls.contains(normUrl)) {
+            return true;
+        }
+        if (normTitle.isEmpty()) {
+            return false;
+        }
+        for (String seen : seenNormTitles) {
+            if (normTitle.equals(seen)) {
+                return true;
+            }
+            // Prefix match for syndicated articles with slight variations after first 30 characters
+            int minLen = Math.min(normTitle.length(), seen.length());
+            if (minLen >= 30) {
+                String p1 = normTitle.substring(0, 30);
+                String p2 = seen.substring(0, 30);
+                if (p1.equals(p2)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private List<String> extractKeywords(String query) {
@@ -63,6 +109,13 @@ public class NewsArticleController {
         return java.util.Arrays.stream(words)
                 .map(w -> w.replaceAll("[^a-z0-9]", ""))
                 .filter(w -> w.length() >= 3 && !STOP_WORDS.contains(w))
+                .collect(Collectors.toList());
+    }
+
+    private List<String> extractSpecificKeywords(List<String> keywords) {
+        if (keywords == null) return java.util.Collections.emptyList();
+        return keywords.stream()
+                .filter(w -> !DOMAIN_GENERIC_WORDS.contains(w))
                 .collect(Collectors.toList());
     }
 
@@ -85,6 +138,7 @@ public class NewsArticleController {
         String rawQuery = request.getQuery().trim();
         String queryLower = rawQuery.toLowerCase();
         List<String> queryKeywords = extractKeywords(rawQuery);
+        List<String> specificKeywords = extractSpecificKeywords(queryKeywords);
 
         // 1) Call the NLP service's POST /embed endpoint to get an embedding vector for the query text.
         //    If NLP service is unavailable (e.g. 429 rate limit or connection timeout), fall back to keyword search.
@@ -109,19 +163,16 @@ public class NewsArticleController {
             return returnGuardrailCutoff(rawQuery);
         }
 
-        // 3) Deduplicate candidates by normalized title and URL
-        java.util.Set<String> seenTitles = new java.util.HashSet<>();
+        // 3) Deduplicate candidates by normalized title (exact + prefix) and normalized URL
+        java.util.List<String> seenTitles = new java.util.ArrayList<>();
         java.util.Set<String> seenUrls = new java.util.HashSet<>();
         List<NewsArticleRepository.NewsArticleSearchResult> deduplicatedResults = new java.util.ArrayList<>();
 
         for (NewsArticleRepository.NewsArticleSearchResult result : searchResults) {
             String normTitle = normalizeTitle(result.getTitle());
-            String normUrl = result.getUrl() != null ? result.getUrl().trim().toLowerCase() : "";
+            String normUrl = normalizeUrl(result.getUrl());
 
-            if (!normTitle.isEmpty() && seenTitles.contains(normTitle)) {
-                continue;
-            }
-            if (!normUrl.isEmpty() && seenUrls.contains(normUrl)) {
+            if (isDuplicateCandidate(normTitle, normUrl, seenTitles, seenUrls)) {
                 continue;
             }
 
@@ -139,22 +190,26 @@ public class NewsArticleController {
             double rawSimilarity = Math.max(0.0, 1.0 - cosineDistance);
 
             // Filter out clearly irrelevant items below base similarity floor (unless single mock item in tests)
-            if (deduplicatedResults.size() > 1 && rawSimilarity < 0.28) {
+            if (deduplicatedResults.size() > 1 && rawSimilarity < 0.25) {
                 continue;
             }
 
             String titleLower = result.getTitle() != null ? result.getTitle().toLowerCase() : "";
             String contentLower = result.getRawContent() != null ? result.getRawContent().toLowerCase() : "";
 
-            int titleHits = 0;
-            int contentHits = 0;
+            int allTitleHits = 0;
+            int allContentHits = 0;
             for (String kw : queryKeywords) {
-                if (titleLower.contains(kw)) titleHits++;
-                if (contentLower.contains(kw)) contentHits++;
+                if (titleLower.contains(kw)) allTitleHits++;
+                if (contentLower.contains(kw)) allContentHits++;
             }
 
-            double titleRatio = !queryKeywords.isEmpty() ? (double) titleHits / queryKeywords.size() : 0.0;
-            double contentRatio = !queryKeywords.isEmpty() ? (double) contentHits / queryKeywords.size() : 0.0;
+            int specificTitleHits = 0;
+            int specificContentHits = 0;
+            for (String kw : specificKeywords) {
+                if (titleLower.contains(kw)) specificTitleHits++;
+                if (contentLower.contains(kw)) specificContentHits++;
+            }
 
             double finalScore;
             if (deduplicatedResults.size() == 1) {
@@ -164,35 +219,49 @@ public class NewsArticleController {
                 // Calibrate raw vector similarity from all-MiniLM-L6-v2 space into intuitive display scale
                 double semanticBase;
                 if (rawSimilarity >= 0.70) {
-                    semanticBase = 0.82 + (rawSimilarity - 0.70) * 0.60;
-                } else if (rawSimilarity >= 0.50) {
-                    semanticBase = 0.68 + (rawSimilarity - 0.50) * 0.70;
-                } else if (rawSimilarity >= 0.35) {
-                    semanticBase = 0.52 + (rawSimilarity - 0.35) * 1.07;
+                    semanticBase = 0.82 + (rawSimilarity - 0.70) * 0.55;
+                } else if (rawSimilarity >= 0.52) {
+                    semanticBase = 0.68 + (rawSimilarity - 0.52) * 0.77;
+                } else if (rawSimilarity >= 0.36) {
+                    semanticBase = 0.50 + (rawSimilarity - 0.36) * 1.12;
                 } else {
-                    semanticBase = Math.max(0.30, rawSimilarity * 1.48);
+                    semanticBase = Math.max(0.30, rawSimilarity * 1.38);
                 }
 
-                // Lexical keyword bonus: confirmation that the article contains user's specific query terms
-                double keywordBonus = (titleRatio * 0.08) + (contentRatio * 0.04);
-                if (titleLower.contains(queryLower)) {
-                    keywordBonus += 0.06;
+                double score = semanticBase;
+
+                // 1. Phrase confirmation: check if the multi-word query phrase appears in the title or content
+                if (queryKeywords.size() >= 2 && titleLower.contains(queryLower)) {
+                    score += 0.10;
+                } else if (queryKeywords.size() >= 2 && contentLower.contains(queryLower)) {
+                    score += 0.04;
                 }
 
-                // Gentle recency micro-bonus (up to +0.03 for fresh articles within 48h)
-                double recencyBonus = 0.0;
+                // 2. Lexical keyword verification using specific keywords if available, else all keywords
+                List<String> targetKws = !specificKeywords.isEmpty() ? specificKeywords : queryKeywords;
+                int targetTitleHits = !specificKeywords.isEmpty() ? specificTitleHits : allTitleHits;
+                int targetContentHits = !specificKeywords.isEmpty() ? specificContentHits : allContentHits;
+
+                double titleRatio = !targetKws.isEmpty() ? (double) targetTitleHits / targetKws.size() : 0.0;
+                double contentRatio = !targetKws.isEmpty() ? (double) targetContentHits / targetKws.size() : 0.0;
+
+                score += (titleRatio * 0.09) + (contentRatio * 0.04);
+
+                // Specific keyword missing penalty: if specific concepts (e.g. "tariffs", "bunker") are absent
+                if (!specificKeywords.isEmpty()) {
+                    if (specificTitleHits == 0 && specificContentHits == 0) {
+                        score -= 0.12; // Misses all specific concepts
+                    } else if (specificKeywords.size() >= 2 && specificTitleHits == 0 && specificContentHits < specificKeywords.size()) {
+                        score -= 0.04; // Only partial weak hit
+                    }
+                }
+
+                // 3. Gentle recency micro-bonus (up to +0.03 for fresh articles within 14 days)
                 if (result.getPublishedAt() != null) {
                     long hoursAgo = Math.max(0, java.time.Duration.between(result.getPublishedAt(), now).toHours());
-                    recencyBonus = Math.max(0.0, 0.03 - (hoursAgo / 336.0 * 0.03));
+                    score += Math.max(0.0, 0.03 - (hoursAgo / 336.0 * 0.03));
                 }
 
-                // Keyword constraint penalty: if multi-term query has zero matches in title/content
-                double constraintPenalty = 0.0;
-                if (queryKeywords.size() >= 2 && titleHits == 0 && contentHits == 0) {
-                    constraintPenalty = 0.12;
-                }
-
-                double score = semanticBase + keywordBonus + recencyBonus - constraintPenalty;
                 finalScore = Math.min(0.96, Math.max(0.30, Math.round(score * 100.0) / 100.0));
             }
 
@@ -277,17 +346,27 @@ public class NewsArticleController {
                     .filter(w -> !w.isEmpty())
                     .collect(Collectors.toList());
         }
+        List<String> specificKeywords = extractSpecificKeywords(queryKeywords);
 
         java.util.Map<String, NewsArticle> seen = new java.util.LinkedHashMap<>();
-        java.util.Set<String> seenTitles = new java.util.HashSet<>();
+        java.util.List<String> seenTitles = new java.util.ArrayList<>();
+        java.util.Set<String> seenUrls = new java.util.HashSet<>();
 
-        for (String word : queryKeywords) {
+        // Prefer searching for specific keywords first
+        List<String> searchWords = !specificKeywords.isEmpty() ? specificKeywords : queryKeywords;
+        for (String word : searchWords) {
             List<NewsArticle> results = newsArticleRepository.findByKeyword(word);
             for (NewsArticle a : results) {
                 if (a.getUrl() == null) continue;
                 String normTitle = normalizeTitle(a.getTitle());
-                if (!normTitle.isEmpty() && seenTitles.contains(normTitle)) continue;
+                String normUrl = normalizeUrl(a.getUrl());
+
+                if (isDuplicateCandidate(normTitle, normUrl, seenTitles, seenUrls)) {
+                    continue;
+                }
+
                 if (!normTitle.isEmpty()) seenTitles.add(normTitle);
+                if (!normUrl.isEmpty()) seenUrls.add(normUrl);
                 seen.putIfAbsent(a.getUrl(), a);
             }
         }
@@ -300,25 +379,33 @@ public class NewsArticleController {
             String contentLower = article.getRawContent() != null ? article.getRawContent().toLowerCase() : "";
             String entitiesLower = article.getEntities() != null ? article.getEntities().toLowerCase() : "";
 
-            int titleHits = 0;
-            int contentHits = 0;
-            int entityHits = 0;
-
+            int allTitleHits = 0;
+            int allContentHits = 0;
             for (String kw : queryKeywords) {
-                if (titleLower.contains(kw)) titleHits++;
-                if (contentLower.contains(kw)) contentHits++;
-                if (entitiesLower.contains(kw)) entityHits++;
+                if (titleLower.contains(kw)) allTitleHits++;
+                if (contentLower.contains(kw)) allContentHits++;
             }
 
-            int totalHits = (titleHits * 3) + (contentHits * 2) + entityHits;
-            if (totalHits == 0) {
+            int specificTitleHits = 0;
+            int specificContentHits = 0;
+            for (String kw : specificKeywords) {
+                if (titleLower.contains(kw)) specificTitleHits++;
+                if (contentLower.contains(kw)) specificContentHits++;
+            }
+
+            int totalHits = (allTitleHits * 3) + (allContentHits * 2);
+            if (totalHits == 0 && (entitiesLower.isEmpty() || !entitiesLower.contains(queryLower))) {
                 continue;
             }
 
-            double titleRatio = !queryKeywords.isEmpty() ? (double) titleHits / queryKeywords.size() : 0.0;
-            double contentRatio = !queryKeywords.isEmpty() ? (double) contentHits / queryKeywords.size() : 0.0;
+            List<String> targetKws = !specificKeywords.isEmpty() ? specificKeywords : queryKeywords;
+            int targetTitleHits = !specificKeywords.isEmpty() ? specificTitleHits : allTitleHits;
+            int targetContentHits = !specificKeywords.isEmpty() ? specificContentHits : allContentHits;
 
-            double score = 0.45 + (titleRatio * 0.35) + (contentRatio * 0.15);
+            double titleRatio = !targetKws.isEmpty() ? (double) targetTitleHits / targetKws.size() : 0.0;
+            double contentRatio = !targetKws.isEmpty() ? (double) targetContentHits / targetKws.size() : 0.0;
+
+            double score = 0.50 + (titleRatio * 0.30) + (contentRatio * 0.12);
 
             if (titleLower.contains(queryLower)) {
                 score += 0.10;
@@ -326,10 +413,13 @@ public class NewsArticleController {
                 score += 0.05;
             }
 
+            if (!specificKeywords.isEmpty() && specificTitleHits == 0 && specificContentHits == 0) {
+                score -= 0.12;
+            }
+
             if (article.getPublishedAt() != null) {
                 long hoursAgo = Math.max(0, java.time.Duration.between(article.getPublishedAt(), now).toHours());
-                double recencyBonus = Math.max(0.0, 0.03 - (hoursAgo / 720.0 * 0.03));
-                score += recencyBonus;
+                score += Math.max(0.0, 0.03 - (hoursAgo / 720.0 * 0.03));
             }
 
             double finalScore = Math.min(0.96, Math.max(0.35, Math.round(score * 100.0) / 100.0));

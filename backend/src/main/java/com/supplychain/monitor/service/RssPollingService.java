@@ -139,11 +139,14 @@ public class RssPollingService {
             }
 
             // Use NLP service to generate embeddings so new articles show up in Semantic Search
-            // Also retroactively generate embeddings for existing articles that lack them
             if (isNew || article.getEmbedding() == null) {
-                String contentToAnalyze = article.getRawContent();
-                if (contentToAnalyze == null || contentToAnalyze.isEmpty()) {
-                    contentToAnalyze = article.getTitle();
+                String contentToAnalyze = article.getTitle();
+                if (article.getRawContent() != null && !article.getRawContent().trim().isEmpty()) {
+                    String cleanContent = article.getRawContent().replaceAll("<[^>]*>", " ").trim();
+                    if (cleanContent.length() > 300) {
+                        cleanContent = cleanContent.substring(0, 300);
+                    }
+                    contentToAnalyze = article.getTitle() + ". " + cleanContent;
                 }
 
                 try {

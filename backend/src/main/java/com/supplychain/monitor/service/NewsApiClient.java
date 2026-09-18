@@ -123,10 +123,18 @@ public class NewsApiClient {
                             }
                         }
 
-                        // Generate vector embedding using the article title
+                        // Generate vector embedding using the article title and lead snippet
                         if (savedArticle.getTitle() != null && !savedArticle.getTitle().isEmpty()) {
                             try {
-                                float[] embedding = nlpClient.getEmbedding(savedArticle.getTitle());
+                                String textToEmbed = savedArticle.getTitle();
+                                if (savedArticle.getRawContent() != null && !savedArticle.getRawContent().trim().isEmpty()) {
+                                    String cleanContent = savedArticle.getRawContent().replaceAll("<[^>]*>", " ").trim();
+                                    if (cleanContent.length() > 300) {
+                                        cleanContent = cleanContent.substring(0, 300);
+                                    }
+                                    textToEmbed = savedArticle.getTitle() + ". " + cleanContent;
+                                }
+                                float[] embedding = nlpClient.getEmbedding(textToEmbed);
                                 if (embedding != null) {
                                     savedArticle.setEmbedding(new PGvector(embedding));
                                     needsUpdate = true;
