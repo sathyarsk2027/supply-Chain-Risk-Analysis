@@ -70,20 +70,15 @@ public class DigestController {
             }
         }
 
-        logger.info("Digest trigger endpoint called (external cron). Firing asynchronous process to avoid 30s timeout.");
-        
-        // Run the heavy AI and SMTP tasks in the background
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            try {
-                dailyDigestService.generateAndSendDigest(false);
-            } catch (Exception e) {
-                logger.error("Background digest trigger failed: {}", e.getMessage(), e);
-            }
-        });
-
-        // Return immediately so cron-job.org doesn't timeout
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(Map.of("status", "accepted", "message", "Digest generation started in the background."));
+        logger.info("Digest trigger endpoint called (external cron). Processing digest synchronously to ensure Render CPU stays active.");
+        try {
+            DailyDigestService.DigestResult result = dailyDigestService.generateAndSendDigest(false);
+            return ResponseEntity.ok(buildResponseMap(result));
+        } catch (Exception e) {
+            logger.error("Digest trigger execution failed: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Digest trigger failed", "message", e.getMessage()));
+        }
     }
 
     /**
