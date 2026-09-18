@@ -172,9 +172,27 @@ public class DailyDigestService {
             }
         }
 
-        // 5. Generate AI summaries
-        String indiaSummary = generateSectionSummary(indiaArticles, "India");
-        String globalSummary = generateSectionSummary(globalArticles, "global supply chain");
+        // 5. Generate AI summaries in parallel to reduce response time (from ~15s to ~6s)
+        java.util.concurrent.CompletableFuture<String> indiaFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> generateSectionSummary(indiaArticles, "India"));
+        java.util.concurrent.CompletableFuture<String> globalFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> generateSectionSummary(globalArticles, "global supply chain"));
+
+        String indiaSummary;
+        String globalSummary;
+        try {
+            indiaSummary = indiaFuture.get(12, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            logger.warn("India summary generation timed out or failed: {}", e.getMessage());
+            indiaSummary = buildDataDrivenSummary(indiaArticles, "India");
+        }
+
+        try {
+            globalSummary = globalFuture.get(12, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            logger.warn("Global summary generation timed out or failed: {}", e.getMessage());
+            globalSummary = buildDataDrivenSummary(globalArticles, "global supply chain");
+        }
 
         // 6. Build HTML email
         String dateDisplay = today.format(DATE_DISPLAY);
