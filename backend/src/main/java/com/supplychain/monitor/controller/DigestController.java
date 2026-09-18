@@ -15,7 +15,7 @@ import java.util.Map;
  * REST controller for the Daily Digest feature.
  *
  * Endpoints:
- *   POST /api/digest/trigger   — External cron trigger (cron-job.org hits this at 6 AM IST)
+ *   POST /api/digest/trigger   — External cron trigger (cron-job.org hits this at 11:00 AM IST)
  *   POST /api/digest/send-now  — Manual test trigger (dev/viva demos)
  */
 @RestController
@@ -43,7 +43,7 @@ public class DigestController {
     }
 
     /**
-     * External cron trigger — called by cron-job.org at 6:00 AM IST daily.
+     * External cron trigger — called by cron-job.org at 11:00 AM IST daily.
      * Supports both POST and GET.
      * If DIGEST_TRIGGER_SECRET is configured, accepts either Authorization header or ?secret= query param.
      */
