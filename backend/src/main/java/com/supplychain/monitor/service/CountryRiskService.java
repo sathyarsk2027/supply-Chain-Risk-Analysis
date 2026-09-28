@@ -63,6 +63,7 @@ public class CountryRiskService {
     private final NewsArticleRepository newsArticleRepository;
     private final GroqClient groqClient;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public CountryRiskService(NewsArticleRepository newsArticleRepository, GroqClient groqClient) {
         this.newsArticleRepository = newsArticleRepository;
         this.groqClient = groqClient;

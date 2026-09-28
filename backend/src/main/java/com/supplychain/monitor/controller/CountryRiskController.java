@@ -71,6 +71,7 @@ public class CountryRiskController {
         new CountryPin("TH", "Thailand", "🇹🇭", 15.8, 100.9)
     );
 
+    @org.springframework.beans.factory.annotation.Autowired
     public CountryRiskController(CountryRiskService countryRiskService, NewsArticleRepository newsArticleRepository) {
         this.countryRiskService = countryRiskService;
         this.newsArticleRepository = newsArticleRepository;

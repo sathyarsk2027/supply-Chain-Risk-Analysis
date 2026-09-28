@@ -8,7 +8,7 @@ class DailyDigestServiceTest {
 
     @Test
     void testStripHtmlTagsWithEncodedTagsAndUrls() throws Exception {
-        DailyDigestService service = new DailyDigestService(null, null);
+        DailyDigestService service = new DailyDigestService(null, null, null);
         Method method = DailyDigestService.class.getDeclaredMethod("stripHtmlTags", String.class);
         method.setAccessible(true);
 
@@ -29,7 +29,7 @@ class DailyDigestServiceTest {
 
     @Test
     void testBuildHtmlEmailStructure() throws Exception {
-        DailyDigestService service = new DailyDigestService(null, null);
+        DailyDigestService service = new DailyDigestService(null, null, null);
         Method method = DailyDigestService.class.getDeclaredMethod("buildHtmlEmail",
                 String.class,
                 com.supplychain.monitor.service.RiskScoreCalculator.RiskResult.class,

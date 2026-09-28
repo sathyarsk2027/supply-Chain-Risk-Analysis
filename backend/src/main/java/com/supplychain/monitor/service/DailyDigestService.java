@@ -4,6 +4,7 @@ import com.supplychain.monitor.model.NewsArticle;
 import com.supplychain.monitor.repository.NewsArticleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -92,14 +93,11 @@ public class DailyDigestService {
     // Simple date-based deduplication to prevent double-sends
     private volatile String lastSentDate = "";
 
+    @Autowired
     public DailyDigestService(NewsArticleRepository newsArticleRepository, GroqClient groqClient, CountryRiskService countryRiskService) {
         this.newsArticleRepository = newsArticleRepository;
         this.groqClient = groqClient;
         this.countryRiskService = countryRiskService;
-    }
-
-    public DailyDigestService(NewsArticleRepository newsArticleRepository, GroqClient groqClient) {
-        this(newsArticleRepository, groqClient, null);
     }
 
     // --------------------------------------------------------------------------
