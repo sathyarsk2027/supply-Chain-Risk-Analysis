@@ -990,8 +990,8 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
     isContainerA = true;
     labelData = { marker: 'A', title: 'ALL FEEDS', tab: 'feed' };
     if (activeTab === 'feed') {
-      offsetX = 0.35;
-      offsetZ = 0.95;
+      offsetX = 0.50;
+      offsetZ = 0.40;
     }
   } else if (c.id === 'c-0-1') {
     isTarget = true;
@@ -999,8 +999,8 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
     interiorType = 'network';
     labelData = { marker: 'B', title: 'SEMANTIC AI SEARCH', tab: 'search' };
     if (activeTab === 'search') {
-      offsetX = 0.35;
-      offsetZ = 0.95;
+      offsetX = 0.50;
+      offsetZ = 0.40;
       isDoorOpen = true;
     }
   } else if (c.id === 'c--1-1') {
@@ -1009,8 +1009,8 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
     interiorType = 'nasa';
     labelData = { marker: 'C', title: 'NASA SATELLITE', tab: 'analytics' };
     if (activeTab === 'analytics') {
-      offsetX = 0.35;
-      offsetZ = 0.95;
+      offsetX = 0.50;
+      offsetZ = 0.40;
       isDoorOpen = true;
     }
   }
@@ -1044,7 +1044,7 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
 
       {isTarget && labelData && (
         <Html
-          position={[-1.52, 0.22, 0.61]}
+          position={[-1.46, 0.18, 0.60]}
           center={false}
           distanceFactor={11}
           zIndexRange={[100, 0]}
@@ -1090,7 +1090,7 @@ const Stack = ({ activeTab, onTabClick, articles }) => {
   });
 
   return (
-    <group position={[0, 0.2, 0]} scale={0.72}>
+    <group position={[0.78, 0.12, -0.32]} scale={0.70}>
       <group ref={floatRef}>
         {containers.map((c) => (
           <AnimatedContainer 
@@ -1112,31 +1112,32 @@ const CameraController = ({ activeTab }) => {
   const controlsRef = useRef();
 
   // Targets and positions tailored for each container's feature focus
+  // Kept vertically stable so the stack never sinks or jumps abruptly
   const { camPos, camTarget } = useMemo(() => {
     switch (activeTab) {
       case 'feed':
-        // Focus on Container A (top front), framing the live news ticker
+        // Focus cleanly on Container A (top front), framing the live news ticker with stable vertical baseline
         return {
-          camPos: new THREE.Vector3(7.4, 4.8, 7.6),
-          camTarget: new THREE.Vector3(0.3, 0.85, 0.35)
+          camPos: new THREE.Vector3(7.9, 5.05, 7.7),
+          camTarget: new THREE.Vector3(0.70, 0.28, -0.10)
         };
       case 'search':
         // Focus on Container B (middle front), 3/4 angle peering inside open doors
         return {
-          camPos: new THREE.Vector3(7.9, 4.2, 7.3),
-          camTarget: new THREE.Vector3(0.35, 0.05, 0.3)
+          camPos: new THREE.Vector3(7.95, 4.85, 7.55),
+          camTarget: new THREE.Vector3(0.70, 0.10, -0.10)
         };
       case 'analytics':
         // Focus on Container C (bottom front), showcasing rotating holographic risk globe
         return {
-          camPos: new THREE.Vector3(7.6, 3.6, 7.5),
-          camTarget: new THREE.Vector3(0.3, -0.75, 0.3)
+          camPos: new THREE.Vector3(7.9, 4.65, 7.6),
+          camTarget: new THREE.Vector3(0.70, -0.10, -0.10)
         };
       default: // 'overview'
-        // Balanced symmetrical isometric view of full 3x3 stack
+        // Balanced symmetrical isometric view of full 3x3 stack centered in canvas
         return {
-          camPos: new THREE.Vector3(8.0, 5.0, 8.0),
-          camTarget: new THREE.Vector3(0.0, 0.0, 0.0)
+          camPos: new THREE.Vector3(8.1, 5.0, 7.9),
+          camTarget: new THREE.Vector3(0.65, 0.08, -0.22)
         };
     }
   }, [activeTab]);

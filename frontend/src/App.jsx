@@ -313,7 +313,7 @@ function App() {
   const [searchError, setSearchError] = useState(null);
 
   const handleTabClick = useCallback((tab) => {
-    setActiveTab((prev) => (prev === tab ? prev : tab));
+    setActiveTab((prev) => (prev === tab ? 'overview' : tab));
   }, []);
 
   const handleNavigateToSatellite = useCallback((countryName) => {
@@ -493,7 +493,7 @@ function App() {
           </div>
           
           <div className="hero-graphic">
-            <div className={`img-wrapper ${activeTab !== 'overview' ? 'is-exploded' : ''} zoom-${activeTab}`}>
+            <div className={`img-wrapper ${activeTab !== 'overview' ? 'is-exploded' : ''} ${!hasWebGL ? `is-fallback zoom-${activeTab}` : ''}`}>
               {hasWebGL ? (
                 <WebGLErrorBoundary fallback={
                   <>
@@ -607,7 +607,7 @@ function App() {
       )}
 
       {/* Stats Summary Banner */}
-      {activeTab === 'feed' && !error && (
+      {(activeTab === 'feed' || activeTab === 'overview') && !error && (
         <section className="stats-banner" aria-label="Dashboard Stats">
           <div className="stat-card" style={{ '--accent-color': '#10b981' }}>
             <div className="stat-icon" style={{ color: '#10b981' }}>
@@ -682,7 +682,7 @@ function App() {
       )}
 
       <main id="main-content-section">
-        {activeTab === 'feed' ? (
+        {activeTab === 'feed' || activeTab === 'overview' ? (
           /* ALL FEEDS TAB */
           <div>
             {!error && articles.length > 0 && (

@@ -1287,8 +1287,8 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: visible;
 }
-
 
 
 
@@ -1365,10 +1365,10 @@ h1 {
 .r3f-label-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: rgba(14, 18, 15, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 5px 12px 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 4px 8px 4px 5px;
   border-radius: 4px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(8px);
@@ -1391,15 +1391,16 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   background: #e2e8f0;
   color: #0b0e0c;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
-  font-size: 0.725rem;
+  font-size: 0.70rem;
   border-radius: 2px;
   transition: all 0.25s ease;
+  flex-shrink: 0;
 }
 
 .r3f-container-label.is-active .r3f-label-marker {
@@ -1409,9 +1410,9 @@ h1 {
 
 .r3f-label-text {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.725rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   color: #ffffff;
   text-transform: uppercase;
 }
@@ -1419,7 +1420,7 @@ h1 {
 .r3f-leader-line {
   display: flex;
   align-items: center;
-  width: 28px;
+  width: 18px;
   height: 2px;
 }
 
@@ -1503,14 +1504,13 @@ h1 {
 
 .img-wrapper {
   position: relative;
-  width: 90%;
-  height: 90%;
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: center center;
-  transform: scale(1.08);
 }
 
 
@@ -1536,19 +1536,19 @@ h1 {
   pointer-events: none;
 }
 
-/* Dynamic Layer Zoom Focus - Precision Framed for A, B, and C */
-.img-wrapper.zoom-feed {
-  /* Option A: Top Tier (MAERSK / ONE) - Perfectly centered in viewport */
+/* Fallback 2D Image Layer Zoom Focus (Only applied when WebGL is absent) */
+.img-wrapper.is-fallback.zoom-feed {
+  /* Option A: Top Tier - Centered in viewport */
   transform: scale(1.25) translate(4%, 14%);
 }
 
-.img-wrapper.zoom-search {
-  /* Option B: Middle Tier (CMA CGM) - Perfectly centered in viewport */
+.img-wrapper.is-fallback.zoom-search {
+  /* Option B: Middle Tier - Centered in viewport */
   transform: scale(1.22) translate(5%, 0%);
 }
 
-.img-wrapper.zoom-analytics {
-  /* Option C: Bottom Tier (COSCO) - Perfectly centered in viewport */
+.img-wrapper.is-fallback.zoom-analytics {
+  /* Option C: Bottom Tier - Centered in viewport */
   transform: scale(1.25) translate(4%, -14%);
 }
 
