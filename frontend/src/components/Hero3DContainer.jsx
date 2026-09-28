@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, ContactShadows, OrbitControls, Html } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import * as THREE from 'three';
@@ -276,10 +276,10 @@ const createContainerTexture = (baseColor, brandName, serialNumber, faceType = '
 
 // ── Corner Castings Geometry Component (8 ISO Corner Blocks) ──────────
 const CornerCastings = () => {
-  const hw = 1.5;   // half width
-  const hh = 0.65;  // half height
-  const hd = 0.6;   // half depth
-  const s = 0.11;   // cube size
+  const hw = 1.5;
+  const hh = 0.65;
+  const hd = 0.6;
+  const s = 0.11;
 
   const positions = useMemo(() => [
     [-hw, -hh, -hd], [hw, -hh, -hd], [-hw, hh, -hd], [hw, hh, -hd],
@@ -329,7 +329,7 @@ const DoorLockingHardware = () => {
 };
 
 // ── Animated Opening Doors Component (For Interactive Containers B & C) ─
-const OpeningDoors = ({ doorOpenProgress, doorTex, doorNormal, doorRoughness }) => {
+const OpeningDoors = ({ doorOpenProgress, doorTex, doorNormal, doorRoughness, isHovered }) => {
   return (
     <group position={[1.502, 0, 0]}>
       {/* Left Door Wing (pivots outward around +Z edge at Z = +0.59) */}
@@ -346,6 +346,8 @@ const OpeningDoors = ({ doorOpenProgress, doorTex, doorNormal, doorRoughness }) 
               roughnessMap={doorRoughness}
               roughness={0.42}
               metalness={0.65}
+              emissive={isHovered ? '#10b981' : '#000000'}
+              emissiveIntensity={isHovered ? 0.18 : 0}
             />
           </mesh>
           {/* Vertical locking rods on left wing */}
@@ -378,6 +380,8 @@ const OpeningDoors = ({ doorOpenProgress, doorTex, doorNormal, doorRoughness }) 
               roughnessMap={doorRoughness}
               roughness={0.42}
               metalness={0.65}
+              emissive={isHovered ? '#10b981' : '#000000'}
+              emissiveIntensity={isHovered ? 0.18 : 0}
             />
           </mesh>
           {/* Vertical locking rods on right wing */}
@@ -592,20 +596,16 @@ const useLiveTickerTexture = (articles) => {
 
 // ── Theme B: Interior Glowing Particle Trade Network ──────────────────
 const TRADE_NODES = [
-  // Asia Ports
   { pos: [0.85, 0.15, 0.22], color: '#06b6d4', size: 0.052 },
   { pos: [0.72, -0.12, 0.28], color: '#10b981', size: 0.046 },
   { pos: [0.88, 0.32, -0.05], color: '#06b6d4', size: 0.042 },
   { pos: [0.92, -0.05, 0.12], color: '#06b6d4', size: 0.044 },
-  // Middle East / Choke Points
   { pos: [0.38, -0.08, 0.18], color: '#ef4444', size: 0.06 },
   { pos: [0.46, -0.18, 0.05], color: '#f59e0b', size: 0.048 },
   { pos: [0.28, -0.22, 0.24], color: '#ef4444', size: 0.054 },
-  // Europe
   { pos: [-0.08, 0.22, 0.15], color: '#06b6d4', size: 0.05 },
   { pos: [-0.18, 0.14, 0.02], color: '#10b981', size: 0.044 },
   { pos: [0.02, 0.08, 0.26], color: '#06b6d4', size: 0.042 },
-  // Americas
   { pos: [-0.65, 0.18, -0.18], color: '#06b6d4', size: 0.05 },
   { pos: [-0.78, 0.24, 0.12], color: '#10b981', size: 0.046 },
   { pos: [-0.48, -0.22, 0.08], color: '#f59e0b', size: 0.052 }
@@ -632,7 +632,6 @@ const InteriorNetworkNodeCluster = ({ isOpen }) => {
   useFrame((state) => {
     if (!isOpen) return;
     const t = state.clock.elapsedTime;
-    // Animate glowing data packets along route segments
     ROUTE_CONNECTIONS.slice(0, 4).forEach(([fromIdx, toIdx], i) => {
       if (packetRef.current[i]) {
         const p1 = new THREE.Vector3(...TRADE_NODES[fromIdx].pos);
@@ -646,15 +645,12 @@ const InteriorNetworkNodeCluster = ({ isOpen }) => {
 
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
-      {/* Interior Cyan Ambient Illumination */}
       <pointLight position={[0.6, 0, 0]} color="#06b6d4" intensity={isOpen ? 3.0 : 0} distance={3.8} />
 
-      {/* Network Connecting Lines */}
       <lineSegments geometry={routeGeometry}>
         <lineBasicMaterial color="#38bdf8" transparent opacity={0.65} linewidth={1} />
       </lineSegments>
 
-      {/* Trade Hub Nodes */}
       {TRADE_NODES.map((node, i) => (
         <mesh key={i} position={node.pos}>
           <sphereGeometry args={[node.size, 12, 12]} />
@@ -662,7 +658,6 @@ const InteriorNetworkNodeCluster = ({ isOpen }) => {
         </mesh>
       ))}
 
-      {/* Animated Data Packets */}
       {[0, 1, 2, 3].map((idx) => (
         <mesh key={`pkt-${idx}`} ref={(el) => (packetRef.current[idx] = el)}>
           <sphereGeometry args={[0.024, 8, 8]} />
@@ -698,22 +693,17 @@ const InteriorNasaRiskGlobe = ({ isOpen }) => {
 
   return (
     <group position={[0.65, 0, 0]}>
-      {/* Interior Amber Ambient Glow */}
       <pointLight color="#f59e0b" intensity={isOpen ? 3.2 : 0} distance={3.8} />
 
-      {/* Rotating Holographic Globe Group */}
       <group ref={globeGroupRef} rotation={[0.38, 0, 0]}>
-        {/* Wireframe outer sphere */}
         <mesh>
           <sphereGeometry args={[0.34, 18, 18]} />
           <meshBasicMaterial color="#f59e0b" wireframe transparent opacity={0.5} />
         </mesh>
-        {/* Atmospheric inner glow */}
         <mesh>
           <sphereGeometry args={[0.26, 16, 16]} />
           <meshBasicMaterial color="#b45309" transparent opacity={0.3} />
         </mesh>
-        {/* Hotspot Chokepoint Beacons */}
         {[
           [0.26, 0.12, 0.18],  // Suez
           [0.31, -0.05, 0.12], // Bab el-Mandeb
@@ -727,13 +717,11 @@ const InteriorNasaRiskGlobe = ({ isOpen }) => {
         ))}
       </group>
 
-      {/* Orbital Satellite Ring */}
       <mesh rotation={[Math.PI / 4, 0, 0.3]}>
         <torusGeometry args={[0.52, 0.008, 12, 48]} />
         <meshBasicMaterial color="#38bdf8" transparent opacity={0.4} />
       </mesh>
 
-      {/* Orbiting Satellite Marker */}
       <group ref={satRef}>
         <mesh>
           <boxGeometry args={[0.035, 0.025, 0.02]} />
@@ -745,7 +733,6 @@ const InteriorNasaRiskGlobe = ({ isOpen }) => {
         </mesh>
       </group>
 
-      {/* Radar Pulse Wave */}
       <mesh ref={radarRingRef} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.28, 0.3, 32]} />
         <meshBasicMaterial color="#f59e0b" transparent opacity={0.6} side={THREE.DoubleSide} />
@@ -770,6 +757,7 @@ const ContainerMesh = ({
   isContainerA
 }) => {
   const [hovered, setHovered] = useState(false);
+  const hoverCageRef = useRef();
 
   // Cached PBR Textures
   const sideTex = useMemo(() => createContainerTexture(color, brand, serial, 'side'), [color, brand, serial]);
@@ -780,6 +768,17 @@ const ContainerMesh = ({
   const sideRoughness = useMemo(() => createCorrugationRoughnessMap('side'), []);
   const doorNormal = useMemo(() => createCorrugationNormalMap('door'), []);
   const doorRoughness = useMemo(() => createCorrugationRoughnessMap('door'), []);
+
+  // Subtle breathing outline pulse on hover
+  useFrame((state) => {
+    if (isInteractive && hovered && hoverCageRef.current) {
+      const pulse = 0.28 + 0.14 * Math.sin(state.clock.elapsedTime * 8);
+      hoverCageRef.current.material.opacity = pulse;
+    }
+  });
+
+  const emissiveColor = isInteractive && hovered ? '#10b981' : '#000000';
+  const emissiveIntensity = isInteractive && hovered ? 0.2 : 0;
 
   return (
     <group position={position}>
@@ -804,6 +803,8 @@ const ContainerMesh = ({
             roughnessMap={doorRoughness}
             roughness={0.42}
             metalness={0.65}
+            emissive={emissiveColor}
+            emissiveIntensity={emissiveIntensity}
           />
         )}
         {/* -X left side (Closed end) */}
@@ -815,9 +816,18 @@ const ContainerMesh = ({
           roughnessMap={doorRoughness}
           roughness={0.42}
           metalness={0.65}
+          emissive={emissiveColor}
+          emissiveIntensity={emissiveIntensity}
         />
         {/* +Y top */}
-        <meshStandardMaterial attach="material-2" map={topTex} roughness={0.55} metalness={0.5} />
+        <meshStandardMaterial 
+          attach="material-2" 
+          map={topTex} 
+          roughness={0.55} 
+          metalness={0.5} 
+          emissive={emissiveColor}
+          emissiveIntensity={emissiveIntensity * 0.5}
+        />
         {/* -Y bottom */}
         <meshStandardMaterial attach="material-3" color={color} roughness={0.8} metalness={0.2} />
         {/* +Z front (Long side facing camera) */}
@@ -830,6 +840,8 @@ const ContainerMesh = ({
             roughnessMap={sideRoughness}
             roughness={0.38}
             metalness={0.55}
+            emissive={emissiveColor}
+            emissiveIntensity={emissiveIntensity * 0.7}
           />
         ) : (
           <meshStandardMaterial
@@ -840,6 +852,8 @@ const ContainerMesh = ({
             roughnessMap={sideRoughness}
             roughness={0.45}
             metalness={0.65}
+            emissive={emissiveColor}
+            emissiveIntensity={emissiveIntensity}
           />
         )}
         {/* -Z back (Long side) */}
@@ -854,6 +868,14 @@ const ContainerMesh = ({
         />
       </mesh>
 
+      {/* Subtle Holographic Bounding Wireframe on Hover */}
+      {isInteractive && hovered && (
+        <mesh ref={hoverCageRef} position={[0, 0, 0]}>
+          <boxGeometry args={[3.04, 1.34, 1.24]} />
+          <meshBasicMaterial color="#38bdf8" wireframe transparent opacity={0.32} />
+        </mesh>
+      )}
+
       {/* Structural Corner Blocks & Frame Rails */}
       <CornerCastings />
       <FrameRails />
@@ -867,6 +889,7 @@ const ContainerMesh = ({
             doorTex={doorTex}
             doorNormal={doorNormal}
             doorRoughness={doorRoughness}
+            isHovered={isInteractive && hovered}
           />
           {interiorType === 'network' && (
             <InteriorNetworkNodeCluster isOpen={isInteriorActive} />
@@ -955,7 +978,6 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
 
   // The 3 front-facing containers assigned to the interactive tabs
   if (c.id === 'c-1-1') {
-    // Top Front: Tab A (ALL FEEDS / SUPPLY CHAIN NEWS)
     isTarget = true;
     isContainerA = true;
     labelData = { marker: 'A', title: 'ALL FEEDS', tab: 'feed' };
@@ -964,7 +986,6 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
       offsetZ = 0.95;
     }
   } else if (c.id === 'c-0-1') {
-    // Mid Front: Tab B (SEMANTIC AI SEARCH / NETWORK DISRUPTION)
     isTarget = true;
     hasOpeningDoors = true;
     interiorType = 'network';
@@ -975,7 +996,6 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
       isDoorOpen = true;
     }
   } else if (c.id === 'c--1-1') {
-    // Bot Front: Tab C (NASA SATELLITE / RISK MONITOR)
     isTarget = true;
     hasOpeningDoors = true;
     interiorType = 'nasa';
@@ -1078,6 +1098,62 @@ const Stack = ({ activeTab, onTabClick, articles }) => {
   );
 };
 
+// ── Smooth 700ms Camera Easing Controller ─────────────────────────────
+const CameraController = ({ activeTab }) => {
+  const { camera } = useThree();
+  const controlsRef = useRef();
+
+  // Targets and positions tailored for each container's feature focus
+  const { camPos, camTarget } = useMemo(() => {
+    switch (activeTab) {
+      case 'feed':
+        // Focus on Container A (top front), framing the live news ticker
+        return {
+          camPos: new THREE.Vector3(7.4, 4.8, 7.6),
+          camTarget: new THREE.Vector3(0.3, 0.85, 0.35)
+        };
+      case 'search':
+        // Focus on Container B (middle front), 3/4 angle peering inside open doors
+        return {
+          camPos: new THREE.Vector3(7.9, 4.2, 7.3),
+          camTarget: new THREE.Vector3(0.35, 0.05, 0.3)
+        };
+      case 'analytics':
+        // Focus on Container C (bottom front), showcasing rotating holographic risk globe
+        return {
+          camPos: new THREE.Vector3(7.6, 3.6, 7.5),
+          camTarget: new THREE.Vector3(0.3, -0.75, 0.3)
+        };
+      default: // 'overview'
+        // Balanced symmetrical isometric view of full 3x3 stack
+        return {
+          camPos: new THREE.Vector3(8.0, 5.0, 8.0),
+          camTarget: new THREE.Vector3(0.0, 0.0, 0.0)
+        };
+    }
+  }, [activeTab]);
+
+  useFrame((state, delta) => {
+    // 700ms smooth exponential ease-out (factor 4.6 * delta reaches ~96% convergence in 700ms)
+    const factor = Math.min(1, delta * 4.6);
+    camera.position.lerp(camPos, factor);
+    if (controlsRef.current) {
+      controlsRef.current.target.lerp(camTarget, factor);
+      controlsRef.current.update();
+    }
+  });
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      target={[0, 0, 0]}
+      enableZoom={false}
+      enablePan={false}
+      enableRotate={false}
+    />
+  );
+};
+
 // ── Main Export ────────────────────────────────────────────────────────
 export default function Hero3DContainer({ activeTab, onTabClick, articles = [] }) {
   return (
@@ -1133,13 +1209,8 @@ export default function Hero3DContainer({ activeTab, onTabClick, articles = [] }
         color="#040605"
       />
 
-      {/* Fixed viewing angle with smooth interaction */}
-      <OrbitControls
-        target={[0, 0, 0]}
-        enableZoom={false}
-        enablePan={false}
-        enableRotate={false}
-      />
+      {/* Smooth 700ms Camera Easing Controller */}
+      <CameraController activeTab={activeTab} />
     </Canvas>
   );
 }

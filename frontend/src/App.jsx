@@ -536,13 +536,17 @@ function App() {
             </div>
             
             {activeTab !== 'overview' && (
-              <div 
-                className="iso-label label-reset"
+              <button 
+                type="button"
+                className="r3f-reset-view-btn"
                 onClick={(e) => { e.stopPropagation(); handleTabClick('overview'); }}
-                style={{ position: 'absolute', top: '1rem', right: '1rem', cursor: 'pointer', zIndex: 50, background: 'var(--text-primary)', color: 'var(--bg-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                title="Reset 3D camera to overview stack"
               >
-                <CloseIcon size={13} color="var(--bg-primary)" /> RESET VIEW
-              </div>
+                <span className="r3f-reset-icon">
+                  <CloseIcon size={11} color="currentColor" />
+                </span>
+                <span>Reset View</span>
+              </button>
             )}
           </div>
         </header>
