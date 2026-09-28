@@ -447,286 +447,197 @@ public class DailyDigestService {
         return false;
     }
 
-    // --------------------------------------------------------------------------
-    // HTML Email Template — Hybrid Design
-    // Dark intelligence header + Clean white body with Google News-style articles
-    // --------------------------------------------------------------------------
+    // ══════════════════════════════════════════════════════════════════════════
+    // HTML Email Template — Premium Executive Briefing Design
+    // Deep navy hero + clean white body + minimal article feed
+    // ══════════════════════════════════════════════════════════════════════════
     private String buildHtmlEmail(String dateDisplay, RiskScoreCalculator.RiskResult indiaRisk,
                                   Map<String, Integer> elevatedCountries,
                                   String indiaSummary, int indiaCount,
                                   String globalSummary, int globalCount) {
 
-        String riskBadgeColor = indiaRisk.getColorHex();
-        String riskEmoji = indiaRisk.getEmoji();
+        String riskColor = indiaRisk.getColorHex();
         String riskLabel = indiaRisk.getStatus();
         int riskScore = indiaRisk.getScore();
+        int totalArticles = indiaCount + globalCount;
 
-        // Elevated countries line
-        String elevatedLine = "";
-        if (elevatedCountries != null && !elevatedCountries.isEmpty()) {
-            String entries = elevatedCountries.entrySet().stream()
-                    .map(e -> e.getKey() + " (" + e.getValue() + "/100)")
-                    .collect(Collectors.joining(", "));
-            elevatedLine = "<p style=\"margin:8px 0 0 0;font-size:12px;color:#f59e0b;\">⚠️ Also elevated: " + entries + "</p>";
-        }
-
-        // Escape HTML in summaries
         String indiaHtml = escapeHtml(indiaSummary).replace("\n", "<br>");
         String globalHtml = escapeHtml(globalSummary).replace("\n", "<br>");
 
-        // Category scores
         Map<String, Integer> catScores = indiaRisk.getCategoryScores();
-        int geoScore = catScores.getOrDefault("geopolitical", 0);
-        int logScore = catScores.getOrDefault("logistics", 0);
-        int wxScore = catScores.getOrDefault("weather", 0);
-        int mktScore = catScores.getOrDefault("market", 0);
+        int geo = catScores.getOrDefault("geopolitical", 0);
+        int log = catScores.getOrDefault("logistics", 0);
+        int wx  = catScores.getOrDefault("weather", 0);
+        int mkt = catScores.getOrDefault("market", 0);
 
-        // Build inline HTML bar chart
-        String chartHtml = buildInlineBarChart(geoScore, logScore, wxScore, mktScore);
+        String reportId = "#SCR-" + LocalDate.now(IST).format(DateTimeFormatter.ofPattern("yyMMdd"));
+        String timeGen = LocalTime.now(IST).format(DateTimeFormatter.ofPattern("HH:mm"));
 
-        // Build top headlines section from recent articles
-        List<NewsArticle> recentArticles = newsArticleRepository.findAllByOrderByPublishedAtDesc();
-        String topHeadlinesHtml = buildTopHeadlinesHtml(recentArticles, 5);
-
-        // Risk gauge bar segments
-        int filledSegments = riskScore / 10;
-        StringBuilder gaugeBar = new StringBuilder();
-        for (int i = 0; i < 10; i++) {
-            String segColor = i < filledSegments ? riskBadgeColor : "#1e2a22";
-            String border = i < filledSegments ? riskBadgeColor : "#2a3a2e";
-            gaugeBar.append("<td style=\"width:10%;height:8px;background:" + segColor + ";border:1px solid " + border + ";\"></td>");
+        // Elevated countries pill
+        String elevatedHtml = "";
+        if (elevatedCountries != null && !elevatedCountries.isEmpty()) {
+            StringBuilder eb = new StringBuilder();
+            for (Map.Entry<String, Integer> e : elevatedCountries.entrySet()) {
+                eb.append("<span style=\"display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;background:rgba(245,158,11,0.12);color:#d97706;font-size:10px;font-weight:700;border-radius:10px;\">")
+                  .append(escapeHtml(e.getKey())).append(" ").append(e.getValue()).append("</span>");
+            }
+            elevatedHtml = "<div style=\"margin-top:8px;\">" + eb.toString() + "</div>";
         }
 
-        // Total articles stat
-        int totalArticles = indiaCount + globalCount;
-        String reportId = "#SCR-" + LocalDate.now(IST).format(DateTimeFormatter.ofPattern("yyMMdd"));
-        String timeGenerated = LocalTime.now(IST).format(DateTimeFormatter.ofPattern("HH:mm"));
+        // Top headlines
+        List<NewsArticle> recentArticles = (newsArticleRepository != null)
+                ? newsArticleRepository.findAllByOrderByPublishedAtDesc()
+                : java.util.Collections.emptyList();
+        String headlinesHtml = buildTopHeadlinesHtml(recentArticles, 5);
 
-        return "<!DOCTYPE html>" +
-                "<html lang=\"en\">" +
-                "<head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">" +
-                "<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');</style></head>" +
-                "<body style=\"margin:0;padding:0;background:#f0f2f5;font-family:Inter,'Segoe UI',Arial,sans-serif;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f0f2f5;\">" +
-                "<tr><td align=\"center\" style=\"padding:0;\">" +
-                "<table role=\"presentation\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" style=\"overflow:hidden;\">" +
+        // Build risk gauge — 20 thin segments for a sleek look
+        StringBuilder gauge = new StringBuilder();
+        int filled20 = Math.max(1, riskScore / 5);
+        for (int i = 0; i < 20; i++) {
+            String bg = i < filled20 ? riskColor : "#e2e8f0";
+            gauge.append("<td style=\"width:5%;height:6px;font-size:1px;line-height:1px;background:").append(bg).append(";border-radius:3px;\">&nbsp;</td>");
+        }
 
-                // ════════════════════════════════════════════════════════════
-                // DARK HEADER ZONE — Intelligence Dashboard
-                // ════════════════════════════════════════════════════════════
-                "<tr><td style=\"background:#0c1210;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">" +
+        // ─── Assemble the email ─────────────────────────────────────────────
+        return "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\"><title>Supply Chain Risk Intelligence</title></head>" +
+        "<body style=\"margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;\">" +
+        "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f1f5f9;\"><tr><td align=\"center\" style=\"padding:24px 12px 36px;\">" +
+        "<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 25px -5px rgba(0,0,0,0.08);border:1px solid #e2e8f0;\">" +
 
-                // HEADER ROW
-                "<tr><td style=\"padding:32px 36px 20px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
-                "<td>" +
-                "<p style=\"margin:0;font-size:10px;font-weight:700;color:" + riskBadgeColor + ";text-transform:uppercase;letter-spacing:0.25em;\">Daily Risk Report</p>" +
-                "<h1 style=\"margin:6px 0 0 0;font-size:24px;font-weight:800;color:#e8f0e0;letter-spacing:-0.01em;\">Supply Chain Intelligence</h1>" +
-                "<p style=\"margin:6px 0 0 0;font-size:12px;color:#5a7a50;\">" + dateDisplay + "</p></td>" +
-                "<td align=\"right\" style=\"vertical-align:top;\"><div style=\"background:#0a120d;border:1px solid #1a2820;border-radius:8px;padding:10px 16px;\">" +
-                "<p style=\"margin:0;font-size:8px;color:#4a6440;text-transform:uppercase;letter-spacing:0.15em;\">Report</p>" +
-                "<p style=\"margin:3px 0 0;font-size:15px;color:#8fa882;font-family:'Courier New',monospace;font-weight:700;\">" + reportId + "</p>" +
-                "</div></td></tr></table>" +
-                "</td></tr>" +
+        // ╔══════════════════════════════════════════════════════════════════╗
+        // ║  HERO HEADER — Deep Navy Executive Gradient                    ║
+        // ╚══════════════════════════════════════════════════════════════════╝
+        "<tr><td style=\"background-color:#0f172a;background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#334155 100%);padding:28px 32px 24px;\">" +
 
-                // STAT CARDS
-                "<tr><td style=\"padding:4px 36px 16px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"8\" style=\"border-collapse:separate;\"><tr>" +
-                buildStatCard(String.valueOf(totalArticles), "articles scanned", "#5e7254") +
-                buildStatCard(String.valueOf(indiaCount), "india focus", "#f59e0b") +
-                buildStatCard(String.valueOf(riskScore), "risk score", riskBadgeColor) +
-                "</tr></table></td></tr>" +
+        // Top row: branding + report ID
+        "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
+        "<td><p style=\"margin:0;font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.25em;\">Daily Risk Report</p>" +
+        "<h1 style=\"margin:4px 0 0;font-size:22px;font-weight:800;color:#f8fafc;letter-spacing:-0.02em;\">Supply Chain Intelligence</h1>" +
+        "<p style=\"margin:6px 0 0;font-size:11px;color:#94a3b8;\">" + dateDisplay + "</p></td>" +
+        "<td align=\"right\" style=\"vertical-align:top;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
+        "<td style=\"background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 12px;text-align:right;\">" +
+        "<p style=\"margin:0;font-size:7px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.18em;font-weight:600;\">Report</p>" +
+        "<p style=\"margin:2px 0 0;font-size:12px;color:#e2e8f0;font-family:'Courier New',monospace;font-weight:700;\">" + reportId + "</p>" +
+        "</td></tr></table></td></tr></table>" +
 
-                // RISK ASSESSMENT ROW
-                "<tr><td style=\"padding:4px 36px 16px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;\">" +
-                "<tr><td style=\"padding:22px 28px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
+        // ── Stats Row ──────────────────────────────────────────────────────
+        "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:20px;\"><tr>" +
+        "<td style=\"width:33%;text-align:center;padding:12px 6px;background:rgba(255,255,255,0.05);border-radius:10px 0 0 10px;\">" +
+        "<p style=\"margin:0;font-size:24px;font-weight:900;color:#f8fafc;line-height:1;\">" + totalArticles + "</p>" +
+        "<p style=\"margin:4px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;\">Scanned</p></td>" +
+        "<td style=\"width:34%;text-align:center;padding:12px 6px;background:rgba(255,255,255,0.05);border-left:1px solid rgba(255,255,255,0.07);border-right:1px solid rgba(255,255,255,0.07);\">" +
+        "<p style=\"margin:0;font-size:24px;font-weight:900;color:#f59e0b;line-height:1;\">" + indiaCount + "</p>" +
+        "<p style=\"margin:4px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;\">India Focus</p></td>" +
+        "<td style=\"width:33%;text-align:center;padding:12px 6px;background:rgba(255,255,255,0.05);border-radius:0 10px 10px 0;\">" +
+        "<p style=\"margin:0;font-size:24px;font-weight:900;color:" + riskColor + ";line-height:1;\">" + riskScore + "</p>" +
+        "<p style=\"margin:4px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;\">Risk Score</p></td>" +
+        "</tr></table>" +
 
-                // Left: Score
-                "<td style=\"width:45%;vertical-align:top;\">" +
-                "<p style=\"margin:0;font-size:9px;font-weight:700;color:#4a6440;text-transform:uppercase;letter-spacing:0.15em;\">India Risk Assessment</p>" +
-                "<p style=\"margin:12px 0 0 0;font-size:48px;font-weight:900;color:" + riskBadgeColor + ";line-height:1;\">" + riskScore + "<span style=\"font-size:18px;color:#3e5234;font-weight:400;\">/100</span></p>" +
-                "<p style=\"margin:10px 0 0 0;\"><span style=\"display:inline-block;padding:4px 14px;background:" + riskBadgeColor + "18;color:" + riskBadgeColor + ";font-size:11px;font-weight:700;border-radius:20px;letter-spacing:0.05em;\">" + riskLabel + "</span></p>" +
-                elevatedLine +
-                "</td>" +
+        "</td></tr>" +
 
-                // Right: Threat Breakdown
-                "<td style=\"width:55%;vertical-align:top;padding-left:24px;\">" +
-                "<p style=\"margin:0 0 14px 0;font-size:9px;color:#4a6440;text-transform:uppercase;letter-spacing:0.15em;font-weight:700;\">Threat Breakdown</p>" +
-                buildThreatBreakdownRow("#ef4444", "Geopolitical", geoScore) +
-                buildThreatBreakdownRow("#f59e0b", "Logistics", logScore) +
-                buildThreatBreakdownRow("#3b82f6", "Weather", wxScore) +
-                buildThreatBreakdownRow("#22c55e", "Market", mktScore) +
-                "</td></tr>" +
+        // ╔══════════════════════════════════════════════════════════════════╗
+        // ║  RISK ASSESSMENT BAND                                          ║
+        // ╚══════════════════════════════════════════════════════════════════╝
+        "<tr><td style=\"background-color:#ffffff;padding:24px 32px;border-bottom:1px solid #f1f5f9;\">" +
+        "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
 
-                // Gauge bar
-                "<tr><td colspan=\"2\" style=\"padding:18px 0 0 0;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"2\" style=\"border-collapse:separate;\"><tr>" + gaugeBar.toString() + "</tr></table>" +
-                "</td></tr></table>" +
-                "</td></tr></table>" +
-                "</td></tr>" +
+        // Left: Big score + label
+        "<td style=\"width:38%;vertical-align:top;\">" +
+        "<p style=\"margin:0;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.18em;\">India Risk Index</p>" +
+        "<p style=\"margin:6px 0 0;font-size:46px;font-weight:900;color:" + riskColor + ";line-height:1;letter-spacing:-0.03em;\">" + riskScore +
+        "<span style=\"font-size:16px;color:#94a3b8;font-weight:500;\">/100</span></p>" +
+        "<div style=\"margin-top:8px;\">" +
+        "<span style=\"display:inline-block;padding:3px 12px;background:" + riskColor + "18;color:" + riskColor + ";font-size:10px;font-weight:800;border-radius:12px;letter-spacing:0.06em;\">" + riskLabel.toUpperCase() + "</span>" +
+        "</div>" +
+        elevatedHtml +
+        "</td>" +
 
-                // RISK DISTRIBUTION
-                "<tr><td style=\"padding:4px 36px 20px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0a120d;border-radius:10px;\">" +
-                "<tr><td style=\"padding:20px 28px;\">" +
-                "<h2 style=\"margin:0 0 16px 0;font-size:12px;font-weight:800;color:#a3b898;text-transform:uppercase;letter-spacing:0.12em;\">Risk Distribution</h2>" +
-                chartHtml +
-                "</td></tr></table>" +
-                "</td></tr>" +
+        // Right: Category breakdown as compact rows
+        "<td style=\"width:62%;vertical-align:top;padding-left:24px;\">" +
+        "<p style=\"margin:0 0 10px;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.18em;\">Threat Breakdown</p>" +
+        buildCategoryRow("#ef4444", "Geopolitical", geo) +
+        buildCategoryRow("#f59e0b", "Logistics", log) +
+        buildCategoryRow("#3b82f6", "Weather", wx) +
+        buildCategoryRow("#10b981", "Market", mkt) +
+        "</td></tr></table>" +
 
-                "</table></td></tr>" +
+        // Gauge bar
+        "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"2\" style=\"border-collapse:separate;margin-top:16px;\"><tr>" + gauge.toString() + "</tr></table>" +
 
-                // ════════════════════════════════════════════════════════════
-                // TRANSITION — Dark to White
-                // ════════════════════════════════════════════════════════════
-                "<tr><td style=\"background:linear-gradient(to bottom, #0c1210 0%, #f8f9fa 100%);height:32px;\">" +
-                "</td></tr>" +
+        "</td></tr>" +
 
-                // ════════════════════════════════════════════════════════════
-                // WHITE BODY ZONE — Google News / Reddit Style
-                // ════════════════════════════════════════════════════════════
-                "<tr><td style=\"background:#f8f9fa;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">" +
+        // ╔══════════════════════════════════════════════════════════════════╗
+        // ║  INDIA INTELLIGENCE                                            ║
+        // ╚══════════════════════════════════════════════════════════════════╝
+        "<tr><td style=\"background-color:#ffffff;padding:24px 32px;border-bottom:1px solid #f1f5f9;\">" +
+        "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
+        "<td style=\"vertical-align:middle;\"><p style=\"margin:0;font-size:14px;font-weight:800;color:#0f172a;\">🇮🇳&nbsp; India Intelligence</p></td>" +
+        "<td align=\"right\"><span style=\"display:inline-block;padding:3px 10px;background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;border-radius:12px;\">" + indiaCount + " articles</span></td>" +
+        "</tr></table>" +
+        "<div style=\"margin-top:12px;font-size:13px;line-height:1.65;color:#334155;\">" + indiaHtml + "</div>" +
+        "</td></tr>" +
 
-                // INDIA INTELLIGENCE CARD
-                "<tr><td style=\"padding:8px 28px 16px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;\">" +
-                "<tr><td style=\"padding:0;\">" +
-                // Amber top accent bar
-                "<div style=\"height:4px;background:#f59e0b;\"></div>" +
-                "</td></tr>" +
-                "<tr><td style=\"padding:24px 28px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
-                "<td style=\"vertical-align:middle;\">" +
-                "<h2 style=\"margin:0;font-size:16px;font-weight:800;color:#1a1a1a;letter-spacing:-0.01em;\">🇮🇳 India Intelligence</h2>" +
-                "</td>" +
-                "<td align=\"right\">" +
-                "<span style=\"display:inline-block;padding:3px 10px;background:#fef3c7;color:#92400e;font-size:10px;font-weight:600;border-radius:12px;\">" + indiaCount + " articles</span>" +
-                "</td></tr></table>" +
-                "<p style=\"margin:16px 0 0 0;font-size:14px;line-height:1.75;color:#374151;\">" + indiaHtml + "</p>" +
-                "</td></tr></table>" +
-                "</td></tr>" +
+        // ╔══════════════════════════════════════════════════════════════════╗
+        // ║  GLOBAL SITUATION                                              ║
+        // ╚══════════════════════════════════════════════════════════════════╝
+        "<tr><td style=\"background-color:#ffffff;padding:24px 32px;border-bottom:1px solid #f1f5f9;\">" +
+        "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
+        "<td style=\"vertical-align:middle;\"><p style=\"margin:0;font-size:14px;font-weight:800;color:#0f172a;\">🌍&nbsp; Global Situation</p></td>" +
+        "<td align=\"right\"><span style=\"display:inline-block;padding:3px 10px;background:#e0f2fe;color:#0369a1;font-size:9px;font-weight:700;border-radius:12px;\">" + globalCount + " articles</span></td>" +
+        "</tr></table>" +
+        "<div style=\"margin-top:12px;font-size:13px;line-height:1.65;color:#334155;\">" + globalHtml + "</div>" +
+        "</td></tr>" +
 
-                // GLOBAL SITUATION CARD
-                "<tr><td style=\"padding:0 28px 16px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;\">" +
-                "<tr><td style=\"padding:0;\">" +
-                // Blue top accent bar
-                "<div style=\"height:4px;background:#3b82f6;\"></div>" +
-                "</td></tr>" +
-                "<tr><td style=\"padding:24px 28px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
-                "<td style=\"vertical-align:middle;\">" +
-                "<h2 style=\"margin:0;font-size:16px;font-weight:800;color:#1a1a1a;letter-spacing:-0.01em;\">🌍 Global Situation</h2>" +
-                "</td>" +
-                "<td align=\"right\">" +
-                "<span style=\"display:inline-block;padding:3px 10px;background:#dbeafe;color:#1e40af;font-size:10px;font-weight:600;border-radius:12px;\">" + globalCount + " articles</span>" +
-                "</td></tr></table>" +
-                "<p style=\"margin:16px 0 0 0;font-size:14px;line-height:1.75;color:#374151;\">" + globalHtml + "</p>" +
-                "</td></tr></table>" +
-                "</td></tr>" +
+        // ╔══════════════════════════════════════════════════════════════════╗
+        // ║  TOP STORIES                                                   ║
+        // ╚══════════════════════════════════════════════════════════════════╝
+        "<tr><td style=\"background-color:#ffffff;padding:24px 32px 16px;\">" +
+        "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:14px;\"><tr>" +
+        "<td><p style=\"margin:0;font-size:14px;font-weight:800;color:#0f172a;\">📰&nbsp; Top Stories</p></td>" +
+        "<td align=\"right\"><span style=\"font-size:10px;color:#94a3b8;font-weight:500;\">Priority intelligence</span></td>" +
+        "</tr></table>" +
+        headlinesHtml +
+        "</td></tr>" +
 
-                // TOP STORIES CARD
-                "<tr><td style=\"padding:0 28px 16px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;\">" +
-                "<tr><td style=\"padding:0;\">" +
-                "<div style=\"height:4px;background:linear-gradient(90deg, #ef4444 0%, #f59e0b 33%, #3b82f6 66%, #22c55e 100%);\"></div>" +
-                "</td></tr>" +
-                "<tr><td style=\"padding:24px 28px 8px;\">" +
-                "<h2 style=\"margin:0 0 4px;font-size:16px;font-weight:800;color:#1a1a1a;letter-spacing:-0.01em;\">📰 Top Stories</h2>" +
-                "<p style=\"margin:0 0 20px;font-size:12px;color:#9ca3af;\">Today's most important supply chain developments</p>" +
-                topHeadlinesHtml +
-                "</td></tr></table>" +
-                "</td></tr>" +
+        // ╔══════════════════════════════════════════════════════════════════╗
+        // ║  CTA + FOOTER                                                  ║
+        // ╚══════════════════════════════════════════════════════════════════╝
+        "<tr><td style=\"background-color:#ffffff;padding:12px 32px 28px;\" align=\"center\">" +
+        "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
+        "<td style=\"border-radius:8px;background-color:#0f172a;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);\">" +
+        "<a href=\"" + dashboardUrl + "\" target=\"_blank\" style=\"display:inline-block;padding:12px 36px;color:#f8fafc;font-size:12px;font-weight:700;text-decoration:none;letter-spacing:0.04em;\">Open Live Dashboard &rarr;</a>" +
+        "</td></tr></table>" +
+        "</td></tr>" +
 
-                // CTA BUTTON
-                "<tr><td style=\"padding:8px 28px 28px;\" align=\"center\">" +
-                "<a href=\"" + dashboardUrl + "\" target=\"_blank\" style=\"display:inline-block;padding:14px 48px;background:#0c1210;color:#e8f0e0;font-size:13px;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:0.04em;\">Open Live Dashboard →</a>" +
-                "</td></tr>" +
+        // Footer
+        "<tr><td style=\"background-color:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;\">" +
+        "<p style=\"margin:0;font-size:10px;color:#94a3b8;text-align:center;line-height:1.5;\">" +
+        timeGen + " IST &middot; " + reportId + " &middot; Groq AI + pgvector &middot; " + dateDisplay + "</p>" +
+        "</td></tr>" +
 
-                "</table></td></tr>" +
-
-                // ════════════════════════════════════════════════════════════
-                // FOOTER
-                // ════════════════════════════════════════════════════════════
-                "<tr><td style=\"background:#f0f2f5;padding:20px 36px;\">" +
-                "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>" +
-                "<td align=\"center\">" +
-                "<p style=\"margin:0;font-size:11px;color:#9ca3af;\">" +
-                "Generated at " + timeGenerated + " IST &middot; " + reportId + " &middot; Powered by Groq AI + pgvector</p>" +
-                "<p style=\"margin:6px 0 0;font-size:10px;color:#c0c7cf;\">" +
-                "Supply Chain Risk Monitor &middot; Real-time disruption intelligence</p>" +
-                "</td></tr></table>" +
-                "</td></tr>" +
-
-                "</table></td></tr></table></body></html>";
+        "</table></td></tr></table></body></html>";
     }
 
-    /** Builds a single stat card cell for the header stats row. */
-    private String buildStatCard(String value, String label, String accentColor) {
-        return "<td style=\"background:#0a120d;border-radius:8px;padding:18px 12px;text-align:center;width:33%;border-top:3px solid " + accentColor + ";\">" +
-                "<p style=\"margin:0;font-size:30px;font-weight:900;color:" + accentColor + ";line-height:1;\">" + value + "</p>" +
-                "<p style=\"margin:6px 0 0;font-size:8px;color:#4a6440;text-transform:uppercase;letter-spacing:0.14em;font-weight:600;\">" + label + "</p></td>";
+    // ──────────────────────────────────────────────────────────────────────────
+    // Helper: compact category row with inline mini-bar
+    // ──────────────────────────────────────────────────────────────────────────
+    private String buildCategoryRow(String color, String label, int score) {
+        int barPct = Math.min(100, Math.max(3, score));
+        String scoreColor = score > 40 ? "#f59e0b" : "#64748b";
+        return "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:6px;\"><tr>" +
+            "<td style=\"width:80px;font-size:11px;color:#475569;font-weight:500;\">" + label + "</td>" +
+            "<td style=\"padding:0 10px;\"><div style=\"width:100%;background:#f1f5f9;border-radius:3px;height:8px;overflow:hidden;font-size:1px;line-height:1px;\">" +
+            "<div style=\"width:" + barPct + "%;height:100%;background:" + color + ";border-radius:3px;font-size:1px;line-height:1px;\"></div></div></td>" +
+            "<td style=\"width:28px;text-align:right;font-size:12px;font-weight:800;color:" + scoreColor + ";font-family:'Courier New',monospace;\">" + score + "</td>" +
+            "</tr></table>";
     }
 
-    /** Builds a single threat breakdown row for the risk assessment panel. */
-    private String buildThreatBreakdownRow(String dotColor, String label, int score) {
-        String scoreColor = score > 40 ? "#f59e0b" : "#6b8c5e";
-        return "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:6px;\">" +
-                "<tr><td style=\"width:12px;\"><div style=\"width:8px;height:8px;background:" + dotColor + ";border-radius:2px;\"></div></td>" +
-                "<td style=\"padding-left:8px;font-size:12px;color:#8fa882;\">" + label + "</td>" +
-                "<td style=\"text-align:right;color:" + scoreColor + ";font-weight:800;font-size:13px;font-family:'Courier New',monospace;\">" + score + "</td>" +
-                "</tr></table>";
-    }
-
-    /**
-     * Builds a pure HTML inline bar chart representing the risk distribution.
-     * This avoids external image blocking issues in email clients like Gmail.
-     */
-    private String buildInlineBarChart(int geo, int log, int wx, int mkt) {
-        // Calculate percentages (avoid div by 0)
-        int total = geo + log + wx + mkt;
-        if (total == 0) return "<p style=\"color:#5e7254;font-size:12px;\">Not enough data to calculate distribution.</p>";
-
-        int geoPct = Math.min(100, (geo * 100) / total);
-        int logPct = Math.min(100, (log * 100) / total);
-        int wxPct  = Math.min(100, (wx * 100) / total);
-        int mktPct = Math.min(100, (mkt * 100) / total);
-
-        // Ensure visible bars even for small non-zero values
-        if (geo > 0 && geoPct < 5) geoPct = 5;
-        if (log > 0 && logPct < 5) logPct = 5;
-        if (wx > 0 && wxPct < 5) wxPct = 5;
-        if (mkt > 0 && mktPct < 5) mktPct = 5;
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"8\" style=\"font-size:11px;\">");
-        sb.append(buildBarRow("Geopolitical", "#ef4444", geoPct, geo));
-        sb.append(buildBarRow("Logistics", "#f59e0b", logPct, log));
-        sb.append(buildBarRow("Weather", "#3b82f6", wxPct, wx));
-        sb.append(buildBarRow("Market", "#22c55e", mktPct, mkt));
-        sb.append("</table>");
-        return sb.toString();
-    }
-
-    /** Builds a single horizontal bar row for the risk distribution chart. */
-    private String buildBarRow(String label, String color, int pct, int value) {
-        return "<tr><td style=\"width:22%;color:#8fa882;font-weight:600;\">" + label + "</td>" +
-                "<td style=\"width:68%;\"><div style=\"width:100%;background:#1e2a22;border-radius:4px;overflow:hidden;height:12px;\">" +
-                "<div style=\"width:" + pct + "%;height:100%;background:" + color + ";border-radius:4px;\"></div></div></td>" +
-                "<td style=\"width:10%;color:" + color + ";text-align:right;font-weight:700;\">" + value + "</td></tr>";
-    }
-
-    /**
-     * Builds HTML for the top N headlines in a compact Google News-style numbered list.
-     * Strips HTML tags from raw content to produce clean text snippets.
-     */
+    // ──────────────────────────────────────────────────────────────────────────
+    // Helper: Google News-style numbered article list
+    // ──────────────────────────────────────────────────────────────────────────
     private String buildTopHeadlinesHtml(List<NewsArticle> articles, int limit) {
         if (articles == null || articles.isEmpty()) {
-            return "<p style=\"font-size:13px;color:#9ca3af;text-align:center;padding:16px 0;\">No recent headlines available.</p>";
+            return "<p style=\"font-size:12px;color:#94a3b8;text-align:center;padding:12px 0;\">No recent headlines.</p>";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -739,57 +650,45 @@ public class DailyDigestService {
             String url = article.getUrl() != null ? article.getUrl() : "#";
             String category = article.getRiskCategory() != null ? article.getRiskCategory().toUpperCase() : "NEWS";
 
-            // Category color mapping
-            String catColor = "#6b7280";
+            String catColor = "#64748b";
             String catLabel = "News";
             if (category.contains("GEO")) { catColor = "#ef4444"; catLabel = "Geopolitical"; }
             else if (category.contains("LOG")) { catColor = "#f59e0b"; catLabel = "Logistics"; }
             else if (category.contains("WEATHER")) { catColor = "#3b82f6"; catLabel = "Weather"; }
-            else if (category.contains("MARKET")) { catColor = "#22c55e"; catLabel = "Market"; }
+            else if (category.contains("MARKET")) { catColor = "#10b981"; catLabel = "Market"; }
 
-            // Build a clean snippet — strip HTML tags and URLs from raw content
+            // Clean snippet — decode entities, strip tags and URLs
             String snippet = "";
             if (article.getRawContent() != null && article.getRawContent().length() > 20) {
                 String cleaned = stripHtmlTags(article.getRawContent());
-                if (cleaned.length() > 100) cleaned = cleaned.substring(0, 100).trim() + "…";
+                if (cleaned.length() > 90) cleaned = cleaned.substring(0, 90).trim() + "…";
                 snippet = escapeHtml(cleaned);
             }
 
-            // Article row
             sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>");
 
-            // Number column
-            sb.append("<td style=\"width:32px;vertical-align:top;padding:10px 0;\">");
-            sb.append("<div style=\"width:26px;height:26px;border-radius:50%;border:2px solid " + catColor + ";text-align:center;line-height:26px;font-size:12px;font-weight:800;color:" + catColor + ";\">");
+            // Number badge (circular with category color)
+            sb.append("<td style=\"width:28px;vertical-align:top;padding:8px 0;\">");
+            sb.append("<div style=\"width:22px;height:22px;border-radius:50%;background:" + catColor + ";text-align:center;line-height:22px;font-size:11px;font-weight:800;color:#ffffff;\">");
             sb.append(count).append("</div></td>");
 
-            // Content column
-            sb.append("<td style=\"vertical-align:top;padding:10px 0 10px 10px;\">");
-
-            // Source + category
-            sb.append("<p style=\"margin:0 0 3px;font-size:10px;color:#9ca3af;\">");
-            sb.append("<span style=\"display:inline-block;width:6px;height:6px;background:" + catColor + ";border-radius:50%;margin-right:4px;vertical-align:middle;\"></span>");
-            sb.append(source).append(" &middot; ");
-            sb.append("<span style=\"color:" + catColor + ";font-weight:600;\">" + catLabel + "</span></p>");
-
-            // Title (clickable)
-            sb.append("<a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:13px;color:#111827;text-decoration:none;font-weight:700;line-height:1.35;\">");
+            // Content
+            sb.append("<td style=\"vertical-align:top;padding:8px 0 8px 10px;\">");
+            sb.append("<p style=\"margin:0 0 2px;font-size:9px;color:#94a3b8;font-weight:500;\">");
+            sb.append(source).append(" &middot; <span style=\"color:" + catColor + ";font-weight:700;\">" + catLabel + "</span></p>");
+            sb.append("<a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:13px;color:#0f172a;text-decoration:none;font-weight:600;line-height:1.35;\">");
             sb.append(title).append("</a>");
-
-            // Snippet + Read More on same line
             if (!snippet.isEmpty()) {
-                sb.append("<p style=\"margin:3px 0 0;font-size:11px;line-height:1.45;color:#6b7280;\">").append(snippet);
-                sb.append(" <a href=\"").append(url).append("\" target=\"_blank\" style=\"color:" + catColor + ";text-decoration:none;font-weight:600;\">Read More</a>");
-                sb.append("</p>");
+                sb.append("<p style=\"margin:2px 0 0;font-size:11px;color:#64748b;line-height:1.4;\">").append(snippet);
+                sb.append(" <a href=\"").append(url).append("\" target=\"_blank\" style=\"color:" + catColor + ";text-decoration:none;font-weight:600;white-space:nowrap;\">Read More &rarr;</a></p>");
             } else {
-                sb.append("<p style=\"margin:3px 0 0;\"><a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:11px;color:" + catColor + ";text-decoration:none;font-weight:600;\">Read More</a></p>");
+                sb.append("<p style=\"margin:2px 0 0;\"><a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:11px;color:" + catColor + ";text-decoration:none;font-weight:600;white-space:nowrap;\">Read More &rarr;</a></p>");
             }
-
             sb.append("</td></tr>");
 
-            // Separator (not after last item)
+            // Divider between items
             if (count < Math.min(articles.size(), limit)) {
-                sb.append("<tr><td colspan=\"2\" style=\"padding:0;\"><div style=\"height:1px;background:#eef0f2;\"></div></td></tr>");
+                sb.append("<tr><td colspan=\"2\" style=\"padding:0;\"><div style=\"height:1px;background:#f1f5f9;margin:2px 0;\"></div></td></tr>");
             }
             sb.append("</table>");
         }
@@ -813,12 +712,19 @@ public class DailyDigestService {
                    .replace("\"", "&quot;");
     }
 
-    /** Strips HTML tags and URLs from raw content to produce clean plain text. */
+    /** Strips HTML tags, unescapes HTML entities, and removes URLs to produce clean plain text. */
     private String stripHtmlTags(String html) {
         if (html == null || html.isEmpty()) return "";
-        // Remove HTML tags
-        String text = html.replaceAll("<[^>]*>", " ");
-        // Remove URLs (http/https)
+        // Unescape HTML entities first so encoded tags (&lt;a ...&gt;) become real tags (<a ...>)
+        String text = html.replace("&amp;", "&")
+                          .replace("&lt;", "<")
+                          .replace("&gt;", ">")
+                          .replace("&quot;", "\"")
+                          .replace("&#39;", "'")
+                          .replace("&nbsp;", " ");
+        // Strip all HTML tags
+        text = text.replaceAll("<[^>]*>", " ");
+        // Strip URLs (http/https)
         text = text.replaceAll("https?://\\S+", "");
         // Collapse whitespace
         text = text.replaceAll("\\s+", " ").trim();
