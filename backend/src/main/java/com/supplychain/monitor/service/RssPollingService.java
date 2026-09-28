@@ -46,10 +46,18 @@ public class RssPollingService {
 
     @Scheduled(fixedRateString = "${rss.fetch-interval-ms}")
     public void pollRssFeeds() {
+        pollRssFeedsInternal();
+    }
+
+    public int pollRssFeedsNow() {
+        return pollRssFeedsInternal();
+    }
+
+    private synchronized int pollRssFeedsInternal() {
         logger.info("Starting scheduled RSS feed polling...");
         if (feedUrlsConfig == null || feedUrlsConfig.trim().isEmpty()) {
             logger.warn("RSS feed configuration (rss.feed-urls) is empty. Skipping RSS polling.");
-            return;
+            return 0;
         }
 
         List<String> feedUrls = Arrays.stream(feedUrlsConfig.split(","))
@@ -69,6 +77,7 @@ public class RssPollingService {
         }
 
         logger.info("RSS feed polling finished. Saved {} new articles across all feeds.", totalSavedCount);
+        return totalSavedCount;
     }
 
     private int processFeed(String feedUrl) throws Exception {
@@ -102,91 +111,136 @@ public class RssPollingService {
             }
             url = url.trim();
 
+            if (newsArticleRepository.existsByUrl(url)) {
+                continue;
+            }
+
             java.util.Optional<NewsArticle> existingOpt = newsArticleRepository.findByUrl(url);
-            NewsArticle article;
-            boolean isNew = false;
-
-            if (existingOpt.isEmpty()) {
-                String title = entry.getTitle();
-
-                Instant publishedAt = Instant.now();
-                Date pubDate = entry.getPublishedDate();
-                if (pubDate == null) {
-                    pubDate = entry.getUpdatedDate();
-                }
-                if (pubDate != null) {
-                    publishedAt = pubDate.toInstant();
-                }
-
-                String rawContent = "";
-                if (entry.getDescription() != null && entry.getDescription().getValue() != null) {
-                    rawContent = entry.getDescription().getValue();
-                } else if (entry.getContents() != null && !entry.getContents().isEmpty()) {
-                    rawContent = entry.getContents().get(0).getValue();
-                }
-
-                article = new NewsArticle(
-                        title,
-                        url,
-                        sourceName,
-                        publishedAt,
-                        rawContent,
-                        Instant.now()
-                );
-                isNew = true;
-            } else {
-                article = existingOpt.get();
+            if (existingOpt.isPresent()) {
+                continue;
             }
 
-            // Use NLP service to generate embeddings so new articles show up in Semantic Search
-            if (isNew || article.getEmbedding() == null) {
-                String contentToAnalyze = article.getTitle();
-                if (article.getRawContent() != null && !article.getRawContent().trim().isEmpty()) {
-                    String cleanContent = article.getRawContent().replaceAll("<[^>]*>", " ").trim();
-                    if (cleanContent.length() > 300) {
-                        cleanContent = cleanContent.substring(0, 300);
-                    }
-                    contentToAnalyze = article.getTitle() + ". " + cleanContent;
-                }
+            String title = entry.getTitle() != null ? entry.getTitle().trim() : "Untitled Disruption Report";
+            String entrySource = resolveSourceName(feedUrl, entry, title);
 
-                try {
-                    float[] embedding = nlpClient.getEmbedding(contentToAnalyze);
-                    if (embedding != null) {
-                        article.setEmbedding(new PGvector(embedding));
-                    }
-                    
-                    // Also get risk category
-                    NlpClient.NlpResponse nlpResult = nlpClient.extractEntities(contentToAnalyze);
-                    if (nlpResult != null && nlpResult.category != null && !nlpResult.category.isEmpty()) {
-                        article.setRiskCategory(nlpResult.category);
-                    }
-                    
-                    // Sleep briefly to prevent rate-limiting the NLP service (2 seconds)
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                } catch (Exception e) {
-                    logger.warn("Failed NLP enrichment for RSS article '{}': {}", article.getTitle(), e.getMessage());
-                    if (e.getMessage() != null && e.getMessage().contains("429")) {
-                        logger.warn("NLP Service rate limit hit. Cooling down for 30 seconds before next article...");
-                        try {
-                            Thread.sleep(30000); // 30 second cooldown
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                }
-
-                newsArticleRepository.save(article);
-                if (isNew) {
-                    savedCount++;
+            // Clean title by stripping trailing publisher suffix if present (e.g. "Title - Reuters")
+            if (title.contains(" - ")) {
+                int lastDash = title.lastIndexOf(" - ");
+                if (lastDash > 15) {
+                    title = title.substring(0, lastDash).trim();
                 }
             }
+
+            Instant publishedAt = Instant.now();
+            Date pubDate = entry.getPublishedDate();
+            if (pubDate == null) {
+                pubDate = entry.getUpdatedDate();
+            }
+            if (pubDate != null) {
+                publishedAt = pubDate.toInstant();
+            }
+
+            String rawContent = "";
+            if (entry.getDescription() != null && entry.getDescription().getValue() != null) {
+                rawContent = entry.getDescription().getValue();
+            } else if (entry.getContents() != null && !entry.getContents().isEmpty()) {
+                rawContent = entry.getContents().get(0).getValue();
+            }
+
+            NewsArticle article = new NewsArticle(
+                    title,
+                    url,
+                    entrySource,
+                    publishedAt,
+                    rawContent,
+                    Instant.now()
+            );
+
+            // Immediate heuristic categorization so real-time feeds appear categorized immediately
+            article.setRiskCategory(inferInitialCategory(title, rawContent));
+
+            // Save immediately so it's live in PostgreSQL for ALL FEEDS and NASA SATELLITE
+            try {
+                article = newsArticleRepository.save(article);
+                savedCount++;
+            } catch (Exception e) {
+                logger.warn("Could not save initial article '{}': {}", title, e.getMessage());
+                continue;
+            }
+
+            // NLP enrichment (embeddings & ML category) without blocking the ingestion cycle
+            enrichArticleWithNlp(article);
         }
 
         return savedCount;
+    }
+
+    private void enrichArticleWithNlp(NewsArticle article) {
+        if (nlpClient == null) return;
+        String contentToAnalyze = article.getTitle();
+        if (article.getRawContent() != null && !article.getRawContent().trim().isEmpty()) {
+            String cleanContent = article.getRawContent().replaceAll("<[^>]*>", " ").trim();
+            if (cleanContent.length() > 300) {
+                cleanContent = cleanContent.substring(0, 300);
+            }
+            contentToAnalyze = article.getTitle() + ". " + cleanContent;
+        }
+
+        try {
+            float[] embedding = nlpClient.getEmbedding(contentToAnalyze);
+            boolean updated = false;
+            if (embedding != null) {
+                article.setEmbedding(new PGvector(embedding));
+                updated = true;
+            }
+
+            NlpClient.NlpResponse nlpResult = nlpClient.extractEntities(contentToAnalyze);
+            if (nlpResult != null && nlpResult.category != null && !nlpResult.category.isEmpty()) {
+                article.setRiskCategory(nlpResult.category);
+                updated = true;
+            }
+
+            if (updated) {
+                newsArticleRepository.save(article);
+            }
+        } catch (Exception e) {
+            logger.debug("NLP enrichment skipped for '{}': {}", article.getTitle(), e.getMessage());
+        }
+    }
+
+    private String inferInitialCategory(String title, String content) {
+        String combined = ((title != null ? title : "") + " " + (content != null ? content : "")).toLowerCase();
+        if (combined.contains("strike") || combined.contains("war") || combined.contains("tariff") ||
+            combined.contains("sanction") || combined.contains("geopolitic") || combined.contains("protest") ||
+            combined.contains("conflict") || combined.contains("houthi") || combined.contains("red sea")) {
+            return "Geopolitical";
+        }
+        if (combined.contains("storm") || combined.contains("hurricane") || combined.contains("typhoon") ||
+            combined.contains("cyclone") || combined.contains("flood") || combined.contains("drought") ||
+            combined.contains("weather") || combined.contains("climate")) {
+            return "Weather";
+        }
+        if (combined.contains("inflation") || combined.contains("price") || combined.contains("cost") ||
+            combined.contains("interest rate") || combined.contains("economy") || combined.contains("currency") ||
+            combined.contains("market")) {
+            return "Market";
+        }
+        return "Logistics";
+    }
+
+    private String resolveSourceName(String feedUrl, SyndEntry entry, String title) {
+        if (entry != null && entry.getSource() != null && entry.getSource().getTitle() != null
+                && !entry.getSource().getTitle().trim().isEmpty()) {
+            return entry.getSource().getTitle().trim();
+        }
+        if (title != null && title.contains(" - ")) {
+            int lastDash = title.lastIndexOf(" - ");
+            String candidate = title.substring(lastDash + 3).trim();
+            if (!candidate.isEmpty() && candidate.length() < 40) {
+                return candidate;
+            }
+        }
+        return getSourceNameForUrl(feedUrl);
     }
 
     private String getSourceNameForUrl(String feedUrl) {

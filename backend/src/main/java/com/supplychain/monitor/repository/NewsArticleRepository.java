@@ -11,9 +11,10 @@ import java.util.List;
 public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> {
     boolean existsByUrl(String url);
     java.util.Optional<NewsArticle> findByUrl(String url);
+    @Query(value = "SELECT * FROM news_articles ORDER BY published_at DESC NULLS LAST, fetched_at DESC NULLS LAST", nativeQuery = true)
     List<NewsArticle> findAllByOrderByPublishedAtDesc();
 
-    @Query(value = "SELECT * FROM news_articles WHERE fetched_at >= :startTime AND fetched_at < :endTime ORDER BY published_at DESC", nativeQuery = true)
+    @Query(value = "SELECT * FROM news_articles WHERE fetched_at >= :startTime AND fetched_at < :endTime ORDER BY published_at DESC NULLS LAST, fetched_at DESC NULLS LAST", nativeQuery = true)
     List<NewsArticle> findArticlesIngestedBetween(@Param("startTime") java.time.Instant startTime, @Param("endTime") java.time.Instant endTime);
 
     @Query(value = "SELECT id, title, url, source, risk_category AS riskCategory, raw_content AS rawContent, published_at AS publishedAt, " +
@@ -33,14 +34,14 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
     @Query(value = "SELECT source AS source, COUNT(*) AS count FROM news_articles GROUP BY source", nativeQuery = true)
     List<SourceCountProjection> findSourceCounts();
 
-    @Query(value = "SELECT * FROM news_articles WHERE LOWER(title) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(COALESCE(entities, '')) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(COALESCE(raw_content, '')) LIKE LOWER(CONCAT('%', :kw, '%')) ORDER BY published_at DESC LIMIT 50", nativeQuery = true)
+    @Query(value = "SELECT * FROM news_articles WHERE LOWER(title) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(COALESCE(entities, '')) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(COALESCE(raw_content, '')) LIKE LOWER(CONCAT('%', :kw, '%')) ORDER BY published_at DESC NULLS LAST, fetched_at DESC NULLS LAST LIMIT 50", nativeQuery = true)
     List<NewsArticle> findByKeyword(@Param("kw") String keyword);
 
     @Query(value = "SELECT * FROM news_articles WHERE " +
                    "title ~* :pattern OR " +
                    "COALESCE(entities, '') ~* :pattern OR " +
                    "COALESCE(raw_content, '') ~* :pattern " +
-                   "ORDER BY published_at DESC LIMIT 50", nativeQuery = true)
+                   "ORDER BY published_at DESC NULLS LAST, fetched_at DESC NULLS LAST LIMIT 50", nativeQuery = true)
     List<NewsArticle> findByPattern(@Param("pattern") String regexPattern);
 
     interface NewsArticleSearchResult {

@@ -14,6 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.supplychain.monitor.service.RssPollingService;
+import java.util.Map;
+import java.util.HashMap;
+
 @RestController
 @RequestMapping("/api")
 public class NewsArticleController {
@@ -23,16 +27,38 @@ public class NewsArticleController {
     private final NewsArticleRepository newsArticleRepository;
     private final NlpClient nlpClient;
     private final GroqClient groqClient;
+    private final RssPollingService rssPollingService;
 
-    public NewsArticleController(NewsArticleRepository newsArticleRepository, NlpClient nlpClient, GroqClient groqClient) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public NewsArticleController(NewsArticleRepository newsArticleRepository, NlpClient nlpClient, GroqClient groqClient, RssPollingService rssPollingService) {
         this.newsArticleRepository = newsArticleRepository;
         this.nlpClient = nlpClient;
         this.groqClient = groqClient;
+        this.rssPollingService = rssPollingService;
     }
 
     @GetMapping("/articles")
     public List<NewsArticle> getAllArticles() {
         return newsArticleRepository.findAllByOrderByPublishedAtDesc();
+    }
+
+    @PostMapping("/articles/sync")
+    public ResponseEntity<Map<String, Object>> syncArticles() {
+        logger.info("Real-time live news sync triggered via API...");
+        int count = 0;
+        if (rssPollingService != null) {
+            count = rssPollingService.pollRssFeedsNow();
+        }
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("success", true);
+        resp.put("newArticlesFetched", count);
+        resp.put("timestamp", java.time.Instant.now().toString());
+        return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/articles/sync")
+    public ResponseEntity<Map<String, Object>> syncArticlesGet() {
+        return syncArticles();
     }
 
     @GetMapping("/articles/sources")

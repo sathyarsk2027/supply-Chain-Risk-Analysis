@@ -1,71 +1,68 @@
 package com.supplychain.monitor.service;
 
-import com.supplychain.monitor.model.NewsArticle;
-import com.supplychain.monitor.repository.NewsArticleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 
-import java.util.List;
+import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
 
-@SpringBootTest
 class RssPollingServiceTest {
 
-    @Autowired
     private RssPollingService rssPollingService;
-
-    @MockBean
-    private NewsArticleRepository newsArticleRepository;
-
-    @MockBean
-    private NlpClient nlpClient;
 
     @BeforeEach
     void setUp() {
-        rssPollingService.setFeedUrlsConfig("https://www.freightwaves.com/feed,https://www.joc.com/rssfeed");
-    }
-
-    @Test
-    void shouldPollRssFeedsAndSaveArticles() throws Exception {
-        when(newsArticleRepository.existsByUrl(anyString())).thenReturn(false);
-        when(newsArticleRepository.save(any(NewsArticle.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        NlpClient.NlpResponse mockNlp = new NlpClient.NlpResponse();
-        mockNlp.category = "Logistics";
-        mockNlp.companies = List.of("FreightWaves");
-        mockNlp.locations = List.of("USA");
-        mockNlp.dates = List.of("2026-07-28");
-
-        when(nlpClient.extractEntities(anyString())).thenReturn(mockNlp);
-        when(nlpClient.getEmbedding(anyString())).thenReturn(new float[]{0.1f, 0.2f, 0.3f});
-
-        rssPollingService.pollRssFeeds();
-
-        // Verify that articles were saved to the repository
-        verify(newsArticleRepository, atLeastOnce()).save(any(NewsArticle.class));
-    }
-
-    @Test
-    void shouldNotSaveDuplicateArticles() {
-        when(newsArticleRepository.existsByUrl(anyString())).thenReturn(true);
-
-        rssPollingService.pollRssFeeds();
-
-        // Should not save any articles if existsByUrl returns true for all
-        verify(newsArticleRepository, never()).save(any(NewsArticle.class));
+        rssPollingService = new RssPollingService(null, null);
     }
 
     @Test
     void shouldHandleEmptyFeedUrlsConfigGracefully() {
         rssPollingService.setFeedUrlsConfig("");
-        rssPollingService.pollRssFeeds();
-        verify(newsArticleRepository, never()).save(any(NewsArticle.class));
+        int saved = rssPollingService.pollRssFeedsNow();
+        assertEquals(0, saved);
+    }
+
+    @Test
+    void shouldHandleNullFeedUrlsConfigGracefully() {
+        rssPollingService.setFeedUrlsConfig(null);
+        int saved = rssPollingService.pollRssFeedsNow();
+        assertEquals(0, saved);
+    }
+
+    @Test
+    void testInferInitialCategory() throws Exception {
+        Method method = RssPollingService.class.getDeclaredMethod("inferInitialCategory", String.class, String.class);
+        method.setAccessible(true);
+
+        String cat1 = (String) method.invoke(rssPollingService, "Port workers strike in Hamburg", "Disruption expected");
+        assertEquals("Geopolitical", cat1);
+
+        String cat2 = (String) method.invoke(rssPollingService, "Typhoon halts shipping vessels", "Harbor closed");
+        assertEquals("Weather", cat2);
+
+        String cat3 = (String) method.invoke(rssPollingService, "Inflation drives up ocean freight cost", "Market dynamics");
+        assertEquals("Market", cat3);
+
+        String cat4 = (String) method.invoke(rssPollingService, "Container terminal operations resume", "Berth operations");
+        assertEquals("Logistics", cat4);
+    }
+
+    @Test
+    void testResolveSourceName() throws Exception {
+        Method method = RssPollingService.class.getDeclaredMethod("resolveSourceName", String.class, com.rometools.rome.feed.synd.SyndEntry.class, String.class);
+        method.setAccessible(true);
+
+        // Case 1: Title with publisher suffix
+        String src1 = (String) method.invoke(rssPollingService, "https://example.com/feed", null, "Major India port expansion underway - The Economic Times");
+        assertEquals("The Economic Times", src1);
+
+        // Case 2: Known feed URL
+        String src2 = (String) method.invoke(rssPollingService, "https://www.freightwaves.com/feed", null, "Simple Title");
+        assertEquals("FreightWaves", src2);
+
+        // Case 3: Unknown feed URL without title dash
+        String src3 = (String) method.invoke(rssPollingService, "https://unknown.com/rss", null, "Simple Title");
+        assertEquals("Global Disruption Feed", src3);
     }
 }

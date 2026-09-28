@@ -198,6 +198,69 @@ function getCountryCoords(query) {
   return { query, flag: '🌐', lat: 20.0, lng: 0.0, baseScore: 50 };
 }
 
+const isRecentOrToday = (dateStr) => {
+  if (!dateStr) return false;
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    return diffHours >= 0 && diffHours <= 24;
+  } catch (e) {
+    return false;
+  }
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (diffMinutes >= 0 && diffMinutes < 60) {
+      return diffMinutes <= 1 ? 'Just now' : `${diffMinutes}m ago`;
+    }
+    if (isToday) {
+      return `Today, ${timeStr}`;
+    }
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return `Yesterday, ${timeStr}`;
+    }
+
+    return date.toLocaleDateString([], { 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+const detectCountryInArticle = (article) => {
+  if (!article) return null;
+  const text = ((article.title || '') + ' ' + (article.rawContent || '') + ' ' + (article.entities || '')).toLowerCase();
+  if (text.includes('india') || text.includes('mumbai') || text.includes('mundra') || text.includes('nhava sheva') || text.includes('gujarat')) return 'India';
+  if (text.includes('germany') || text.includes('german') || text.includes('hamburg') || text.includes('rhine')) return 'Germany';
+  if (text.includes('united states') || text.includes('california') || text.includes('los angeles') || text.includes('long beach') || text.includes('u.s.')) return 'United States';
+  if (text.includes('china') || text.includes('shanghai') || text.includes('shenzhen') || text.includes('ningbo')) return 'China';
+  if (text.includes('suez') || text.includes('egypt')) return 'Egypt';
+  if (text.includes('singapore')) return 'Singapore';
+  if (text.includes('united kingdom') || text.includes('felixstowe') || text.includes('london')) return 'United Kingdom';
+  if (text.includes('netherlands') || text.includes('rotterdam')) return 'Netherlands';
+  if (text.includes('japan') || text.includes('tokyo') || text.includes('yokohama')) return 'Japan';
+  if (text.includes('brazil') || text.includes('santos')) return 'Brazil';
+  if (text.includes('uae') || text.includes('dubai') || text.includes('jebel ali')) return 'United Arab Emirates';
+  return null;
+};
+
 function App() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -207,6 +270,13 @@ function App() {
 
   // Category & Filter state
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+
+  // Active country for NASA Satellite view
+  const [selectedCountryQuery, setSelectedCountryQuery] = useState('India');
+
+  // Real-time Feed Syncing state
+  const [syncingFeeds, setSyncingFeeds] = useState(false);
+  const [syncToast, setSyncToast] = useState(null);
 
   // Semantic Search States
   const [activeTab, setActiveTab] = useState('overview'); // 'feed' | 'search' | 'analytics'
@@ -218,6 +288,14 @@ function App() {
 
   const handleTabClick = useCallback((tab) => {
     setActiveTab((prev) => (prev === tab ? prev : tab));
+  }, []);
+
+  const handleNavigateToSatellite = useCallback((countryName) => {
+    if (countryName) {
+      setSelectedCountryQuery(countryName);
+    }
+    setActiveTab('analytics');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
 
@@ -248,6 +326,24 @@ function App() {
       setLoading(false);
     }
   }, []);
+
+  const syncLiveFeeds = useCallback(async () => {
+    setSyncingFeeds(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/articles/sync`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        const count = data.newArticlesFetched || 0;
+        setSyncToast(`Real-time feed sync completed: ${count} new disruption updates ingested.`);
+        setTimeout(() => setSyncToast(null), 4500);
+      }
+    } catch (e) {
+      console.warn('Sync live feeds request failed:', e);
+    } finally {
+      await fetchArticles();
+      setSyncingFeeds(false);
+    }
+  }, [fetchArticles]);
 
   // 15-Minute Automatic Article Refresh Trigger
   useEffect(() => {
@@ -299,21 +395,6 @@ function App() {
       setSearchError(`Backend Error: ${err.message}`);
     } finally {
       setSearching(false);
-    }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString(undefined, { 
-        month: 'short', 
-        day: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } catch (e) {
-      return dateStr;
     }
   };
 
@@ -456,6 +537,26 @@ function App() {
           </div>
         </header>
 
+      {/* Sync Toast Notification */}
+      {syncToast && (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.15)',
+          border: '1px solid #10b981',
+          color: '#10b981',
+          borderRadius: '8px',
+          padding: '0.65rem 1.25rem',
+          marginBottom: '1rem',
+          fontSize: '0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          animation: 'fadeInUp 0.3s ease-out'
+        }}>
+          <CheckCircleIcon size={16} color="#10b981" />
+          <span>{syncToast}</span>
+        </div>
+      )}
+
       {/* Stats Summary Banner */}
       {activeTab === 'feed' && !error && (
         <section className="stats-banner" aria-label="Dashboard Stats">
@@ -463,10 +564,36 @@ function App() {
             <div className="stat-icon" style={{ color: '#10b981' }}>
               <ActivityIcon size={22} color="#10b981" />
             </div>
-            <div className="stat-item">
-              <span className="stat-label">System status</span>
-              <span className="stat-value" style={{ color: '#10b981', fontSize: '1.1rem' }}>
-                Active (15m Auto-Sync)
+            <div className="stat-item" style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="stat-label">System status</span>
+                <button
+                  type="button"
+                  onClick={syncLiveFeeds}
+                  disabled={syncingFeeds}
+                  title="Poll latest real-time news feeds from RSS & NewsAPI"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1px solid #10b981',
+                    color: '#10b981',
+                    borderRadius: '4px',
+                    padding: '2px 7px',
+                    fontSize: '0.68rem',
+                    cursor: syncingFeeds ? 'wait' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontWeight: '700',
+                    fontFamily: 'JetBrains Mono, monospace'
+                  }}
+                >
+                  <RefreshCwIcon size={10} className={syncingFeeds ? 'spin' : ''} />
+                  {syncingFeeds ? 'Syncing...' : 'Sync Now'}
+                </button>
+              </div>
+              <span className="stat-value" style={{ color: '#10b981', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="pulse-dot" style={{ width: '7px', height: '7px', background: '#10b981', borderRadius: '50%', display: 'inline-block' }} />
+                Real-Time (15m Sync)
               </span>
             </div>
           </div>
@@ -575,6 +702,7 @@ function App() {
                     'LOGISTICS'
                   );
                   const tagClass = `tag-${categoryName.toLowerCase()}`;
+                  const detectedCountry = detectCountryInArticle(article);
 
                   return (
                     <a 
@@ -589,17 +717,54 @@ function App() {
                         <span className="source-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                           <RssIcon size={13} color="#8f9e7c" /> {article.source || 'Disruption Feed'}
                         </span>
-                        <span className="time-stamp">{formatDate(article.publishedAt)}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {isRecentOrToday(article.publishedAt) && (
+                            <span style={{ fontSize: '0.65rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '4px', padding: '1px 5px', fontWeight: '800', letterSpacing: '0.04em', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <span className="pulse-dot" style={{ width: '5px', height: '5px', background: '#10b981', borderRadius: '50%' }}></span>
+                              TODAY
+                            </span>
+                          )}
+                          <span className="time-stamp">{formatDate(article.publishedAt)}</span>
+                        </div>
                       </div>
                       <h2 className="article-title">{article.title}</h2>
-                      <div className="card-footer">
+                      <div className="card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span className={`risk-tag ${tagClass}`}>
                           {categoryName}
                         </span>
-                        <span className="read-more">
-                          Analyze source report
-                          <ExternalLinkIcon size={14} style={{ marginLeft: '6px' }} />
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {detectedCountry && (
+                            <button
+                              type="button"
+                              className="satellite-bridge-link"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleNavigateToSatellite(detectedCountry);
+                              }}
+                              title={`Inspect ${detectedCountry} in NASA Satellite 3D Globe`}
+                              style={{
+                                background: 'rgba(56, 189, 248, 0.12)',
+                                border: '1px solid rgba(56, 189, 248, 0.35)',
+                                color: '#38bdf8',
+                                borderRadius: '4px',
+                                padding: '2px 7px',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <SatelliteIcon size={12} color="#38bdf8" /> {detectedCountry}
+                            </button>
+                          )}
+                          <span className="read-more">
+                            Analyze report
+                            <ExternalLinkIcon size={14} style={{ marginLeft: '4px' }} />
+                          </span>
+                        </div>
                       </div>
                     </a>
                   );
@@ -749,7 +914,13 @@ function App() {
           </div>
         ) : (
           /* NASA SATELLITE & RISK FACTORS TAB */
-          <AnalyticsDashboardGoogleEarth articles={articles} />
+          <AnalyticsDashboardGoogleEarth 
+            articles={articles} 
+            selectedCountryQuery={selectedCountryQuery}
+            setSelectedCountryQuery={setSelectedCountryQuery}
+            onSyncFeeds={syncLiveFeeds}
+            isSyncing={syncingFeeds}
+          />
         )}
       </main>
     </div>
@@ -759,8 +930,13 @@ function App() {
 // --------------------------------------------------------------------------
 // Real-Time Dynamic NASA satellite & risk factors Analytics Section
 // --------------------------------------------------------------------------
-function AnalyticsDashboardGoogleEarth({ articles = [] }) {
-  const [selectedCountryQuery, setSelectedCountryQuery] = useState('Germany');
+function AnalyticsDashboardGoogleEarth({ 
+  articles = [], 
+  selectedCountryQuery = 'India', 
+  setSelectedCountryQuery,
+  onSyncFeeds,
+  isSyncing
+}) {
   const [searchCountryQuery, setSearchCountryQuery] = useState('');
   const [mapMode, setMapMode] = useState('hd'); // 'hd' | '3d'
 
@@ -792,8 +968,17 @@ function AnalyticsDashboardGoogleEarth({ articles = [] }) {
     fetchRealTimeCountryRisk(selectedCountryQuery);
   }, [selectedCountryQuery, fetchRealTimeCountryRisk]);
 
+  // Re-fetch country risk whenever live articles are refreshed or synced
+  useEffect(() => {
+    if (selectedCountryQuery) {
+      fetchRealTimeCountryRisk(selectedCountryQuery);
+    }
+  }, [articles, selectedCountryQuery, fetchRealTimeCountryRisk]);
+
   const handleSelectCountry = (countryName) => {
-    setSelectedCountryQuery(countryName);
+    if (setSelectedCountryQuery) {
+      setSelectedCountryQuery(countryName);
+    }
     setSearchCountryQuery('');
   };
 
@@ -915,6 +1100,8 @@ function AnalyticsDashboardGoogleEarth({ articles = [] }) {
         data={countryRiskData}
         loading={loadingRisk}
         error={riskError}
+        onSyncFeeds={onSyncFeeds}
+        isSyncing={isSyncing}
       />
     </div>
   );
@@ -923,7 +1110,7 @@ function AnalyticsDashboardGoogleEarth({ articles = [] }) {
 // --------------------------------------------------------------------------
 // Real-Time Computed Country Risk Factor Analysis Card Component
 // --------------------------------------------------------------------------
-function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }) {
+function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error, onSyncFeeds, isSyncing }) {
   if (loading) {
     return (
       <div className="country-risk-panel" style={{ padding: '2rem', textAlign: 'center' }}>
@@ -1053,10 +1240,37 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
           <h4 style={{ fontSize: '0.95rem', color: '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <NewspaperIcon size={18} color="var(--accent-olive)" /> Matched real-time intelligence feeds ({data.matchedArticles?.length || 0})
           </h4>
-          <span style={{ fontSize: '0.725rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.2rem 0.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span className="pulse-dot" style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%', display: 'inline-block' }}></span>
-            Live Postgres feed stream
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {onSyncFeeds && (
+              <button
+                type="button"
+                onClick={onSyncFeeds}
+                disabled={isSyncing}
+                title="Poll latest real-time feeds from RSS sources"
+                style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid #10b981',
+                  color: '#10b981',
+                  borderRadius: '4px',
+                  padding: '2px 8px',
+                  fontSize: '0.72rem',
+                  cursor: isSyncing ? 'wait' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: '700',
+                  fontFamily: 'JetBrains Mono, monospace'
+                }}
+              >
+                <RefreshCwIcon size={11} className={isSyncing ? 'spin' : ''} />
+                {isSyncing ? 'Syncing...' : 'Sync Real-Time'}
+              </button>
+            )}
+            <span style={{ fontSize: '0.725rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.2rem 0.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span className="pulse-dot" style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%', display: 'inline-block' }}></span>
+              Live Postgres feed stream
+            </span>
+          </div>
         </div>
         {!data.matchedArticles || data.matchedArticles.length === 0 ? (
           <div style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
@@ -1076,15 +1290,20 @@ function RealTimeCountryRiskPanel({ countryQuery, coords, data, loading, error }
                   <span className="source-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     <RadioIcon size={13} color="var(--accent-olive)" /> {article.source || 'News Feed'}
                   </span>
-                  <span className="time-stamp">{article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : ''}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {isRecentOrToday(article.publishedAt) && (
+                      <span style={{ fontSize: '0.62rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '4px', padding: '1px 5px', fontWeight: '800' }}>
+                        TODAY
+                      </span>
+                    )}
+                    <span className="time-stamp">{formatDate(article.publishedAt)}</span>
+                  </div>
                 </div>
                 <h2 className="article-title">{article.title}</h2>
                 <div className="card-footer">
                   <span className="read-more">
                     Analyze source report
-                    <svg className="arrow-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
+                    <ExternalLinkIcon size={13} style={{ marginLeft: '4px' }} />
                   </span>
                 </div>
               </a>
