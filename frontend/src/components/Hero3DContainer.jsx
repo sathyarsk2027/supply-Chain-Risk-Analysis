@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, ContactShadows, OrbitControls, useTexture, Html } from '@react-three/drei';
+import { Environment, ContactShadows, OrbitControls, Html } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import * as THREE from 'three';
 
@@ -42,16 +42,12 @@ const createCorrugationNormalMap = (faceType) => {
     }
 
     // Outer frame perimeter bevels
-    // Top frame rail bevel (tilts up: +Y) -> G ~ 198
     ctx.fillStyle = 'rgb(128, 198, 235)';
     ctx.fillRect(0, 0, canvas.width, 24);
-    // Bottom frame rail bevel (tilts down: -Y) -> G ~ 58
     ctx.fillStyle = 'rgb(128, 58, 235)';
     ctx.fillRect(0, canvas.height - 24, canvas.width, 24);
-    // Left edge corner post bevel
     ctx.fillStyle = 'rgb(198, 128, 235)';
     ctx.fillRect(0, 0, 18, canvas.height);
-    // Right edge corner post bevel
     ctx.fillStyle = 'rgb(58, 128, 235)';
     ctx.fillRect(canvas.width - 18, 0, 18, canvas.height);
 
@@ -68,7 +64,7 @@ const createCorrugationNormalMap = (faceType) => {
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.anisotropy = 16;
-  texture.colorSpace = THREE.NoColorSpace; // linear data for normal maps
+  texture.colorSpace = THREE.NoColorSpace;
   texture.generateMipmaps = true;
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
@@ -87,19 +83,18 @@ const createCorrugationRoughnessMap = (faceType) => {
   canvas.height = 1024;
   const ctx = canvas.getContext('2d');
 
-  // Base satin paint roughness: ~0.38 (rgb 98, 98, 98)
+  // Base satin paint roughness: ~0.38
   ctx.fillStyle = 'rgb(98, 98, 98)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   if (faceType === 'side') {
-    // Corrugation valleys gather micro-dust -> higher roughness
     const pitch = 48;
     for (let x = 0; x < canvas.width; x += pitch) {
       ctx.fillStyle = 'rgb(168, 168, 168)';
       ctx.fillRect(x + 36, 0, 12, canvas.height);
     }
 
-    // Heavy weathering & rust grime gradient at top and bottom (roughness ~0.85)
+    // Heavy weathering & rust grime gradient at top and bottom
     const rustRough = ctx.createLinearGradient(0, 0, 0, canvas.height);
     rustRough.addColorStop(0, 'rgba(215, 215, 215, 0.92)');
     rustRough.addColorStop(0.12, 'rgba(0, 0, 0, 0)');
@@ -108,13 +103,12 @@ const createCorrugationRoughnessMap = (faceType) => {
     ctx.fillStyle = rustRough;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Burnished steel highlights along structural edges -> lower roughness (higher specular glint)
+    // Burnished steel highlights along structural edges
     ctx.fillStyle = 'rgb(55, 55, 55)';
     ctx.fillRect(0, 36, canvas.width, 4);
     ctx.fillRect(0, canvas.height - 40, canvas.width, 4);
 
   } else if (faceType === 'door') {
-    // Locking bars: smooth steel rods with low roughness
     ctx.fillStyle = 'rgb(65, 65, 65)';
     ctx.fillRect(canvas.width * 0.22, 0, 20, canvas.height);
     ctx.fillRect(canvas.width * 0.38, 0, 20, canvas.height);
@@ -124,7 +118,7 @@ const createCorrugationRoughnessMap = (faceType) => {
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.anisotropy = 16;
-  texture.colorSpace = THREE.NoColorSpace; // linear data for roughness maps
+  texture.colorSpace = THREE.NoColorSpace;
   texture.generateMipmaps = true;
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
@@ -133,70 +127,83 @@ const createCorrugationRoughnessMap = (faceType) => {
   return texture;
 };
 
-// ── Diffuse / Livery Texture Generator ─────────────────────────────────
-const createContainerTexture = (color, brandName, serialNumber, faceType) => {
-  const key = `${color}-${brandName}-${serialNumber}-${faceType}`;
-  if (textureCache.has(key)) return textureCache.get(key);
+// Procedural Diffuse & Livery Generator
+const createContainerTexture = (baseColor, brandName, serialNumber, faceType = 'side') => {
+  const cacheKey = `${baseColor}-${brandName}-${serialNumber}-${faceType}`;
+  if (textureCache.has(cacheKey)) return textureCache.get(cacheKey);
 
   const canvas = document.createElement('canvas');
-  // 2048 x 1024 provides 2:1 aspect ratio matching 3.0 x 1.3 face geometry with sharp resolution
   canvas.width = faceType === 'side' ? 2048 : 1024;
   canvas.height = 1024;
   const ctx = canvas.getContext('2d');
 
-  // Base metallic paint
-  ctx.fillStyle = color;
+  // 1. Base Painted Steel
+  ctx.fillStyle = baseColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // 2. Weathering Gradients (Grime & Salt Wash)
+  const topShadow = ctx.createLinearGradient(0, 0, 0, 180);
+  topShadow.addColorStop(0, 'rgba(0, 0, 0, 0.42)');
+  topShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = topShadow;
+  ctx.fillRect(0, 0, canvas.width, 180);
+
+  const bottomGrime = ctx.createLinearGradient(0, canvas.height - 220, 0, canvas.height);
+  bottomGrime.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  bottomGrime.addColorStop(1, 'rgba(20, 16, 10, 0.58)');
+  ctx.fillStyle = bottomGrime;
+  ctx.fillRect(0, canvas.height - 220, canvas.width, 220);
+
+  // Edge rust wash along outer seams
+  ctx.fillStyle = 'rgba(68, 38, 22, 0.28)';
+  ctx.fillRect(0, 0, canvas.width, 12);
+  ctx.fillRect(0, canvas.height - 14, canvas.width, 14);
+
+  // 3. Corrugation & Details
   if (faceType === 'side') {
-    // Subtle corrugation lighting accents
-    for (let i = 0; i < canvas.width; i += 48) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
-      ctx.fillRect(i, 0, 24, canvas.height);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-      ctx.fillRect(i + 24, 0, 6, canvas.height);
+    const pitch = 48;
+    for (let i = 0; i < canvas.width; i += pitch) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+      ctx.fillRect(i, 0, 14, canvas.height);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.fillRect(i + 14, 0, 6, canvas.height);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+      ctx.fillRect(i + 20, 0, 10, canvas.height);
     }
 
-    // Heavy weathering (top and bottom rust/grime gradient)
-    const rustGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    rustGrad.addColorStop(0, 'rgba(45, 28, 18, 0.65)');
-    rustGrad.addColorStop(0.12, 'rgba(0, 0, 0, 0)');
-    rustGrad.addColorStop(0.88, 'rgba(0, 0, 0, 0)');
-    rustGrad.addColorStop(1, 'rgba(30, 20, 12, 0.85)');
-    ctx.fillStyle = rustGrad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Weathered vertical rain streaks
-    for (let i = 0; i < 60; i++) {
-      const x = (i * 34.7 + 19) % canvas.width;
-      const w = ((i * 7) % 4) + 1.5;
-      const h = ((i * 19) % 350) + 150;
-      const streakGrad = ctx.createLinearGradient(0, 0, 0, h);
-      streakGrad.addColorStop(0, 'rgba(0, 0, 0, 0.22)');
-      streakGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = streakGrad;
-      ctx.fillRect(x, 0, w, h);
-    }
-
-    // Edge wear and paint scuffs on corners and rails
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.fillRect(0, 0, canvas.width, 38);
-    ctx.fillRect(0, canvas.height - 38, canvas.width, 38);
+    // Outer structural frame borders
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, 28);
+    ctx.fillRect(0, canvas.height - 28, canvas.width, 28);
     ctx.fillRect(0, 0, 24, canvas.height);
     ctx.fillRect(canvas.width - 24, 0, 24, canvas.height);
 
-    // Bare steel micro-scuffs on frame edges
-    ctx.fillStyle = 'rgba(200, 210, 205, 0.25)';
-    ctx.fillRect(0, 36, canvas.width, 2);
-    ctx.fillRect(0, canvas.height - 38, canvas.width, 2);
+    // Hazard Corner Notches
+    const drawHazardPads = (x, y) => {
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(x, y, 64, 40);
+      ctx.fillStyle = '#0f172a';
+      for (let s = 0; s < 64; s += 16) {
+        ctx.beginPath();
+        ctx.moveTo(x + s, y);
+        ctx.lineTo(x + s + 8, y);
+        ctx.lineTo(x + s, y + 40);
+        ctx.lineTo(x + s - 8, y + 40);
+        ctx.closePath();
+        ctx.fill();
+      }
+    };
+    drawHazardPads(30, 34);
+    drawHazardPads(canvas.width - 94, 34);
 
-    // Massive Brand Logo: Dynamic auto-scaling to prevent text clipping
-    const maxTextWidth = canvas.width * 0.58; // Confined strictly to 58% center to guarantee padding
-    let fontSize = 130;
+    // Brand Name Livery (Centered with generous side margin)
+    const availableWidth = canvas.width * 0.58;
+    let fontSize = 175;
     ctx.font = `900 ${fontSize}px "Oswald", "Impact", "Arial Black", sans-serif`;
     let measuredWidth = ctx.measureText(brandName).width;
-    while (measuredWidth > maxTextWidth && fontSize > 40) {
-      fontSize -= 4;
+
+    while (measuredWidth > availableWidth && fontSize > 40) {
+      fontSize -= 6;
       ctx.font = `900 ${fontSize}px "Oswald", "Impact", "Arial Black", sans-serif`;
       measuredWidth = ctx.measureText(brandName).width;
     }
@@ -224,11 +231,9 @@ const createContainerTexture = (color, brandName, serialNumber, faceType) => {
     ctx.fillText(' 2.180 KG', canvas.width - 245, canvas.height - 95);
 
   } else if (faceType === 'door') {
-    // Door panel division
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.fillRect(canvas.width / 2 - 6, 40, 12, canvas.height - 80);
 
-    // Vertical corrugation on doors
     for (let i = 40; i < canvas.width - 40; i += 48) {
       if (i > canvas.width / 2 - 20 && i < canvas.width / 2 + 20) continue;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
@@ -237,14 +242,12 @@ const createContainerTexture = (color, brandName, serialNumber, faceType) => {
       ctx.fillRect(i + 18, 40, 6, canvas.height - 80);
     }
 
-    // Door serial label
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.font = 'bold 30px "JetBrains Mono", monospace';
     ctx.textAlign = 'right';
     ctx.fillText(serialNumber, canvas.width - 50, 75);
 
   } else if (faceType === 'top') {
-    // Metal roof ribs & grime
     ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
     for (let i = 0; i < canvas.width; i += 60) {
       ctx.fillRect(i, 0, 3, canvas.height);
@@ -267,7 +270,7 @@ const createContainerTexture = (color, brandName, serialNumber, faceType) => {
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
-  textureCache.set(key, texture);
+  textureCache.set(cacheKey, texture);
   return texture;
 };
 
@@ -295,25 +298,22 @@ const CornerCastings = () => {
   );
 };
 
-// ── Vertical Door Locking Bars Component (+X Door End Face) ───────────
+// ── Vertical Door Locking Bars Component (Static for background containers) ─
 const DoorLockingHardware = () => {
   const rodZPositions = [-0.36, -0.12, 0.12, 0.36];
 
   return (
     <group position={[1.512, 0, 0]}>
-      {/* 4 Vertical Locking Rods */}
       {rodZPositions.map((z, idx) => (
         <group key={idx} position={[0, 0, z]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[0.022, 1.22, 0.022]} />
             <meshStandardMaterial color="#2d3430" roughness={0.35} metalness={0.88} />
           </mesh>
-          {/* Horizontal Cam Handle */}
           <mesh position={[0.015, -0.06, 0.02]} castShadow>
             <boxGeometry args={[0.038, 0.018, 0.06]} />
             <meshStandardMaterial color="#8a9690" roughness={0.3} metalness={0.92} />
           </mesh>
-          {/* Top & Bottom Cam Keeper Brackets */}
           <mesh position={[0.01, 0.58, 0]}>
             <boxGeometry args={[0.03, 0.04, 0.035]} />
             <meshStandardMaterial color="#252b27" roughness={0.5} metalness={0.8} />
@@ -328,11 +328,96 @@ const DoorLockingHardware = () => {
   );
 };
 
+// ── Animated Opening Doors Component (For Interactive Containers B & C) ─
+const OpeningDoors = ({ doorOpenProgress, doorTex, doorNormal, doorRoughness }) => {
+  return (
+    <group position={[1.502, 0, 0]}>
+      {/* Left Door Wing (pivots outward around +Z edge at Z = +0.59) */}
+      <animated.group
+        position={[0, 0, 0.59]}
+        rotation={doorOpenProgress.to((v) => [0, v * 1.95, 0])}
+      >
+        <group position={[-0.015, 0, -0.295]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[0.03, 1.24, 0.58]} />
+            <meshStandardMaterial
+              map={doorTex}
+              normalMap={doorNormal}
+              roughnessMap={doorRoughness}
+              roughness={0.42}
+              metalness={0.65}
+            />
+          </mesh>
+          {/* Vertical locking rods on left wing */}
+          {[-0.12, 0.14].map((z, idx) => (
+            <group key={idx} position={[0.02, 0, z]}>
+              <mesh castShadow>
+                <boxGeometry args={[0.02, 1.2, 0.02]} />
+                <meshStandardMaterial color="#2d3430" roughness={0.35} metalness={0.88} />
+              </mesh>
+              <mesh position={[0.015, -0.06, 0.01]} castShadow>
+                <boxGeometry args={[0.035, 0.018, 0.05]} />
+                <meshStandardMaterial color="#8a9690" roughness={0.3} metalness={0.92} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      </animated.group>
+
+      {/* Right Door Wing (pivots outward around -Z edge at Z = -0.59) */}
+      <animated.group
+        position={[0, 0, -0.59]}
+        rotation={doorOpenProgress.to((v) => [0, -v * 1.95, 0])}
+      >
+        <group position={[-0.015, 0, 0.295]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[0.03, 1.24, 0.58]} />
+            <meshStandardMaterial
+              map={doorTex}
+              normalMap={doorNormal}
+              roughnessMap={doorRoughness}
+              roughness={0.42}
+              metalness={0.65}
+            />
+          </mesh>
+          {/* Vertical locking rods on right wing */}
+          {[-0.14, 0.12].map((z, idx) => (
+            <group key={idx} position={[0.02, 0, z]}>
+              <mesh castShadow>
+                <boxGeometry args={[0.02, 1.2, 0.02]} />
+                <meshStandardMaterial color="#2d3430" roughness={0.35} metalness={0.88} />
+              </mesh>
+              <mesh position={[0.015, -0.06, -0.01]} castShadow>
+                <boxGeometry args={[0.035, 0.018, 0.05]} />
+                <meshStandardMaterial color="#8a9690" roughness={0.3} metalness={0.92} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      </animated.group>
+    </group>
+  );
+};
+
+// ── Interior Chamber Cavity (Dark steel interior liner) ───────────────
+const InteriorChamber = () => {
+  return (
+    <mesh position={[0, 0, 0]}>
+      <boxGeometry args={[2.92, 1.22, 1.14]} />
+      <meshStandardMaterial
+        color="#080c09"
+        roughness={0.9}
+        metalness={0.2}
+        side={THREE.BackSide}
+      />
+    </mesh>
+  );
+};
+
 // ── Frame Rails Component (Top and Bottom Perimeter Rails) ────────────
 const FrameRails = () => {
   return (
     <group>
-      {/* Top longitudinal rails */}
       <mesh position={[0, 0.65, 0.6]} castShadow receiveShadow>
         <boxGeometry args={[3.01, 0.032, 0.032]} />
         <meshStandardMaterial color="#1e2421" roughness={0.5} metalness={0.75} />
@@ -341,7 +426,6 @@ const FrameRails = () => {
         <boxGeometry args={[3.01, 0.032, 0.032]} />
         <meshStandardMaterial color="#1e2421" roughness={0.5} metalness={0.75} />
       </mesh>
-      {/* Bottom longitudinal runners */}
       <mesh position={[0, -0.65, 0.6]} castShadow receiveShadow>
         <boxGeometry args={[3.01, 0.045, 0.045]} />
         <meshStandardMaterial color="#161b18" roughness={0.7} metalness={0.7} />
@@ -354,8 +438,337 @@ const FrameRails = () => {
   );
 };
 
+// ── Theme A: Live Headline Marquee / Ticker Generator ──────────────────
+const FALLBACK_HEADLINES = [
+  'RED SEA: Commercial liners re-route around Cape of Good Hope amid maritime disruption',
+  'PANAMA CANAL: Daily vessel transit capacity adjusted as watershed levels recover',
+  'PORT OF ROTTERDAM: Automated container dwell monitoring reports 18% throughput efficiency increase',
+  'EAST CHINA SEA: Typhoon alert cautions container traffic across Shanghai-Ningbo corridors',
+  'STRAIT OF MALACCA: Real-time AIS vessel density at 94% peak capacity',
+  'GLOBAL FREIGHT INDEX: Spot rates stabilize across Trans-Pacific routes'
+];
+
+const useLiveTickerTexture = (articles) => {
+  const [internalHeadlines, setInternalHeadlines] = useState(FALLBACK_HEADLINES);
+
+  useEffect(() => {
+    if (Array.isArray(articles) && articles.length > 0) {
+      const list = articles.slice(0, 12).map((a) => {
+        const cat = a.category ? `[${a.category.toUpperCase()}] ` : '';
+        return `${cat}${a.title || 'Supply Chain Intelligence Update'}`;
+      });
+      setInternalHeadlines(list);
+    } else {
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+      fetch(`${apiBase}/api/articles`)
+        .then((res) => {
+          if (!res.ok) throw new Error('API cold');
+          return res.json();
+        })
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            const list = data.slice(0, 12).map((a) => {
+              const cat = a.category ? `[${a.category.toUpperCase()}] ` : '';
+              return `${cat}${a.title || 'Supply Chain Disruption Update'}`;
+            });
+            setInternalHeadlines(list);
+          }
+        })
+        .catch(() => {
+          // Graceful fallback to default offline headlines
+        });
+    }
+  }, [articles]);
+
+  const { canvas, ctx, texture } = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = 2048;
+    c.height = 1024;
+    const context = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c);
+    tex.anisotropy = 16;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return { canvas: c, ctx: context, texture: tex };
+  }, []);
+
+  const offsetRef = useRef(0);
+  const tickerString = useMemo(() => {
+    return '  ///  🔴 LIVE INTEL  ///  ' + internalHeadlines.join('   ■   ') + '   ///   ';
+  }, [internalHeadlines]);
+
+  useFrame((state, delta) => {
+    if (!ctx) return;
+    offsetRef.current += delta * 125;
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Dark industrial container background
+    ctx.fillStyle = '#1e2b20';
+    ctx.fillRect(0, 0, w, h);
+
+    // Corrugation shade lines
+    for (let x = 0; x < w; x += 48) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      ctx.fillRect(x, 0, 16, h);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.fillRect(x + 16, 0, 6, h);
+    }
+
+    // Top Brand Livery: ATLAS FREIGHT
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = '900 80px "Oswald", "Impact", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ATLAS FREIGHT', w / 2, 140);
+
+    // Hazard Stripes above Ticker
+    const stripeY = 240;
+    const stripeH = 26;
+    for (let s = 0; s < w; s += 40) {
+      ctx.fillStyle = s % 80 === 0 ? '#eab308' : '#1e2420';
+      ctx.beginPath();
+      ctx.moveTo(s, stripeY);
+      ctx.lineTo(s + 20, stripeY);
+      ctx.lineTo(s + 10, stripeY + stripeH);
+      ctx.lineTo(s - 10, stripeY + stripeH);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Digital LED Marquee Screen Area (Y: 280 to 760)
+    ctx.fillStyle = '#060907';
+    ctx.fillRect(40, 280, w - 80, 480);
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(40, 280, w - 80, 480);
+
+    // LED scanline grid inside marquee
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.05)';
+    for (let my = 290; my < 750; my += 14) {
+      ctx.fillRect(45, my, w - 90, 2);
+    }
+
+    // Header inside marquee
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 36px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('● SYSTEM STATUS: ONLINE  |  GLOBAL SUPPLY CHAIN DISRUPTION TICKER', 70, 340);
+
+    // Marquee scrolling text
+    ctx.font = 'bold 62px "JetBrains Mono", "Courier New", monospace';
+    const textWidth = ctx.measureText(tickerString).width || 1;
+    const loopOffset = offsetRef.current % textWidth;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(50, 370, w - 100, 260);
+    ctx.clip();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.shadowColor = '#f59e0b';
+    ctx.shadowBlur = 12;
+    ctx.textAlign = 'left';
+    ctx.fillText(tickerString, 60 - loopOffset, 510);
+    ctx.fillText(tickerString, 60 - loopOffset + textWidth, 510);
+    ctx.restore();
+
+    // Footer telemetry inside marquee
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.font = '28px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('AIS MARITIME TELEMETRY FEED: ONLINE  [LIVE REUTERS / RSS / SATELLITE]', w - 70, 720);
+
+    // Bottom container specs
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = '26px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('CONTAINER ID: AF-9281-INTEL  |  MAX PAYLOAD: 28,480 KG', 80, 890);
+
+    texture.needsUpdate = true;
+  });
+
+  return texture;
+};
+
+// ── Theme B: Interior Glowing Particle Trade Network ──────────────────
+const TRADE_NODES = [
+  // Asia Ports
+  { pos: [0.85, 0.15, 0.22], color: '#06b6d4', size: 0.052 },
+  { pos: [0.72, -0.12, 0.28], color: '#10b981', size: 0.046 },
+  { pos: [0.88, 0.32, -0.05], color: '#06b6d4', size: 0.042 },
+  { pos: [0.92, -0.05, 0.12], color: '#06b6d4', size: 0.044 },
+  // Middle East / Choke Points
+  { pos: [0.38, -0.08, 0.18], color: '#ef4444', size: 0.06 },
+  { pos: [0.46, -0.18, 0.05], color: '#f59e0b', size: 0.048 },
+  { pos: [0.28, -0.22, 0.24], color: '#ef4444', size: 0.054 },
+  // Europe
+  { pos: [-0.08, 0.22, 0.15], color: '#06b6d4', size: 0.05 },
+  { pos: [-0.18, 0.14, 0.02], color: '#10b981', size: 0.044 },
+  { pos: [0.02, 0.08, 0.26], color: '#06b6d4', size: 0.042 },
+  // Americas
+  { pos: [-0.65, 0.18, -0.18], color: '#06b6d4', size: 0.05 },
+  { pos: [-0.78, 0.24, 0.12], color: '#10b981', size: 0.046 },
+  { pos: [-0.48, -0.22, 0.08], color: '#f59e0b', size: 0.052 }
+];
+
+const ROUTE_CONNECTIONS = [
+  [0, 1], [0, 2], [0, 3], [1, 5], [5, 4], [4, 6], [4, 7], [7, 8], [7, 9],
+  [10, 12], [11, 12], [12, 7], [1, 10]
+];
+
+const InteriorNetworkNodeCluster = ({ isOpen }) => {
+  const groupRef = useRef();
+  const packetRef = useRef([]);
+
+  const routeGeometry = useMemo(() => {
+    const points = [];
+    ROUTE_CONNECTIONS.forEach(([fromIdx, toIdx]) => {
+      points.push(new THREE.Vector3(...TRADE_NODES[fromIdx].pos));
+      points.push(new THREE.Vector3(...TRADE_NODES[toIdx].pos));
+    });
+    return new THREE.BufferGeometry().setFromPoints(points);
+  }, []);
+
+  useFrame((state) => {
+    if (!isOpen) return;
+    const t = state.clock.elapsedTime;
+    // Animate glowing data packets along route segments
+    ROUTE_CONNECTIONS.slice(0, 4).forEach(([fromIdx, toIdx], i) => {
+      if (packetRef.current[i]) {
+        const p1 = new THREE.Vector3(...TRADE_NODES[fromIdx].pos);
+        const p2 = new THREE.Vector3(...TRADE_NODES[toIdx].pos);
+        const prog = (t * 0.6 + i * 0.25) % 1.0;
+        const current = p1.clone().lerp(p2, prog);
+        packetRef.current[i].position.copy(current);
+      }
+    });
+  });
+
+  return (
+    <group ref={groupRef} position={[0, 0, 0]}>
+      {/* Interior Cyan Ambient Illumination */}
+      <pointLight position={[0.6, 0, 0]} color="#06b6d4" intensity={isOpen ? 3.0 : 0} distance={3.8} />
+
+      {/* Network Connecting Lines */}
+      <lineSegments geometry={routeGeometry}>
+        <lineBasicMaterial color="#38bdf8" transparent opacity={0.65} linewidth={1} />
+      </lineSegments>
+
+      {/* Trade Hub Nodes */}
+      {TRADE_NODES.map((node, i) => (
+        <mesh key={i} position={node.pos}>
+          <sphereGeometry args={[node.size, 12, 12]} />
+          <meshBasicMaterial color={node.color} />
+        </mesh>
+      ))}
+
+      {/* Animated Data Packets */}
+      {[0, 1, 2, 3].map((idx) => (
+        <mesh key={`pkt-${idx}`} ref={(el) => (packetRef.current[idx] = el)}>
+          <sphereGeometry args={[0.024, 8, 8]} />
+          <meshBasicMaterial color="#f8fafc" />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+// ── Theme C: Interior Holographic Rotating NASA Risk Globe ────────────
+const InteriorNasaRiskGlobe = ({ isOpen }) => {
+  const globeGroupRef = useRef();
+  const satRef = useRef();
+  const radarRingRef = useRef();
+
+  useFrame((state, delta) => {
+    if (!isOpen) return;
+    const t = state.clock.elapsedTime;
+    if (globeGroupRef.current) {
+      globeGroupRef.current.rotation.y += delta * 0.45;
+    }
+    if (satRef.current) {
+      const orbit = t * 1.8;
+      satRef.current.position.set(Math.cos(orbit) * 0.52, Math.sin(orbit) * 0.2, Math.sin(orbit) * 0.52);
+    }
+    if (radarRingRef.current) {
+      const s = 0.5 + ((t * 0.8) % 1) * 1.2;
+      radarRingRef.current.scale.set(s, s, s);
+      radarRingRef.current.material.opacity = Math.max(0, 1 - (s - 0.5) / 1.2);
+    }
+  });
+
+  return (
+    <group position={[0.65, 0, 0]}>
+      {/* Interior Amber Ambient Glow */}
+      <pointLight color="#f59e0b" intensity={isOpen ? 3.2 : 0} distance={3.8} />
+
+      {/* Rotating Holographic Globe Group */}
+      <group ref={globeGroupRef} rotation={[0.38, 0, 0]}>
+        {/* Wireframe outer sphere */}
+        <mesh>
+          <sphereGeometry args={[0.34, 18, 18]} />
+          <meshBasicMaterial color="#f59e0b" wireframe transparent opacity={0.5} />
+        </mesh>
+        {/* Atmospheric inner glow */}
+        <mesh>
+          <sphereGeometry args={[0.26, 16, 16]} />
+          <meshBasicMaterial color="#b45309" transparent opacity={0.3} />
+        </mesh>
+        {/* Hotspot Chokepoint Beacons */}
+        {[
+          [0.26, 0.12, 0.18],  // Suez
+          [0.31, -0.05, 0.12], // Bab el-Mandeb
+          [0.15, -0.02, 0.3],  // Malacca
+          [-0.24, 0.08, 0.22]  // Panama
+        ].map((pt, i) => (
+          <mesh key={i} position={pt}>
+            <sphereGeometry args={[0.024, 8, 8]} />
+            <meshBasicMaterial color="#ef4444" />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Orbital Satellite Ring */}
+      <mesh rotation={[Math.PI / 4, 0, 0.3]}>
+        <torusGeometry args={[0.52, 0.008, 12, 48]} />
+        <meshBasicMaterial color="#38bdf8" transparent opacity={0.4} />
+      </mesh>
+
+      {/* Orbiting Satellite Marker */}
+      <group ref={satRef}>
+        <mesh>
+          <boxGeometry args={[0.035, 0.025, 0.02]} />
+          <meshStandardMaterial color="#f8fafc" emissive="#38bdf8" emissiveIntensity={0.8} />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[0.008, 0.07, 0.025]} />
+          <meshBasicMaterial color="#0284c7" />
+        </mesh>
+      </group>
+
+      {/* Radar Pulse Wave */}
+      <mesh ref={radarRingRef} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.28, 0.3, 32]} />
+        <meshBasicMaterial color="#f59e0b" transparent opacity={0.6} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+};
+
 // ── Realistic Container Mesh with PBR Materials & Structural Detail ────
-const ContainerMesh = ({ position, color, brand, serial, specialFaceIndex, specialTex, onClick, isInteractive }) => {
+const ContainerMesh = ({
+  position,
+  color,
+  brand,
+  serial,
+  onClick,
+  isInteractive,
+  hasOpeningDoors,
+  doorOpenProgress,
+  interiorType,
+  isInteriorActive,
+  tickerTex,
+  isContainerA
+}) => {
   const [hovered, setHovered] = useState(false);
 
   // Cached PBR Textures
@@ -379,9 +792,9 @@ const ContainerMesh = ({ position, color, brand, serial, specialFaceIndex, speci
         onPointerOut={isInteractive ? () => { setHovered(false); document.body.style.cursor = 'auto'; } : undefined}
       >
         <boxGeometry args={[3.0, 1.3, 1.2]} />
-        {/* +X right side (Doors) */}
-        {specialFaceIndex === 0 ? (
-          <meshBasicMaterial attach="material-0" map={specialTex} />
+        {/* +X right side (Door Face) */}
+        {hasOpeningDoors ? (
+          <meshBasicMaterial attach="material-0" transparent opacity={0} />
         ) : (
           <meshStandardMaterial
             attach="material-0"
@@ -394,26 +807,30 @@ const ContainerMesh = ({ position, color, brand, serial, specialFaceIndex, speci
           />
         )}
         {/* -X left side (Closed end) */}
-        {specialFaceIndex === 1 ? (
-          <meshBasicMaterial attach="material-1" map={specialTex} />
-        ) : (
-          <meshStandardMaterial
-            attach="material-1"
-            map={doorTex}
-            normalMap={doorNormal}
-            normalScale={new THREE.Vector2(0.8, 0.8)}
-            roughnessMap={doorRoughness}
-            roughness={0.42}
-            metalness={0.65}
-          />
-        )}
+        <meshStandardMaterial
+          attach="material-1"
+          map={doorTex}
+          normalMap={doorNormal}
+          normalScale={new THREE.Vector2(0.8, 0.8)}
+          roughnessMap={doorRoughness}
+          roughness={0.42}
+          metalness={0.65}
+        />
         {/* +Y top */}
         <meshStandardMaterial attach="material-2" map={topTex} roughness={0.55} metalness={0.5} />
         {/* -Y bottom */}
         <meshStandardMaterial attach="material-3" color={color} roughness={0.8} metalness={0.2} />
         {/* +Z front (Long side facing camera) */}
-        {specialFaceIndex === 4 ? (
-          <meshBasicMaterial attach="material-4" map={specialTex} />
+        {isContainerA && tickerTex ? (
+          <meshStandardMaterial
+            attach="material-4"
+            map={tickerTex}
+            normalMap={sideNormal}
+            normalScale={new THREE.Vector2(0.65, 0.65)}
+            roughnessMap={sideRoughness}
+            roughness={0.38}
+            metalness={0.55}
+          />
         ) : (
           <meshStandardMaterial
             attach="material-4"
@@ -426,25 +843,41 @@ const ContainerMesh = ({ position, color, brand, serial, specialFaceIndex, speci
           />
         )}
         {/* -Z back (Long side) */}
-        {specialFaceIndex === 5 ? (
-          <meshBasicMaterial attach="material-5" map={specialTex} />
-        ) : (
-          <meshStandardMaterial
-            attach="material-5"
-            map={sideTex}
-            normalMap={sideNormal}
-            normalScale={new THREE.Vector2(0.85, 0.85)}
-            roughnessMap={sideRoughness}
-            roughness={0.45}
-            metalness={0.65}
-          />
-        )}
+        <meshStandardMaterial
+          attach="material-5"
+          map={sideTex}
+          normalMap={sideNormal}
+          normalScale={new THREE.Vector2(0.85, 0.85)}
+          roughnessMap={sideRoughness}
+          roughness={0.45}
+          metalness={0.65}
+        />
       </mesh>
 
-      {/* Structural Geometry Details */}
+      {/* Structural Corner Blocks & Frame Rails */}
       <CornerCastings />
-      <DoorLockingHardware />
       <FrameRails />
+
+      {/* Opening Doors & Interior Payloads for Containers B & C */}
+      {hasOpeningDoors ? (
+        <>
+          <InteriorChamber />
+          <OpeningDoors
+            doorOpenProgress={doorOpenProgress}
+            doorTex={doorTex}
+            doorNormal={doorNormal}
+            doorRoughness={doorRoughness}
+          />
+          {interiorType === 'network' && (
+            <InteriorNetworkNodeCluster isOpen={isInteriorActive} />
+          )}
+          {interiorType === 'nasa' && (
+            <InteriorNasaRiskGlobe isOpen={isInteriorActive} />
+          )}
+        </>
+      ) : (
+        <DoorLockingHardware />
+      )}
     </group>
   );
 };
@@ -470,7 +903,7 @@ const CONTAINER_COLORS = [
   '#c4b99a', // Cream
 ];
 
-// Fictional brand names only (scaled dynamically with generous margins)
+// Fictional brand names only
 const BRANDS = [
   'VANGUARD LINE',
   'TITAN FREIGHT',
@@ -486,8 +919,8 @@ const BRANDS = [
 // ── Build Symmetric 3x3x1 Wall Arrangement ────────────────────────────
 const buildContainerWall = () => {
   const containers = [];
-  const gapY = 1.34; // Uniform vertical spacing
-  const gapZ = 1.24; // Uniform horizontal bay spacing
+  const gapY = 1.34;
+  const gapZ = 1.24;
   let idx = 0;
 
   for (let row = 1; row >= -1; row--) {       // Top to Bottom (1, 0, -1)
@@ -510,52 +943,56 @@ const buildContainerWall = () => {
 };
 
 // ── Animated Container with Anchored 3D <Html> Label ──────────────────
-const AnimatedContainer = ({ c, activeTab, onTabClick, texFeeds, texSearch, texNasa }) => {
-  let specialFaceIndex = -1;
-  let specialTex = null;
+const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
   let offsetX = 0;
   let offsetZ = 0;
   let isTarget = false;
   let labelData = null;
+  let isContainerA = false;
+  let hasOpeningDoors = false;
+  let interiorType = null;
+  let isDoorOpen = false;
 
   // The 3 front-facing containers assigned to the interactive tabs
   if (c.id === 'c-1-1') {
-    // Top Front: Tab A (ALL FEEDS)
+    // Top Front: Tab A (ALL FEEDS / SUPPLY CHAIN NEWS)
     isTarget = true;
+    isContainerA = true;
     labelData = { marker: 'A', title: 'ALL FEEDS', tab: 'feed' };
     if (activeTab === 'feed') {
       offsetX = 0.35;
       offsetZ = 0.95;
-      specialFaceIndex = 4;
-      specialTex = texFeeds;
     }
   } else if (c.id === 'c-0-1') {
-    // Mid Front: Tab B (SEMANTIC AI SEARCH)
+    // Mid Front: Tab B (SEMANTIC AI SEARCH / NETWORK DISRUPTION)
     isTarget = true;
+    hasOpeningDoors = true;
+    interiorType = 'network';
     labelData = { marker: 'B', title: 'SEMANTIC AI SEARCH', tab: 'search' };
     if (activeTab === 'search') {
       offsetX = 0.35;
       offsetZ = 0.95;
-      specialFaceIndex = 4;
-      specialTex = texSearch;
+      isDoorOpen = true;
     }
   } else if (c.id === 'c--1-1') {
-    // Bot Front: Tab C (NASA SATELLITE)
+    // Bot Front: Tab C (NASA SATELLITE / RISK MONITOR)
     isTarget = true;
+    hasOpeningDoors = true;
+    interiorType = 'nasa';
     labelData = { marker: 'C', title: 'NASA SATELLITE', tab: 'analytics' };
     if (activeTab === 'analytics') {
       offsetX = 0.35;
       offsetZ = 0.95;
-      specialFaceIndex = 4;
-      specialTex = texNasa;
+      isDoorOpen = true;
     }
   }
 
   const targetPos = [c.pos[0] + offsetX, c.pos[1], c.pos[2] + offsetZ];
 
-  const { position } = useSpring({
+  const { position, doorOpenProgress } = useSpring({
     position: targetPos,
-    config: { mass: 1.5, tension: 80, friction: 22 }
+    doorOpenProgress: isDoorOpen ? 1 : 0,
+    config: { mass: 1.5, tension: 75, friction: 22 }
   });
 
   const isActive = labelData && activeTab === labelData.tab;
@@ -567,9 +1004,13 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, texFeeds, texSearch, texN
         color={c.color} 
         brand={c.brand} 
         serial={c.serial} 
-        specialFaceIndex={specialFaceIndex}
-        specialTex={specialTex}
         isInteractive={isTarget}
+        hasOpeningDoors={hasOpeningDoors}
+        doorOpenProgress={doorOpenProgress}
+        interiorType={interiorType}
+        isInteriorActive={isDoorOpen}
+        tickerTex={tickerTex}
+        isContainerA={isContainerA}
         onClick={isTarget && onTabClick ? () => onTabClick(labelData.tab) : undefined}
       />
 
@@ -606,16 +1047,12 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, texFeeds, texSearch, texN
 };
 
 // ── Animated Stack ────────────────────────────────────────────────────
-const Stack = ({ activeTab, onTabClick }) => {
+const Stack = ({ activeTab, onTabClick, articles }) => {
   const floatRef = useRef();
   const containers = useMemo(() => buildContainerWall(), []);
 
-  // Load the AI-generated textures
-  const [texFeeds, texSearch, texNasa] = useTexture([
-    '/assets/panel_feeds.jpg',
-    '/assets/panel_search.jpg',
-    '/assets/panel_nasa.jpg'
-  ]);
+  // Real-time news ticker canvas texture for Container A
+  const tickerTex = useLiveTickerTexture(articles);
 
   // Subtle ambient float
   useFrame((state) => {
@@ -633,9 +1070,7 @@ const Stack = ({ activeTab, onTabClick }) => {
             c={c} 
             activeTab={activeTab}
             onTabClick={onTabClick}
-            texFeeds={texFeeds}
-            texSearch={texSearch}
-            texNasa={texNasa}
+            tickerTex={tickerTex}
           />
         ))}
       </group>
@@ -644,7 +1079,7 @@ const Stack = ({ activeTab, onTabClick }) => {
 };
 
 // ── Main Export ────────────────────────────────────────────────────────
-export default function Hero3DContainer({ activeTab, onTabClick }) {
+export default function Hero3DContainer({ activeTab, onTabClick, articles = [] }) {
   return (
     <Canvas
       shadows
@@ -679,7 +1114,7 @@ export default function Hero3DContainer({ activeTab, onTabClick }) {
       {/* City Environment at Low Intensity (no background override) */}
       <Environment preset="city" background={false} environmentIntensity={0.4} />
 
-      <Stack activeTab={activeTab} onTabClick={onTabClick} />
+      <Stack activeTab={activeTab} onTabClick={onTabClick} articles={articles} />
 
       {/* Soft Ground Shadow Receiver */}
       <mesh position={[0, -1.25, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
@@ -687,7 +1122,7 @@ export default function Hero3DContainer({ activeTab, onTabClick }) {
         <shadowMaterial opacity={0.38} />
       </mesh>
 
-      {/* Ground Contact Shadows (positioned directly beneath lowest container row at Y = -1.24) */}
+      {/* Ground Contact Shadows */}
       <ContactShadows
         position={[0, -1.24, 0]}
         opacity={0.72}

@@ -279,7 +279,13 @@ function App() {
   const [syncToast, setSyncToast] = useState(null);
 
   // Semantic Search States
-  const [activeTab, setActiveTab] = useState('overview'); // 'feed' | 'search' | 'analytics'
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const param = new URLSearchParams(window.location.search).get('tab');
+      if (param && ['feed', 'search', 'analytics', 'overview'].includes(param)) return param;
+    } catch (e) {}
+    return 'overview';
+  }); // 'feed' | 'search' | 'analytics'
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [aiSummary, setAiSummary] = useState(null);
@@ -484,7 +490,7 @@ function App() {
                   </>
                 }>
                   <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
-                    <Hero3DContainer activeTab={activeTab} onTabClick={handleTabClick} />
+                    <Hero3DContainer activeTab={activeTab} onTabClick={handleTabClick} articles={articles} />
                   </div>
                 </Suspense>
               ) : (
