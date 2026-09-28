@@ -4,6 +4,7 @@ import com.supplychain.monitor.model.NewsArticle;
 import com.supplychain.monitor.repository.NewsArticleRepository;
 import com.supplychain.monitor.service.GroqClient;
 import com.supplychain.monitor.service.RiskScoreCalculator;
+import com.supplychain.monitor.service.CountryRiskService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -22,8 +23,8 @@ public class CountryRiskController {
 
     private static final Logger logger = LoggerFactory.getLogger(CountryRiskController.class);
 
+    private final CountryRiskService countryRiskService;
     private final NewsArticleRepository newsArticleRepository;
-    private final GroqClient groqClient;
 
     public static class CountryPin {
         public String id;
@@ -41,7 +42,7 @@ public class CountryRiskController {
         }
     }
 
-    private static final List<CountryPin> ALL_COUNTRIES = List.of(
+    public static final List<CountryPin> ALL_COUNTRIES = List.of(
         new CountryPin("US", "United States", "🇺🇸", 37.0, -95.0),
         new CountryPin("CN", "China", "🇨🇳", 35.0, 104.0),
         new CountryPin("IN", "India", "🇮🇳", 20.5, 78.9),
@@ -70,9 +71,9 @@ public class CountryRiskController {
         new CountryPin("TH", "Thailand", "🇹🇭", 15.8, 100.9)
     );
 
-    public CountryRiskController(NewsArticleRepository newsArticleRepository, GroqClient groqClient) {
+    public CountryRiskController(CountryRiskService countryRiskService, NewsArticleRepository newsArticleRepository) {
+        this.countryRiskService = countryRiskService;
         this.newsArticleRepository = newsArticleRepository;
-        this.groqClient = groqClient;
     }
 
     @GetMapping("/active")
@@ -80,8 +81,8 @@ public class CountryRiskController {
         List<NewsArticle> allArticles = newsArticleRepository.findAllByOrderByPublishedAtDesc();
         List<Map<String, Object>> activePins = new ArrayList<>();
         
-        for (CountryPin pin : ALL_COUNTRIES) {
-            String pattern = buildCountryRegexPattern(pin.query);
+        for (CountryRiskService.CountryPin pin : CountryRiskService.ALL_COUNTRIES) {
+            String pattern = countryRiskService.buildCountryRegexPattern(pin.query);
             Pattern r = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
             
             boolean matches = false;
@@ -117,48 +118,9 @@ public class CountryRiskController {
         }
 
         String countryQuery = query.trim();
-        String javaRegexPattern = buildCountryRegexPattern(countryQuery);
-        // Postgres POSIX regex uses \y for word boundaries and doesn't support \Q \E
-        String pgRegexPattern = javaRegexPattern.replace("\\b", "\\y").replace("\\Q", "").replace("\\E", "");
-        
-        logger.info("Computing real-time dynamic country risk for query: '{}' using PG pattern: '{}'", countryQuery, pgRegexPattern);
+        logger.info("Computing real-time dynamic country risk for query: '{}' via CountryRiskService", countryQuery);
 
-        List<NewsArticle> matchedArticles = newsArticleRepository.findByPattern(pgRegexPattern);
-
-        if (matchedArticles == null) {
-            matchedArticles = new ArrayList<>();
-        } else {
-            matchedArticles = new ArrayList<>(matchedArticles);
-        }
-
-        // If direct keyword matches are fewer than 4 articles, supplement with live database articles
-        if (matchedArticles.size() < 4) {
-            List<NewsArticle> keywordFallback = newsArticleRepository.findByKeyword(countryQuery);
-            if (keywordFallback != null) {
-                for (NewsArticle a : keywordFallback) {
-                    if (matchedArticles.stream().noneMatch(existing -> existing.getId().equals(a.getId()))) {
-                        matchedArticles.add(a);
-                    }
-                }
-            }
-        }
-
-        // If still under 4 articles, supplement with overall database feeds to guarantee rich feeds
-        if (matchedArticles.size() < 4) {
-            List<NewsArticle> allArticles = newsArticleRepository.findAllByOrderByPublishedAtDesc();
-            if (allArticles != null && !allArticles.isEmpty()) {
-                List<NewsArticle> sortedAll = allArticles.stream()
-                        .sorted(Comparator.comparing(NewsArticle::getPublishedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                        .collect(Collectors.toList());
-
-                for (NewsArticle a : sortedAll) {
-                    if (matchedArticles.stream().noneMatch(existing -> existing.getId().equals(a.getId()))) {
-                        matchedArticles.add(a);
-                    }
-                    if (matchedArticles.size() >= 8) break;
-                }
-            }
-        }
+        List<NewsArticle> matchedArticles = countryRiskService.getMatchedArticles(countryQuery);
 
         if (matchedArticles.isEmpty()) {
             CountryRiskResponse emptyResp = new CountryRiskResponse(
@@ -173,8 +135,8 @@ public class CountryRiskController {
             return ResponseEntity.ok(emptyResp);
         }
 
-        // 1. Recency-weighted mathematical risk score calculation (delegated to shared utility)
-        RiskScoreCalculator.RiskResult riskResult = RiskScoreCalculator.compute(matchedArticles);
+        // 1. Recency-weighted mathematical risk score calculation
+        RiskScoreCalculator.RiskResult riskResult = countryRiskService.calculateRisk(matchedArticles);
         int overallScore = riskResult.getScore();
         String status;
         if (overallScore >= 80) {
@@ -189,7 +151,7 @@ public class CountryRiskController {
         Map<String, Integer> categoryScores = riskResult.getCategoryScores();
 
         // 2. Synthesize dynamic Key Regional Risk Drivers from actual matched article titles
-        List<String> highlights = generateRiskDriversFromArticles(countryQuery, matchedArticles);
+        List<String> highlights = countryRiskService.generateRiskDrivers(countryQuery, matchedArticles);
 
         CountryRiskResponse response = new CountryRiskResponse(
                 true,
@@ -202,109 +164,6 @@ public class CountryRiskController {
         );
 
         return ResponseEntity.ok(response);
-    }
-
-    private String buildCountryRegexPattern(String country) {
-        String q = country.toLowerCase().trim();
-        switch (q) {
-            case "germany":
-            case "german":
-                return "\\b(germany|german|hamburg|rhine|bremerhaven|berlin|frankfurt|munich)\\b";
-            case "egypt":
-            case "egyptian":
-                return "\\b(egypt|egyptian|suez|suez canal|cairo|sinai)\\b";
-            case "united states":
-            case "usa":
-            case "us":
-            case "america":
-                return "\\b(united states|usa|us|u\\.s\\.|america|american|los angeles|long beach|california)\\b";
-            case "united kingdom":
-            case "uk":
-            case "britain":
-            case "england":
-                return "\\b(united kingdom|uk|u\\.k\\.|britain|british|felixstowe|dover|london|england)\\b";
-            case "netherlands":
-            case "holland":
-            case "dutch":
-                return "\\b(netherlands|dutch|rotterdam|holland)\\b";
-            case "france":
-            case "french":
-                return "\\b(france|french|le havre|marseille|paris)\\b";
-            case "brazil":
-            case "brazilian":
-                return "\\b(brazil|brazilian|santos|paranaguá)\\b";
-            case "south korea":
-            case "korea":
-                return "\\b(korea|korean|busan|incheon|seoul)\\b";
-            case "uae":
-            case "united arab emirates":
-            case "dubai":
-                return "\\b(uae|united arab emirates|dubai|abu dhabi|jebel ali)\\b";
-            case "china":
-            case "chinese":
-                return "\\b(china|chinese|shanghai|shenzhen|ningbo|beijing|guangzhou|yantian)\\b";
-            case "singapore":
-                return "\\b(singapore|pasir panjang|malacca|strait of malacca)\\b";
-            case "canada":
-            case "canadian":
-                return "\\b(canada|canadian|vancouver|montreal|prince rupert)\\b";
-            case "mexico":
-            case "mexican":
-                return "\\b(mexico|mexican|manzanillo|laredo|monterrey)\\b";
-            case "japan":
-            case "japanese":
-                return "\\b(japan|japanese|tokyo|yokohama|kobe|nagoya)\\b";
-            case "australia":
-            case "australian":
-                return "\\b(australia|australian|sydney|melbourne|brisbane|fremantle)\\b";
-            case "india":
-            case "indian":
-                return "\\b(india|indian|mumbai|mundra|nhava sheva|delhi|gujarat|chennai|bengaluru)\\b";
-            default:
-                return "\\b" + Pattern.quote(q) + "\\b";
-        }
-    }
-
-    private List<String> generateRiskDriversFromArticles(String country, List<NewsArticle> articles) {
-        if (articles == null || articles.isEmpty()) {
-            return List.of("No active disruption news recorded for " + country + ".");
-        }
-
-        String headlinesContext = articles.stream()
-                .limit(8)
-                .map(a -> "- " + a.getTitle())
-                .collect(Collectors.joining("\n"));
-
-        try {
-            GroqClient.GroqResponse groqResp = groqClient.generateSummary(
-                    "Key risk drivers and choke points for " + country,
-                    "Real matched news articles for " + country + ":\n" + headlinesContext
-            );
-
-            if (groqResp != null && groqResp.getSummary() != null && !groqResp.getSummary().trim().isEmpty()) {
-                String summaryStr = groqResp.getSummary().trim();
-                String[] sentences = summaryStr.split("(?<=[.!?])\\s+");
-                List<String> bullets = new ArrayList<>();
-                for (String s : sentences) {
-                    if (!s.trim().isEmpty()) {
-                        bullets.add(s.trim());
-                    }
-                    if (bullets.size() >= 3) break;
-                }
-                if (!bullets.isEmpty()) {
-                    return bullets;
-                }
-            }
-        } catch (Exception e) {
-            logger.warn("Failed to generate Groq risk driver bullets for {}: {}", country, e.getMessage());
-        }
-
-        // Fallback to direct matched headlines if AI unavailable
-        List<String> fallbackBullets = new ArrayList<>();
-        for (int i = 0; i < Math.min(3, articles.size()); i++) {
-            fallbackBullets.add(articles.get(i).getTitle());
-        }
-        return fallbackBullets;
     }
 
     public static class CountryRiskResponse {

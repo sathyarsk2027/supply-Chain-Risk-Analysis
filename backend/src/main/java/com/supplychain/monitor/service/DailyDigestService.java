@@ -72,7 +72,7 @@ public class DailyDigestService {
 
     private final NewsArticleRepository newsArticleRepository;
     private final GroqClient groqClient;
-    // We removed JavaMailSender to use Resend API directly over HTTPS
+    private final CountryRiskService countryRiskService;
 
     @Value("${digest.recipient.email:}")
     private String recipientEmail;
@@ -92,9 +92,14 @@ public class DailyDigestService {
     // Simple date-based deduplication to prevent double-sends
     private volatile String lastSentDate = "";
 
-    public DailyDigestService(NewsArticleRepository newsArticleRepository, GroqClient groqClient) {
+    public DailyDigestService(NewsArticleRepository newsArticleRepository, GroqClient groqClient, CountryRiskService countryRiskService) {
         this.newsArticleRepository = newsArticleRepository;
         this.groqClient = groqClient;
+        this.countryRiskService = countryRiskService;
+    }
+
+    public DailyDigestService(NewsArticleRepository newsArticleRepository, GroqClient groqClient) {
+        this(newsArticleRepository, groqClient, null);
     }
 
     // --------------------------------------------------------------------------
@@ -146,47 +151,72 @@ public class DailyDigestService {
             }
         }
 
-        // 2. Split into India-focused and Global buckets
-        List<NewsArticle> indiaArticles = new ArrayList<>();
-        List<NewsArticle> globalArticles = new ArrayList<>();
+        // 2. Query real-time India intelligence pool — 100% synchronized with NASA Satellite tab
+        List<NewsArticle> indiaArticles = (countryRiskService != null)
+                ? countryRiskService.getMatchedArticles("India")
+                : Collections.emptyList();
 
-        for (NewsArticle article : allArticles) {
-            String content = buildSearchableContent(article);
-            if (INDIA_PATTERN.matcher(content).find()) {
-                indiaArticles.add(article);
-            } else {
-                globalArticles.add(article);
-            }
-        }
-
-        // Ensure India risk calculation has rich coverage even if recent 24h was sparse
-        if (indiaArticles.size() < 3) {
-            List<NewsArticle> indiaFallback = newsArticleRepository.findByKeyword("India");
-            if (indiaFallback != null && !indiaFallback.isEmpty()) {
-                for (NewsArticle a : indiaFallback) {
-                    if (indiaArticles.stream().noneMatch(existing -> existing.getId().equals(a.getId()))) {
-                        indiaArticles.add(a);
-                    }
-                    if (indiaArticles.size() >= 15) break;
+        if (indiaArticles.isEmpty()) {
+            for (NewsArticle article : allArticles) {
+                String content = buildSearchableContent(article);
+                if (INDIA_PATTERN.matcher(content).find()) {
+                    indiaArticles.add(article);
                 }
-                logger.info("Enriched India articles pool with recent matching articles. Total India: {}", indiaArticles.size());
             }
         }
-        logger.info("India articles: {}, Global articles: {}", indiaArticles.size(), globalArticles.size());
 
-        // 3. Compute India aggregate risk score
-        RiskScoreCalculator.RiskResult indiaRisk = RiskScoreCalculator.compute(indiaArticles);
+        // Global articles: articles outside the India focus pool
+        Set<Long> indiaArticleIds = indiaArticles.stream()
+                .map(NewsArticle::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
-        // 4. Cross-country scan for elevated risks
+        List<NewsArticle> globalArticles = allArticles.stream()
+                .filter(a -> a.getId() == null || !indiaArticleIds.contains(a.getId()))
+                .collect(Collectors.toList());
+
+        // Supplement global articles if count is low
+        if (globalArticles.size() < 10) {
+            List<NewsArticle> recentAll = newsArticleRepository.findAllByOrderByPublishedAtDesc();
+            if (recentAll != null) {
+                for (NewsArticle a : recentAll) {
+                    if (a.getId() != null && !indiaArticleIds.contains(a.getId())
+                            && globalArticles.stream().noneMatch(existing -> existing.getId().equals(a.getId()))) {
+                        globalArticles.add(a);
+                    }
+                    if (globalArticles.size() >= 30) break;
+                }
+            }
+        }
+
+        logger.info("Real-time India articles (NASA Satellite sync): {}, Global articles: {}",
+                indiaArticles.size(), globalArticles.size());
+
+        // 3. Compute India aggregate risk score — exact mathematical parity with NASA Satellite tab
+        RiskScoreCalculator.RiskResult indiaRisk = (countryRiskService != null)
+                ? countryRiskService.calculateRisk(indiaArticles)
+                : RiskScoreCalculator.compute(indiaArticles);
+
+        // 4. Cross-country scan for elevated risks — synchronized with live country intelligence
         Map<String, Integer> elevatedCountries = new LinkedHashMap<>();
-        for (Map.Entry<String, Pattern> entry : COUNTRY_PATTERNS.entrySet()) {
-            List<NewsArticle> countryArticles = allArticles.stream()
-                    .filter(a -> entry.getValue().matcher(buildSearchableContent(a)).find())
-                    .collect(Collectors.toList());
-            if (!countryArticles.isEmpty()) {
-                RiskScoreCalculator.RiskResult result = RiskScoreCalculator.compute(countryArticles);
-                if (result.getScore() >= ELEVATED_THRESHOLD) {
-                    elevatedCountries.put(entry.getKey(), result.getScore());
+        if (countryRiskService != null) {
+            for (CountryRiskService.CountryPin pin : CountryRiskService.ALL_COUNTRIES) {
+                if ("India".equalsIgnoreCase(pin.query)) continue;
+                RiskScoreCalculator.RiskResult countryResult = countryRiskService.calculateRisk(pin.query);
+                if (countryResult.getScore() >= ELEVATED_THRESHOLD) {
+                    elevatedCountries.put(pin.query, countryResult.getScore());
+                }
+            }
+        } else {
+            for (Map.Entry<String, Pattern> entry : COUNTRY_PATTERNS.entrySet()) {
+                List<NewsArticle> countryArticles = allArticles.stream()
+                        .filter(a -> entry.getValue().matcher(buildSearchableContent(a)).find())
+                        .collect(Collectors.toList());
+                if (!countryArticles.isEmpty()) {
+                    RiskScoreCalculator.RiskResult result = RiskScoreCalculator.compute(countryArticles);
+                    if (result.getScore() >= ELEVATED_THRESHOLD) {
+                        elevatedCountries.put(entry.getKey(), result.getScore());
+                    }
                 }
             }
         }
@@ -217,7 +247,7 @@ public class DailyDigestService {
         String dateDisplay = today.format(DATE_DISPLAY);
         String subjectLine = "Supply Chain Risk Digest — " + dateDisplay;
         String htmlBody = buildHtmlEmail(dateDisplay, indiaRisk, elevatedCountries,
-                indiaSummary, indiaArticles.size(), globalSummary, globalArticles.size());
+                indiaSummary, indiaArticles.size(), globalSummary, globalArticles.size(), allArticles.size());
 
         // 7. Send email
         boolean emailSent = sendEmail(subjectLine, htmlBody);
@@ -455,11 +485,18 @@ public class DailyDigestService {
                                   Map<String, Integer> elevatedCountries,
                                   String indiaSummary, int indiaCount,
                                   String globalSummary, int globalCount) {
+        return buildHtmlEmail(dateDisplay, indiaRisk, elevatedCountries, indiaSummary, indiaCount, globalSummary, globalCount, indiaCount + globalCount);
+    }
+
+    private String buildHtmlEmail(String dateDisplay, RiskScoreCalculator.RiskResult indiaRisk,
+                                  Map<String, Integer> elevatedCountries,
+                                  String indiaSummary, int indiaCount,
+                                  String globalSummary, int globalCount, int scannedCount) {
 
         String riskColor = indiaRisk.getColorHex();
         String riskLabel = indiaRisk.getStatus();
         int riskScore = indiaRisk.getScore();
-        int totalArticles = indiaCount + globalCount;
+        int totalArticles = Math.max(scannedCount, indiaCount + globalCount);
 
         String indiaHtml = escapeHtml(indiaSummary).replace("\n", "<br>");
         String globalHtml = escapeHtml(globalSummary).replace("\n", "<br>");
