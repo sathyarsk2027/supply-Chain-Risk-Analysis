@@ -486,7 +486,7 @@ public class DailyDigestService {
 
         // Build top headlines section from recent articles
         List<NewsArticle> recentArticles = newsArticleRepository.findAllByOrderByPublishedAtDesc();
-        String topHeadlinesHtml = buildTopHeadlinesHtml(recentArticles, 8);
+        String topHeadlinesHtml = buildTopHeadlinesHtml(recentArticles, 5);
 
         // Risk gauge bar segments
         int filledSegments = riskScore / 10;
@@ -721,13 +721,12 @@ public class DailyDigestService {
     }
 
     /**
-     * Builds HTML for the top N headlines in a Google News-style numbered list with
-     * source badges, category color dots, article snippets, and read links.
-     * Rendered on a white background for maximum readability.
+     * Builds HTML for the top N headlines in a compact Google News-style numbered list.
+     * Strips HTML tags from raw content to produce clean text snippets.
      */
     private String buildTopHeadlinesHtml(List<NewsArticle> articles, int limit) {
         if (articles == null || articles.isEmpty()) {
-            return "<p style=\"font-size:13px;color:#9ca3af;text-align:center;padding:20px 0;\">No recent headlines available.</p>";
+            return "<p style=\"font-size:13px;color:#9ca3af;text-align:center;padding:16px 0;\">No recent headlines available.</p>";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -741,64 +740,57 @@ public class DailyDigestService {
             String category = article.getRiskCategory() != null ? article.getRiskCategory().toUpperCase() : "NEWS";
 
             // Category color mapping
-            String catColor = "#6b7280"; // default gray
+            String catColor = "#6b7280";
             String catLabel = "News";
             if (category.contains("GEO")) { catColor = "#ef4444"; catLabel = "Geopolitical"; }
             else if (category.contains("LOG")) { catColor = "#f59e0b"; catLabel = "Logistics"; }
             else if (category.contains("WEATHER")) { catColor = "#3b82f6"; catLabel = "Weather"; }
             else if (category.contains("MARKET")) { catColor = "#22c55e"; catLabel = "Market"; }
 
-            // Number badge color — cycle through risk category colors
-            String numBg = catColor + "15";
-            String numColor = catColor;
-
-            // Build a snippet from raw content
+            // Build a clean snippet — strip HTML tags and URLs from raw content
             String snippet = "";
             if (article.getRawContent() != null && article.getRawContent().length() > 20) {
-                snippet = article.getRawContent();
-                if (snippet.length() > 120) snippet = snippet.substring(0, 120) + "...";
-                snippet = escapeHtml(snippet);
+                String cleaned = stripHtmlTags(article.getRawContent());
+                if (cleaned.length() > 100) cleaned = cleaned.substring(0, 100).trim() + "…";
+                snippet = escapeHtml(cleaned);
             }
 
-            sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:0;\">");
-            sb.append("<tr>");
+            // Article row
+            sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>");
 
-            // Number badge column
-            sb.append("<td style=\"width:40px;vertical-align:top;padding:12px 0 12px 0;\">");
-            sb.append("<div style=\"width:32px;height:32px;border-radius:50%;background:" + numBg + ";border:2px solid " + numColor + ";text-align:center;line-height:32px;font-size:14px;font-weight:800;color:" + numColor + ";\">");
-            sb.append(count);
-            sb.append("</div></td>");
+            // Number column
+            sb.append("<td style=\"width:32px;vertical-align:top;padding:10px 0;\">");
+            sb.append("<div style=\"width:26px;height:26px;border-radius:50%;border:2px solid " + catColor + ";text-align:center;line-height:26px;font-size:12px;font-weight:800;color:" + catColor + ";\">");
+            sb.append(count).append("</div></td>");
 
             // Content column
-            sb.append("<td style=\"vertical-align:top;padding:12px 0 12px 12px;\">");
+            sb.append("<td style=\"vertical-align:top;padding:10px 0 10px 10px;\">");
 
-            // Source + category dot
-            sb.append("<p style=\"margin:0 0 4px;font-size:11px;color:#9ca3af;\">");
-            sb.append("<span style=\"display:inline-block;width:7px;height:7px;background:" + catColor + ";border-radius:50%;margin-right:5px;vertical-align:middle;\"></span>");
-            sb.append(source);
-            sb.append(" <span style=\"color:#d1d5db;\">&middot;</span> ");
-            sb.append("<span style=\"color:" + catColor + ";font-weight:600;\">" + catLabel + "</span>");
-            sb.append("</p>");
+            // Source + category
+            sb.append("<p style=\"margin:0 0 3px;font-size:10px;color:#9ca3af;\">");
+            sb.append("<span style=\"display:inline-block;width:6px;height:6px;background:" + catColor + ";border-radius:50%;margin-right:4px;vertical-align:middle;\"></span>");
+            sb.append(source).append(" &middot; ");
+            sb.append("<span style=\"color:" + catColor + ";font-weight:600;\">" + catLabel + "</span></p>");
 
-            // Title
-            sb.append("<a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:14px;color:#111827;text-decoration:none;font-weight:700;line-height:1.4;display:block;\">");
+            // Title (clickable)
+            sb.append("<a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:13px;color:#111827;text-decoration:none;font-weight:700;line-height:1.35;\">");
             sb.append(title).append("</a>");
 
-            // Snippet
+            // Snippet + Read More on same line
             if (!snippet.isEmpty()) {
-                sb.append("<p style=\"margin:4px 0 0;font-size:12px;line-height:1.5;color:#6b7280;\">").append(snippet).append("</p>");
+                sb.append("<p style=\"margin:3px 0 0;font-size:11px;line-height:1.45;color:#6b7280;\">").append(snippet);
+                sb.append(" <a href=\"").append(url).append("\" target=\"_blank\" style=\"color:" + catColor + ";text-decoration:none;font-weight:600;\">Read More</a>");
+                sb.append("</p>");
+            } else {
+                sb.append("<p style=\"margin:3px 0 0;\"><a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:11px;color:" + catColor + ";text-decoration:none;font-weight:600;\">Read More</a></p>");
             }
-
-            // Read more link
-            sb.append("<p style=\"margin:6px 0 0;\"><a href=\"").append(url).append("\" target=\"_blank\" style=\"font-size:11px;color:" + catColor + ";text-decoration:none;font-weight:600;\">Read More →</a></p>");
 
             sb.append("</td></tr>");
 
-            // Separator line (not after last item)
+            // Separator (not after last item)
             if (count < Math.min(articles.size(), limit)) {
-                sb.append("<tr><td colspan=\"2\" style=\"padding:0;\"><div style=\"height:1px;background:#e5e7eb;\"></div></td></tr>");
+                sb.append("<tr><td colspan=\"2\" style=\"padding:0;\"><div style=\"height:1px;background:#eef0f2;\"></div></td></tr>");
             }
-
             sb.append("</table>");
         }
         return sb.toString();
@@ -819,6 +811,18 @@ public class DailyDigestService {
                    .replace("<", "&lt;")
                    .replace(">", "&gt;")
                    .replace("\"", "&quot;");
+    }
+
+    /** Strips HTML tags and URLs from raw content to produce clean plain text. */
+    private String stripHtmlTags(String html) {
+        if (html == null || html.isEmpty()) return "";
+        // Remove HTML tags
+        String text = html.replaceAll("<[^>]*>", " ");
+        // Remove URLs (http/https)
+        text = text.replaceAll("https?://\\S+", "");
+        // Collapse whitespace
+        text = text.replaceAll("\\s+", " ").trim();
+        return text;
     }
 
     // --------------------------------------------------------------------------
