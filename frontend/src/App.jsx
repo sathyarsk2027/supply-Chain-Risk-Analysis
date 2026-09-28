@@ -52,6 +52,26 @@ const hasWebGL = (() => {
   }
 })();
 
+// WebGL Runtime Error Boundary for Graceful Degradation
+class WebGLErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, info) {
+    console.warn('WebGL rendering encountered an error; falling back to 2D image:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 // --------------------------------------------------------------------------
@@ -475,7 +495,7 @@ function App() {
           <div className="hero-graphic">
             <div className={`img-wrapper ${activeTab !== 'overview' ? 'is-exploded' : ''} zoom-${activeTab}`}>
               {hasWebGL ? (
-                <Suspense fallback={
+                <WebGLErrorBoundary fallback={
                   <>
                     <img 
                       src="/assets/containers_closed.jpg" 
@@ -489,10 +509,25 @@ function App() {
                     />
                   </>
                 }>
-                  <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
-                    <Hero3DContainer activeTab={activeTab} onTabClick={handleTabClick} articles={articles} />
-                  </div>
-                </Suspense>
+                  <Suspense fallback={
+                    <>
+                      <img 
+                        src="/assets/containers_closed.jpg" 
+                        className={`iso-container-main ${activeTab === 'overview' ? 'visible' : 'hidden'}`} 
+                        alt="Closed Shipping Containers" 
+                      />
+                      <img 
+                        src="/assets/containers_exploded.jpg" 
+                        className={`iso-container-main ${activeTab !== 'overview' ? 'visible' : 'hidden'}`} 
+                        alt="Expanded Shipping Containers" 
+                      />
+                    </>
+                  }>
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+                      <Hero3DContainer activeTab={activeTab} onTabClick={handleTabClick} articles={articles} />
+                    </div>
+                  </Suspense>
+                </WebGLErrorBoundary>
               ) : (
                 <>
                   <img 

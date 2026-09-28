@@ -495,6 +495,14 @@ const useLiveTickerTexture = (articles) => {
     return { canvas: c, ctx: context, texture: tex };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      try {
+        texture.dispose();
+      } catch (e) {}
+    };
+  }, [texture]);
+
   const offsetRef = useRef(0);
   const tickerString = useMemo(() => {
     return '  ///  🔴 LIVE INTEL  ///  ' + internalHeadlines.join('   ■   ') + '   ///   ';
@@ -1156,12 +1164,41 @@ const CameraController = ({ activeTab }) => {
 
 // ── Main Export ────────────────────────────────────────────────────────
 export default function Hero3DContainer({ activeTab, onTabClick, articles = [] }) {
+  // Dispose all cached procedural PBR textures if Hero3DContainer unmounts
+  useEffect(() => {
+    return () => {
+      textureCache.forEach((tex) => {
+        try {
+          tex.dispose();
+        } catch (e) {}
+      });
+      textureCache.clear();
+    };
+  }, []);
+
   return (
     <Canvas
       shadows
       camera={{ position: [8, 5, 8], fov: 40 }}
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: true }}
+      dpr={[1, 1.6]}
+      gl={{
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: false
+      }}
+      onCreated={({ gl }) => {
+        const dom = gl.domElement;
+        const onLost = (e) => {
+          e.preventDefault();
+          console.warn('WebGL context lost. Canvas will attempt automatic recovery.');
+        };
+        const onRestored = () => {
+          console.info('WebGL context restored successfully.');
+        };
+        dom.addEventListener('webglcontextlost', onLost, false);
+        dom.addEventListener('webglcontextrestored', onRestored, false);
+      }}
     >
       {/* Balanced Ambient Light */}
       <ambientLight intensity={0.38} color="#e2e8f0" />
