@@ -37,6 +37,12 @@ public final class RiskScoreCalculator {
         categoryWeights.put("WEATHER", 0.0);
         categoryWeights.put("MARKET", 0.0);
 
+        Map<String, Double> categoryUrgentWeights = new LinkedHashMap<>();
+        categoryUrgentWeights.put("GEOPOLITICAL", 0.0);
+        categoryUrgentWeights.put("LOGISTICS", 0.0);
+        categoryUrgentWeights.put("WEATHER", 0.0);
+        categoryUrgentWeights.put("MARKET", 0.0);
+
         for (NewsArticle article : articles) {
             long daysOld = 0;
             if (article.getPublishedAt() != null) {
@@ -48,22 +54,27 @@ public final class RiskScoreCalculator {
             double weight = Math.exp(-((double) daysOld) / 7.0);
             totalWeightedVolume += weight;
 
-            String cat = article.getRiskCategory() != null ? article.getRiskCategory().toUpperCase() : "LOGISTICS";
-            if (cat.contains("GEO")) {
-                categoryWeights.put("GEOPOLITICAL", categoryWeights.get("GEOPOLITICAL") + weight);
-            } else if (cat.contains("WEATHER") || cat.contains("CLIMATE")) {
-                categoryWeights.put("WEATHER", categoryWeights.get("WEATHER") + weight);
-            } else if (cat.contains("MARKET") || cat.contains("FINANCE") || cat.contains("PRICE")) {
-                categoryWeights.put("MARKET", categoryWeights.get("MARKET") + weight);
+            String catRaw = article.getRiskCategory() != null ? article.getRiskCategory().toUpperCase() : "LOGISTICS";
+            String catKey;
+            if (catRaw.contains("GEO") || catRaw.contains("SANCTION") || catRaw.contains("WAR") || catRaw.contains("TARIFF") || catRaw.contains("POLICY") || catRaw.contains("TRADE")) {
+                catKey = "GEOPOLITICAL";
+            } else if (catRaw.contains("WEATHER") || catRaw.contains("CLIMATE") || catRaw.contains("FLOOD") || catRaw.contains("STORM") || catRaw.contains("DROUGHT") || catRaw.contains("CYCLONE")) {
+                catKey = "WEATHER";
+            } else if (catRaw.contains("MARKET") || catRaw.contains("FINANCE") || catRaw.contains("PRICE") || catRaw.contains("INFLATION") || catRaw.contains("LABOR") || catRaw.contains("STRIKE")) {
+                catKey = "MARKET";
             } else {
-                categoryWeights.put("LOGISTICS", categoryWeights.get("LOGISTICS") + weight);
+                catKey = "LOGISTICS";
             }
+
+            categoryWeights.put(catKey, categoryWeights.get(catKey) + weight);
 
             // Detect acute operational disruption signals in title & text
             String textToInspect = (article.getTitle() != null ? article.getTitle() : "") + " " +
                                   (article.getRawContent() != null ? article.getRawContent() : "");
-            if (HIGH_SEVERITY_PATTERN.matcher(textToInspect).find()) {
+            boolean isUrgent = HIGH_SEVERITY_PATTERN.matcher(textToInspect).find();
+            if (isUrgent) {
                 urgentWeightedVolume += weight;
+                categoryUrgentWeights.put(catKey, categoryUrgentWeights.get(catKey) + weight);
             }
         }
 
@@ -99,13 +110,39 @@ public final class RiskScoreCalculator {
             status = "Low";
         }
 
-        // Calculate 4 sub-category scores (%) relative to overall risk
+        // Differentiated baseline exposure for each category (never static +12% across all categories)
+        Map<String, Double> baselineByCategory = Map.of(
+                "LOGISTICS", 12.0,
+                "MARKET", 10.0,
+                "GEOPOLITICAL", 8.0,
+                "WEATHER", 6.0
+        );
+        Map<String, Double> categoryMultiplier = Map.of(
+                "GEOPOLITICAL", 1.35,
+                "WEATHER", 1.30,
+                "LOGISTICS", 1.15,
+                "MARKET", 0.95
+        );
+
+        // Calculate 4 sub-category scores (%) relative to overall risk and direct category evidence
         Map<String, Integer> categoryScores = new LinkedHashMap<>();
         for (String catKey : List.of("GEOPOLITICAL", "LOGISTICS", "WEATHER", "MARKET")) {
             double catW = categoryWeights.getOrDefault(catKey, 0.0);
-            int catScore = 0;
-            if (totalWeightedVolume > 0) {
-                catScore = (int) Math.min(100, Math.round((catW / totalWeightedVolume) * overallScore + 12.0));
+            double catUrgent = categoryUrgentWeights.getOrDefault(catKey, 0.0);
+            double baseline = baselineByCategory.getOrDefault(catKey, 8.0);
+            double multiplier = categoryMultiplier.getOrDefault(catKey, 1.0);
+
+            int catScore;
+            if (catW > 0.0) {
+                double catVolumeBoost = 15.0 * Math.log(1.0 + catW);
+                double catUrgencyBoost = (catUrgent / catW) * 16.0;
+                double shareOfOverall = (catW / totalWeightedVolume) * (overallScore * 0.65);
+                double computed = baseline + (catVolumeBoost * multiplier) + catUrgencyBoost + shareOfOverall;
+                catScore = (int) Math.min(100, Math.max(10, Math.round(computed)));
+            } else {
+                // When 0 articles in this category, reflect distinct baseline exposure + slight regional spillover
+                double spillover = Math.min(10.0, overallScore * 0.08);
+                catScore = (int) Math.round(baseline + spillover);
             }
             categoryScores.put(catKey.toLowerCase(), catScore);
         }

@@ -13,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -85,7 +86,34 @@ public class GroqClient {
         } else if (lowerQuery.contains("strike") || lowerQuery.contains("port")) {
             summary = "Current world news indicates imminent labor strikes at key commercial ports resulting from stalled contract negotiations between maritime unions and port operators. The core disputes center around wage stagnation in the face of inflation and the increasing automation of terminal operations which threatens union jobs. As the strike deadline approaches, the threat of a complete work stoppage poses a catastrophic risk to regional import/export liquidity. If terminal operations halt, the flow of retail goods, agricultural exports, and critical industrial components will be immediately paralyzed just ahead of peak season. The resulting vessel backlog and container congestion could take months to clear, inflicting massive demurrage costs and widespread inventory stockouts.\n\nBest mitigation ideas:\n• Aggressively front-load shipments ahead of anticipated strike deadlines.\n• Divert inbound cargo to unaffected regional ports immediately.\n• Optimize warehouse space to store increased safety stock.\n• Form alliances with alternative logistics providers who rely on less-congested private terminals.";
         } else {
-            summary = "Based on current world news, there are localized adjustments and emerging risk factors directly related to '" + query + "'. Rapidly changing market dynamics, shifting geopolitical alliances, and localized environmental events are forcing supply chains to adapt. Organizations are currently assessing the short-term impact of these events on supplier lead times and transit lane stability. While baseline logistics networks remain generally operational, the situation remains highly fluid and requires close observation. Procurement teams must remain agile to prevent minor disruptions from cascading into major stockouts.\n\nBest suggestions:\n• Monitor key transit lanes for volatility.\n• Proactively communicate with tier-1 suppliers about potential lead time extensions.\n• Develop contingency plans for alternative sourcing.";
+            // Dynamically ground the fallback summary in the actual context articles
+            List<String> headlines = new ArrayList<>();
+            for (String line : context.split("\n")) {
+                String clean = line.replaceFirst("^[•\\-*\\d.]+\\s*", "").trim();
+                if (clean.length() > 15 && !clean.toLowerCase().contains("real matched news articles")) {
+                    headlines.add(clean);
+                }
+            }
+
+            StringBuilder sb = new StringBuilder();
+            if (!headlines.isEmpty()) {
+                sb.append("Real-time intelligence indicates operational supply chain friction regarding '").append(query).append("'. ");
+                sb.append("Primary disruption report: ").append(headlines.get(0)).append(". ");
+                if (headlines.size() > 1) {
+                    sb.append("Compounding factor: ").append(headlines.get(1)).append(". ");
+                }
+                sb.append("Logistics operators are actively re-evaluating carrier lead times and gateway dwell capacities across affected corridors.");
+            } else {
+                sb.append("Current supply chain monitoring reports localized operational adjustments regarding '").append(query).append("'. ");
+                sb.append("Market participants and shippers are monitoring transit corridor dwell times, carrier capacity allocations, and schedule reliability.");
+            }
+
+            sb.append("\n\nStrategic mitigation recommendations:\n");
+            sb.append("• Proactively communicate with tier-1 logistics coordinators to secure container slot allocations.\n");
+            sb.append("• Shift time-sensitive freight toward alternative intermodal or air feeder lanes where viable.\n");
+            sb.append("• Maintain dynamic buffer stocks for high-criticality inventory nodes.");
+
+            summary = sb.toString();
         }
 
         return new GroqResponse(summary, score);
