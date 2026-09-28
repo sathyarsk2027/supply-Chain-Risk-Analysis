@@ -1,10 +1,10 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, ContactShadows, OrbitControls, useTexture } from '@react-three/drei';
+import { Environment, ContactShadows, OrbitControls, useTexture, Html } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import * as THREE from 'three';
 
-// ── Hyper-realistic procedural texture generator ───────────────────────
+// ── Texture Cache & Procedural Generation ─────────────────────────────
 const textureCache = new Map();
 
 const createContainerTexture = (color, brandName, serialNumber, faceType) => {
@@ -12,7 +12,8 @@ const createContainerTexture = (color, brandName, serialNumber, faceType) => {
   if (textureCache.has(key)) return textureCache.get(key);
 
   const canvas = document.createElement('canvas');
-  canvas.width = 1024;
+  // 2048 x 1024 provides 2:1 aspect ratio matching 3.0 x 1.3 face geometry with sharp resolution
+  canvas.width = 2048;
   canvas.height = 1024;
   const ctx = canvas.getContext('2d');
 
@@ -22,151 +23,169 @@ const createContainerTexture = (color, brandName, serialNumber, faceType) => {
 
   if (faceType === 'side') {
     // Stamped corrugation (deep shadows and sharp highlights)
-    for (let i = 0; i < canvas.width; i += 36) {
+    for (let i = 0; i < canvas.width; i += 48) {
       // Shadow valley
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-      ctx.fillRect(i, 0, 18, canvas.height);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.fillRect(i, 0, 24, canvas.height);
       // Highlight ridge
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-      ctx.fillRect(i + 18, 0, 4, canvas.height);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.fillRect(i + 24, 0, 6, canvas.height);
     }
 
-    // Heavy weathering (top and bottom rust/grime)
+    // Heavy weathering (top and bottom rust/grime gradient)
     const rustGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    rustGrad.addColorStop(0, 'rgba(50, 30, 20, 0.6)');
-    rustGrad.addColorStop(0.15, 'rgba(0, 0, 0, 0)');
-    rustGrad.addColorStop(0.85, 'rgba(0, 0, 0, 0)');
-    rustGrad.addColorStop(1, 'rgba(30, 20, 10, 0.8)');
+    rustGrad.addColorStop(0, 'rgba(45, 28, 18, 0.65)');
+    rustGrad.addColorStop(0.12, 'rgba(0, 0, 0, 0)');
+    rustGrad.addColorStop(0.88, 'rgba(0, 0, 0, 0)');
+    rustGrad.addColorStop(1, 'rgba(30, 20, 12, 0.85)');
     ctx.fillStyle = rustGrad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Drip streaks (rain washing dirt down)
-    for (let i = 0; i < 50; i++) {
-      const x = Math.random() * canvas.width;
-      const w = Math.random() * 4 + 1;
-      const h = Math.random() * canvas.height * 0.5 + canvas.height * 0.2;
+    // Weathered vertical rain streaks
+    for (let i = 0; i < 60; i++) {
+      const x = (i * 34.7 + 19) % canvas.width;
+      const w = ((i * 7) % 4) + 1.5;
+      const h = ((i * 19) % 350) + 150;
       const streakGrad = ctx.createLinearGradient(0, 0, 0, h);
-      streakGrad.addColorStop(0, 'rgba(0,0,0,0.2)');
-      streakGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      streakGrad.addColorStop(0, 'rgba(0, 0, 0, 0.22)');
+      streakGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = streakGrad;
       ctx.fillRect(x, 0, w, h);
     }
 
-    // Heavy metal frame
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(0, 0, canvas.width, 30);
-    ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
-    ctx.fillRect(0, 0, 15, canvas.height);
-    ctx.fillRect(canvas.width - 15, 0, 15, canvas.height);
+    // Structural perimeter frame
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fillRect(0, 0, canvas.width, 40);
+    ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+    ctx.fillRect(0, 0, 25, canvas.height);
+    ctx.fillRect(canvas.width - 25, 0, 25, canvas.height);
 
-    // Massive Brand Logo (simulating painted stencil)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.font = '900 130px "Oswald", sans-serif';
+    // Massive Brand Logo: Dynamic auto-scaling to prevent text clipping
+    const maxTextWidth = canvas.width * 0.58; // Confined strictly to 58% center to guarantee padding
+    let fontSize = 130;
+    ctx.font = `900 ${fontSize}px "Oswald", "Impact", "Arial Black", sans-serif`;
+    let measuredWidth = ctx.measureText(brandName).width;
+    while (measuredWidth > maxTextWidth && fontSize > 40) {
+      fontSize -= 4;
+      ctx.font = `900 ${fontSize}px "Oswald", "Impact", "Arial Black", sans-serif`;
+      measuredWidth = ctx.measureText(brandName).width;
+    }
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(brandName, canvas.width / 2, canvas.height / 2);
 
-    // Industrial Decals & Serial
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.font = 'bold 32px "JetBrains Mono", monospace';
+    // Industrial Serial Decal (Top Right)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = 'bold 36px "JetBrains Mono", monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(serialNumber, canvas.width - 40, 70);
+    ctx.fillText(serialNumber, canvas.width - 60, 90);
 
-    // Weight/Capacity specs box (bottom right)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.fillRect(canvas.width - 180, canvas.height - 200, 140, 150);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.font = '20px "JetBrains Mono", monospace';
+    // Weight/Capacity specs placard (Bottom Right)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillRect(canvas.width - 260, canvas.height - 230, 200, 160);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.font = '22px "JetBrains Mono", monospace';
     ctx.textAlign = 'left';
-    ctx.fillText('MAX GW', canvas.width - 170, canvas.height - 160);
-    ctx.fillText('30.480 KG', canvas.width - 170, canvas.height - 130);
-    ctx.fillText('TARE', canvas.width - 170, canvas.height - 100);
-    ctx.fillText(' 2.200 KG', canvas.width - 170, canvas.height - 70);
+    ctx.fillText('MAX GW', canvas.width - 245, canvas.height - 185);
+    ctx.fillText('30.480 KG', canvas.width - 245, canvas.height - 155);
+    ctx.fillText('TARE WT', canvas.width - 245, canvas.height - 125);
+    ctx.fillText(' 2.180 KG', canvas.width - 245, canvas.height - 95);
 
   } else if (faceType === 'door') {
-    // Door panels
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(canvas.width / 2 - 4, 30, 8, canvas.height - 60); // center gap
-    
-    // Vertical stamped ridges for doors
-    for (let i = 30; i < canvas.width - 30; i += 40) {
-      if (i > canvas.width/2 - 10 && i < canvas.width/2 + 10) continue;
+    // Door panel division
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(canvas.width / 2 - 6, 40, 12, canvas.height - 80);
+
+    // Vertical corrugation on doors
+    for (let i = 40; i < canvas.width - 40; i += 48) {
+      if (i > canvas.width / 2 - 20 && i < canvas.width / 2 + 20) continue;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-      ctx.fillRect(i, 30, 15, canvas.height - 60);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.fillRect(i + 15, 30, 5, canvas.height - 60);
+      ctx.fillRect(i, 40, 18, canvas.height - 80);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.fillRect(i + 18, 40, 6, canvas.height - 80);
     }
 
-    // Heavy locking bars (4 vertical bars)
-    ctx.fillStyle = 'rgba(40, 40, 40, 0.9)';
-    ctx.fillRect(canvas.width * 0.25, 0, 15, canvas.height);
-    ctx.fillRect(canvas.width * 0.4, 0, 15, canvas.height);
-    ctx.fillRect(canvas.width * 0.6, 0, 15, canvas.height);
-    ctx.fillRect(canvas.width * 0.75, 0, 15, canvas.height);
+    // Heavy vertical locking bars (4 steel bars)
+    ctx.fillStyle = 'rgba(35, 35, 35, 0.92)';
+    ctx.fillRect(canvas.width * 0.22, 0, 20, canvas.height);
+    ctx.fillRect(canvas.width * 0.38, 0, 20, canvas.height);
+    ctx.fillRect(canvas.width * 0.62, 0, 20, canvas.height);
+    ctx.fillRect(canvas.width * 0.78, 0, 20, canvas.height);
 
-    // Locking handles
-    ctx.fillStyle = 'rgba(150, 150, 150, 0.8)';
-    ctx.fillRect(canvas.width * 0.25 - 10, canvas.height * 0.55, 35, 10);
-    ctx.fillRect(canvas.width * 0.4 - 10, canvas.height * 0.55, 35, 10);
-    ctx.fillRect(canvas.width * 0.6 - 10, canvas.height * 0.55, 35, 10);
-    ctx.fillRect(canvas.width * 0.75 - 10, canvas.height * 0.55, 35, 10);
+    // Cam lock handles
+    ctx.fillStyle = 'rgba(160, 160, 160, 0.85)';
+    ctx.fillRect(canvas.width * 0.22 - 12, canvas.height * 0.55, 44, 14);
+    ctx.fillRect(canvas.width * 0.38 - 12, canvas.height * 0.55, 44, 14);
+    ctx.fillRect(canvas.width * 0.62 - 12, canvas.height * 0.55, 44, 14);
+    ctx.fillRect(canvas.width * 0.78 - 12, canvas.height * 0.55, 44, 14);
 
-    // Decals
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.font = 'bold 24px "JetBrains Mono", monospace';
+    // Door serial label
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = 'bold 30px "JetBrains Mono", monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(serialNumber, canvas.width - 30, 50);
+    ctx.fillText(serialNumber, canvas.width - 50, 75);
 
   } else if (faceType === 'top') {
-    // Dirty metal roof
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    for (let i = 0; i < canvas.width; i += 50) {
-      ctx.fillRect(i, 0, 2, canvas.height);
-      ctx.fillRect(0, i, canvas.width, 2);
+    // Metal roof ribs & grime
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    for (let i = 0; i < canvas.width; i += 60) {
+      ctx.fillRect(i, 0, 3, canvas.height);
+      ctx.fillRect(0, i, canvas.width, 3);
     }
     const edgeGrad = ctx.createRadialGradient(
-      canvas.width/2, canvas.height/2, 100,
-      canvas.width/2, canvas.height/2, canvas.width/1.2
+      canvas.width / 2, canvas.height / 2, 150,
+      canvas.width / 2, canvas.height / 2, canvas.width / 1.3
     );
-    edgeGrad.addColorStop(0, 'rgba(0,0,0,0)');
-    edgeGrad.addColorStop(1, 'rgba(0,0,0,0.5)');
+    edgeGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    edgeGrad.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
     ctx.fillStyle = edgeGrad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.anisotropy = 16;
+  texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
   textureCache.set(key, texture);
   return texture;
 };
 
-// ── Single realistic container mesh ────────────────────────────────────
-const ContainerMesh = ({ position, color, brand, serial, specialFaceIndex, specialTex }) => {
+// ── Single Container Mesh ─────────────────────────────────────────────
+const ContainerMesh = ({ position, color, brand, serial, specialFaceIndex, specialTex, onClick, isInteractive }) => {
+  const [hovered, setHovered] = useState(false);
   const sideTex = useMemo(() => createContainerTexture(color, brand, serial, 'side'), [color, brand, serial]);
   const topTex = useMemo(() => createContainerTexture(color, brand, serial, 'top'), [color, brand, serial]);
   const doorTex = useMemo(() => createContainerTexture(color, brand, serial, 'door'), [color, brand, serial]);
 
   return (
-    <mesh position={position} castShadow receiveShadow>
+    <mesh
+      position={position}
+      castShadow
+      receiveShadow
+      onClick={onClick}
+      onPointerOver={isInteractive ? (e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; } : undefined}
+      onPointerOut={isInteractive ? () => { setHovered(false); document.body.style.cursor = 'auto'; } : undefined}
+    >
       <boxGeometry args={[3.0, 1.3, 1.2]} />
-      {/* +X right side (Doors) -> specialFaceIndex 0 */}
+      {/* +X right side (Doors) */}
       {specialFaceIndex === 0 ? <meshBasicMaterial attach="material-0" map={specialTex} /> : <meshStandardMaterial attach="material-0" map={doorTex} roughness={0.4} metalness={0.7} />}
-      {/* -X left side (Closed end) -> specialFaceIndex 1 */}
+      {/* -X left side (Closed end) */}
       {specialFaceIndex === 1 ? <meshBasicMaterial attach="material-1" map={specialTex} /> : <meshStandardMaterial attach="material-1" map={doorTex} roughness={0.4} metalness={0.7} />}
       {/* +Y top */}
       <meshStandardMaterial attach="material-2" map={topTex} roughness={0.5} metalness={0.5} />
       {/* -Y bottom */}
       <meshStandardMaterial attach="material-3" color={color} roughness={0.8} metalness={0.2} />
-      {/* +Z front (Long side) -> specialFaceIndex 4 */}
+      {/* +Z front (Long side facing camera) */}
       {specialFaceIndex === 4 ? <meshBasicMaterial attach="material-4" map={specialTex} /> : <meshStandardMaterial attach="material-4" map={sideTex} roughness={0.4} metalness={0.7} />}
-      {/* -Z back (Long side) -> specialFaceIndex 5 */}
+      {/* -Z back (Long side) */}
       {specialFaceIndex === 5 ? <meshBasicMaterial attach="material-5" map={specialTex} /> : <meshStandardMaterial attach="material-5" map={sideTex} roughness={0.4} metalness={0.7} />}
     </mesh>
   );
 };
 
-// ── Serial generator ───────────────────────────────────────────────────
+// ── Serial Generator ───────────────────────────────────────────────────
 const generateSerial = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const nums = '0123456789';
@@ -174,7 +193,7 @@ const generateSerial = () => {
   return `${r(chars, 4)}-${r(nums, 6)}`;
 };
 
-// ── Realistic organic palette ──────────────────────────────────────────
+// ── Realistic Organic Palette ──────────────────────────────────────────
 const CONTAINER_COLORS = [
   '#4a5e4a', // Dark Forest
   '#b0aca3', // Stone/Gray
@@ -187,18 +206,28 @@ const CONTAINER_COLORS = [
   '#c4b99a', // Cream
 ];
 
-const BRANDS = ['NEXUS LOGISTICS', 'APEX CARGO', 'GLOBAL FREIGHT', 'VANGUARD LINE', 'ORION SHIPPING', 'ECHO LOGISTICS', 'TITAN MARINE', 'ATLAS FREIGHT', 'PACIFIC CARGO'];
+// Fictional brand names only (scaled dynamically with generous margins)
+const BRANDS = [
+  'VANGUARD LINE',
+  'TITAN FREIGHT',
+  'ORION MARINE',
+  'NEXUS CARGO',
+  'ATLAS LOGISTICS',
+  'APEX SHIPPING',
+  'PACIFIC HAVEN',
+  'MERIDIAN SEA',
+  'CORAL LINES',
+];
 
-// ── Build 3x3x1 wall arrangement ───────────────────────────────────────
+// ── Build Symmetric 3x3x1 Wall Arrangement ────────────────────────────
 const buildContainerWall = () => {
   const containers = [];
-  const gapY = 1.32; // Height 1.3 + gap
-  const gapZ = 1.22; // Depth 1.2 + gap
+  const gapY = 1.34; // Uniform vertical spacing
+  const gapZ = 1.24; // Uniform horizontal bay spacing
   let idx = 0;
 
-  // X is length. They are all centered at X=0 so they sit side-by-side.
-  for (let row = 1; row >= -1; row--) {       // 3 rows high (Top to Bottom)
-    for (let col = -1; col <= 1; col++) {     // 3 wide on Z axis (Left to Right)
+  for (let row = 1; row >= -1; row--) {       // Top to Bottom (1, 0, -1)
+    for (let col = -1; col <= 1; col++) {     // Back to Front (-1, 0, 1)
       const x = 0;
       const y = row * gapY;
       const z = col * gapZ;
@@ -216,51 +245,56 @@ const buildContainerWall = () => {
   return containers;
 };
 
-const AnimatedContainer = ({ c, isExploded, activeTab, texFeeds, texSearch, texNasa }) => {
+// ── Animated Container with Anchored 3D <Html> Label ──────────────────
+const AnimatedContainer = ({ c, activeTab, onTabClick, texFeeds, texSearch, texNasa }) => {
   let specialFaceIndex = -1;
   let specialTex = null;
   let offsetX = 0;
-  let offsetY = 0;
   let offsetZ = 0;
+  let isTarget = false;
+  let labelData = null;
 
-  if (c.id === 'c-1-1') { // Top Front Container (Label A)
-    if (isExploded) {
-      offsetX = -1.2; // Slide Left
-      offsetY = 0.3;  // Slide Up slightly to avoid overlap
-      offsetZ = 1.0;  // Slide Forward
-      if (activeTab === 'feed') {
-        specialFaceIndex = 4; // +Z face (Long side facing camera)
-        specialTex = texFeeds;
-      }
+  // The 3 front-facing containers assigned to the interactive tabs
+  if (c.id === 'c-1-1') {
+    // Top Front: Tab A (ALL FEEDS)
+    isTarget = true;
+    labelData = { marker: 'A', title: 'ALL FEEDS', tab: 'feed' };
+    if (activeTab === 'feed') {
+      offsetX = 0.35;
+      offsetZ = 0.95;
+      specialFaceIndex = 4;
+      specialTex = texFeeds;
     }
-  } else if (c.id === 'c-0-1') { // Mid Front Container (Label B)
-    if (isExploded) {
-      offsetX = -0.7; // Slide slightly Left
-      offsetY = 0.0;
-      offsetZ = 1.2;  // Slide Forward more
-      if (activeTab === 'search') {
-        specialFaceIndex = 4; 
-        specialTex = texSearch;
-      }
+  } else if (c.id === 'c-0-1') {
+    // Mid Front: Tab B (SEMANTIC AI SEARCH)
+    isTarget = true;
+    labelData = { marker: 'B', title: 'SEMANTIC AI SEARCH', tab: 'search' };
+    if (activeTab === 'search') {
+      offsetX = 0.35;
+      offsetZ = 0.95;
+      specialFaceIndex = 4;
+      specialTex = texSearch;
     }
-  } else if (c.id === 'c--1-1') { // Bot Front Container (Label C)
-    if (isExploded) {
-      offsetX = -0.2; // Slide slightly Left
-      offsetY = -0.4; // Slide Down slightly to prevent going up visually
-      offsetZ = 1.0;  // Slide Forward
-      if (activeTab === 'analytics') {
-        specialFaceIndex = 4; 
-        specialTex = texNasa;
-      }
+  } else if (c.id === 'c--1-1') {
+    // Bot Front: Tab C (NASA SATELLITE)
+    isTarget = true;
+    labelData = { marker: 'C', title: 'NASA SATELLITE', tab: 'analytics' };
+    if (activeTab === 'analytics') {
+      offsetX = 0.35;
+      offsetZ = 0.95;
+      specialFaceIndex = 4;
+      specialTex = texNasa;
     }
   }
 
-  const targetPos = [c.pos[0] + offsetX, c.pos[1] + offsetY, c.pos[2] + offsetZ];
+  const targetPos = [c.pos[0] + offsetX, c.pos[1], c.pos[2] + offsetZ];
 
   const { position } = useSpring({
     position: targetPos,
-    config: { mass: 2, tension: 70, friction: 20 }
+    config: { mass: 1.5, tension: 80, friction: 22 }
   });
+
+  const isActive = labelData && activeTab === labelData.tab;
 
   return (
     <animated.group position={position}>
@@ -271,41 +305,70 @@ const AnimatedContainer = ({ c, isExploded, activeTab, texFeeds, texSearch, texN
         serial={c.serial} 
         specialFaceIndex={specialFaceIndex}
         specialTex={specialTex}
+        isInteractive={isTarget}
+        onClick={isTarget && onTabClick ? () => onTabClick(labelData.tab) : undefined}
       />
+
+      {isTarget && labelData && (
+        <Html
+          position={[-1.52, 0.22, 0.61]}
+          center={false}
+          distanceFactor={11}
+          zIndexRange={[100, 0]}
+          style={{ pointerEvents: 'auto' }}
+        >
+          <div 
+            className={`r3f-container-label ${isActive ? 'is-active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onTabClick) {
+                onTabClick(labelData.tab);
+              }
+            }}
+            title={`Select ${labelData.title}`}
+          >
+            <div className="r3f-label-pill">
+              <span className="r3f-label-marker">{labelData.marker}</span>
+              <span className="r3f-label-text">{labelData.title}</span>
+            </div>
+            <div className="r3f-leader-line">
+              <div className="r3f-leader-dot" />
+            </div>
+          </div>
+        </Html>
+      )}
     </animated.group>
   );
 };
 
-// ── Animated stack ─────────────────────────────────────────────────────
-const Stack = ({ activeTab }) => {
+// ── Animated Stack ────────────────────────────────────────────────────
+const Stack = ({ activeTab, onTabClick }) => {
   const floatRef = useRef();
   const containers = useMemo(() => buildContainerWall(), []);
 
-  // Load the AI-generated holographic textures
+  // Load the AI-generated textures
   const [texFeeds, texSearch, texNasa] = useTexture([
     '/assets/panel_feeds.jpg',
     '/assets/panel_search.jpg',
     '/assets/panel_nasa.jpg'
   ]);
 
-  const isExploded = activeTab !== 'overview';
-
-  // Subtle idle float
+  // Subtle ambient float
   useFrame((state) => {
     if (floatRef.current) {
-      floatRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.6) * 0.05;
+      floatRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.6) * 0.04;
     }
   });
 
   return (
-    <group position={[0, 1.3, 0]} scale={0.75}>
+    <group position={[0, 0.2, 0]} scale={0.72}>
       <group ref={floatRef}>
         {containers.map((c) => (
           <AnimatedContainer 
             key={c.id} 
             c={c} 
             activeTab={activeTab}
-            isExploded={isExploded}
+            onTabClick={onTabClick}
             texFeeds={texFeeds}
             texSearch={texSearch}
             texNasa={texNasa}
@@ -317,41 +380,41 @@ const Stack = ({ activeTab }) => {
 };
 
 // ── Main Export ────────────────────────────────────────────────────────
-export default function Hero3DContainer({ activeTab }) {
+export default function Hero3DContainer({ activeTab, onTabClick }) {
   return (
     <Canvas
       camera={{ position: [8, 5, 8], fov: 40 }}
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true }}
     >
-      <ambientLight intensity={0.6} />
+      <ambientLight intensity={0.65} />
 
       {/* Cinematic Key Light */}
       <directionalLight
         position={[-10, 15, 10]}
-        intensity={3.5}
+        intensity={3.2}
         castShadow
       />
 
       {/* Cool Sky Fill */}
-      <pointLight position={[10, 8, -10]} intensity={2.0} color="#e0f2fe" />
+      <pointLight position={[10, 8, -10]} intensity={1.8} color="#e0f2fe" />
 
       {/* Warm Ground Bounce */}
-      <pointLight position={[0, -5, 5]} intensity={1.5} color="#fed7aa" />
+      <pointLight position={[0, -5, 5]} intensity={1.2} color="#fed7aa" />
 
       <Environment preset="city" />
 
-      <Stack activeTab={activeTab} />
+      <Stack activeTab={activeTab} onTabClick={onTabClick} />
 
       <ContactShadows
         position={[0, -2.5, 0]}
-        opacity={0.6}
+        opacity={0.55}
         scale={20}
-        blur={2}
+        blur={2.2}
         far={5}
       />
 
-      {/* Lock to exactly view the 3x3 wall corner */}
+      {/* Fixed viewing angle with smooth interaction */}
       <OrbitControls
         target={[0, 0, 0]}
         enableZoom={false}

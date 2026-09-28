@@ -484,7 +484,7 @@ function App() {
                   </>
                 }>
                   <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
-                    <Hero3DContainer activeTab={activeTab} />
+                    <Hero3DContainer activeTab={activeTab} onTabClick={handleTabClick} />
                   </div>
                 </Suspense>
               ) : (
@@ -502,26 +502,30 @@ function App() {
                 </>
               )}
             
-              <div 
-                className={`iso-label label-a ${activeTab === 'feed' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); handleTabClick('feed'); }}
-              >
-                <span className="marker">A</span> ALL FEEDS
-              </div>
-              
-              <div 
-                className={`iso-label label-b ${activeTab === 'search' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); handleTabClick('search'); }}
-              >
-                <span className="marker">B</span> SEMANTIC AI SEARCH
-              </div>
-              
-              <div 
-                className={`iso-label label-c ${activeTab === 'analytics' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); handleTabClick('analytics'); }}
-              >
-                <span className="marker">C</span> NASA SATELLITE
-              </div>
+              {!hasWebGL && (
+                <>
+                  <div 
+                    className={`iso-label label-a ${activeTab === 'feed' ? 'active' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); handleTabClick('feed'); }}
+                  >
+                    <span className="marker">A</span> ALL FEEDS
+                  </div>
+                  
+                  <div 
+                    className={`iso-label label-b ${activeTab === 'search' ? 'active' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); handleTabClick('search'); }}
+                  >
+                    <span className="marker">B</span> SEMANTIC AI SEARCH
+                  </div>
+                  
+                  <div 
+                    className={`iso-label label-c ${activeTab === 'analytics' ? 'active' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); handleTabClick('analytics'); }}
+                  >
+                    <span className="marker">C</span> NASA SATELLITE
+                  </div>
+                </>
+              )}
 
             </div>
             

@@ -1346,6 +1346,109 @@ h1 {
 .label-c::before { height: 1px; width: 200px; top: 50%; right: -200px; border-bottom: 1px dashed var(--text-muted); background: transparent; }
 .label-c .marker { background: #e2e8f0; color: #000; padding: 2px 6px; font-weight: bold; }
 
+/* ── 3D Anchored Drei <Html> Labels & Precision Leader Lines ─────────── */
+.r3f-container-label {
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  transform: translate(-100%, -50%);
+  transition: transform 0.25s ease, filter 0.25s ease;
+  z-index: 100;
+}
+
+.r3f-container-label:hover {
+  transform: translate(-102%, -50%) scale(1.03);
+}
+
+.r3f-label-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(14, 18, 15, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 5px 12px 5px 8px;
+  border-radius: 4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+  transition: all 0.25s ease;
+}
+
+.r3f-container-label:hover .r3f-label-pill {
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.8), 0 0 12px rgba(143, 158, 124, 0.3);
+}
+
+.r3f-container-label.is-active .r3f-label-pill {
+  background: rgba(20, 26, 22, 0.98);
+  border-color: #8f9e7c;
+  box-shadow: 0 0 16px rgba(143, 158, 124, 0.45), 0 6px 20px rgba(0, 0, 0, 0.85);
+}
+
+.r3f-label-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #e2e8f0;
+  color: #0b0e0c;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 0.725rem;
+  border-radius: 2px;
+  transition: all 0.25s ease;
+}
+
+.r3f-container-label.is-active .r3f-label-marker {
+  background: #8f9e7c;
+  color: #ffffff;
+}
+
+.r3f-label-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.725rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.r3f-leader-line {
+  display: flex;
+  align-items: center;
+  width: 28px;
+  height: 2px;
+}
+
+.r3f-leader-line::before {
+  content: '';
+  flex: 1;
+  height: 1px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.45);
+}
+
+.r3f-container-label.is-active .r3f-leader-line::before {
+  border-top: 1px solid #8f9e7c;
+}
+
+.r3f-leader-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #000000;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.85);
+  flex-shrink: 0;
+}
+
+.r3f-container-label.is-active .r3f-leader-dot {
+  background: #8f9e7c;
+  box-shadow: 0 0 10px #8f9e7c;
+}
+
 .img-wrapper {
   position: relative;
   width: 90%;
