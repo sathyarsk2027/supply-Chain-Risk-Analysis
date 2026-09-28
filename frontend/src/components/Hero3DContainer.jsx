@@ -383,35 +383,55 @@ const Stack = ({ activeTab, onTabClick }) => {
 export default function Hero3DContainer({ activeTab, onTabClick }) {
   return (
     <Canvas
+      shadows
       camera={{ position: [8, 5, 8], fov: 40 }}
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true }}
     >
-      <ambientLight intensity={0.65} />
+      {/* Balanced Ambient Light */}
+      <ambientLight intensity={0.38} color="#e2e8f0" />
 
-      {/* Cinematic Key Light */}
+      {/* Directional Key Light with Soft Shadows */}
       <directionalLight
-        position={[-10, 15, 10]}
-        intensity={3.2}
+        position={[12, 16, 10]}
+        intensity={2.6}
         castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-near={1}
+        shadow-camera-far={35}
+        shadow-camera-left={-6}
+        shadow-camera-right={6}
+        shadow-camera-top={6}
+        shadow-camera-bottom={-6}
+        shadow-bias={-0.0001}
       />
 
-      {/* Cool Sky Fill */}
-      <pointLight position={[10, 8, -10]} intensity={1.8} color="#e0f2fe" />
+      {/* Cool Sky Secondary Fill */}
+      <directionalLight position={[-10, 8, -10]} intensity={0.55} color="#94a3b8" />
 
-      {/* Warm Ground Bounce */}
-      <pointLight position={[0, -5, 5]} intensity={1.2} color="#fed7aa" />
+      {/* Subtle Warm Olive Terminal Reflection */}
+      <pointLight position={[0, -2, 4]} intensity={0.4} color="#8f9e7c" />
 
-      <Environment preset="city" />
+      {/* City Environment at Low Intensity (no background override) */}
+      <Environment preset="city" background={false} environmentIntensity={0.4} />
 
       <Stack activeTab={activeTab} onTabClick={onTabClick} />
 
+      {/* Soft Ground Shadow Receiver */}
+      <mesh position={[0, -1.25, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[16, 16]} />
+        <shadowMaterial opacity={0.38} />
+      </mesh>
+
+      {/* Ground Contact Shadows (positioned directly beneath lowest container row at Y = -1.24) */}
       <ContactShadows
-        position={[0, -2.5, 0]}
-        opacity={0.55}
-        scale={20}
-        blur={2.2}
-        far={5}
+        position={[0, -1.24, 0]}
+        opacity={0.72}
+        scale={14}
+        blur={1.8}
+        far={3.2}
+        resolution={1024}
+        color="#040605"
       />
 
       {/* Fixed viewing angle with smooth interaction */}
