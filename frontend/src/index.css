@@ -1353,9 +1353,11 @@ h1 {
   pointer-events: auto;
   cursor: pointer;
   user-select: none;
+  /* translate(-100%) moves entire label left so the right edge (dot) sits AT the anchor point */
   transform: translate(-100%, -50%);
   transition: transform 0.25s ease, filter 0.25s ease;
   z-index: 100;
+  gap: 0;
 }
 
 .r3f-container-label:hover {
@@ -1374,6 +1376,7 @@ h1 {
   backdrop-filter: blur(8px);
   white-space: nowrap;
   transition: all 0.25s ease;
+  order: 1;
 }
 
 .r3f-container-label:hover .r3f-label-pill {
@@ -1417,18 +1420,22 @@ h1 {
   text-transform: uppercase;
 }
 
+/* Leader line sits between pill and dot — order: pill(1) → line(2) → dot(3) */
 .r3f-leader-line {
   display: flex;
   align-items: center;
-  width: 18px;
+  /* 40px wide so the connecting segment is clearly visible */
+  width: 40px;
   height: 2px;
+  order: 2;
+  position: relative;
 }
 
 .r3f-leader-line::before {
   content: '';
   flex: 1;
   height: 1px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.45);
+  border-top: 1px dashed rgba(255, 255, 255, 0.55);
 }
 
 .r3f-container-label.is-active .r3f-leader-line::before {
@@ -1436,18 +1443,20 @@ h1 {
 }
 
 .r3f-leader-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #ffffff;
-  border: 1px solid #000000;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 7px rgba(255, 255, 255, 0.9), 0 0 14px rgba(255, 255, 255, 0.4);
   flex-shrink: 0;
+  order: 3;
 }
 
 .r3f-container-label.is-active .r3f-leader-dot {
   background: #8f9e7c;
-  box-shadow: 0 0 10px #8f9e7c;
+  border-color: #5a7a55;
+  box-shadow: 0 0 10px #8f9e7c, 0 0 20px rgba(143, 158, 124, 0.5);
 }
 
 /* Phase 5: Refined Ergonomic Reset View Button */

@@ -603,20 +603,22 @@ const useLiveTickerTexture = (articles) => {
 };
 
 // ── Theme B: Interior Glowing Particle Trade Network ──────────────────
+// All nodes are positioned INSIDE the container body (X: -1.2 to +0.6, Y: ±0.38, Z: ±0.42)
+// so they are fully visible from the open +X door. Nodes are clustered centrally.
 const TRADE_NODES = [
-  { pos: [0.85, 0.15, 0.22], color: '#06b6d4', size: 0.052 },
-  { pos: [0.72, -0.12, 0.28], color: '#10b981', size: 0.046 },
-  { pos: [0.88, 0.32, -0.05], color: '#06b6d4', size: 0.042 },
-  { pos: [0.92, -0.05, 0.12], color: '#06b6d4', size: 0.044 },
-  { pos: [0.38, -0.08, 0.18], color: '#ef4444', size: 0.06 },
-  { pos: [0.46, -0.18, 0.05], color: '#f59e0b', size: 0.048 },
-  { pos: [0.28, -0.22, 0.24], color: '#ef4444', size: 0.054 },
-  { pos: [-0.08, 0.22, 0.15], color: '#06b6d4', size: 0.05 },
-  { pos: [-0.18, 0.14, 0.02], color: '#10b981', size: 0.044 },
-  { pos: [0.02, 0.08, 0.26], color: '#06b6d4', size: 0.042 },
-  { pos: [-0.65, 0.18, -0.18], color: '#06b6d4', size: 0.05 },
-  { pos: [-0.78, 0.24, 0.12], color: '#10b981', size: 0.046 },
-  { pos: [-0.48, -0.22, 0.08], color: '#f59e0b', size: 0.052 }
+  { pos: [0.30, 0.18, 0.22], color: '#06b6d4', size: 0.052 },
+  { pos: [0.18, -0.12, 0.28], color: '#10b981', size: 0.046 },
+  { pos: [0.35, 0.32, -0.05], color: '#06b6d4', size: 0.042 },
+  { pos: [0.40, -0.05, 0.12], color: '#06b6d4', size: 0.044 },
+  { pos: [-0.10, -0.08, 0.20], color: '#ef4444', size: 0.06 },
+  { pos: [-0.02, -0.18, 0.05], color: '#f59e0b', size: 0.048 },
+  { pos: [-0.22, -0.22, 0.24], color: '#ef4444', size: 0.054 },
+  { pos: [-0.52, 0.22, 0.15], color: '#06b6d4', size: 0.05 },
+  { pos: [-0.62, 0.14, 0.02], color: '#10b981', size: 0.044 },
+  { pos: [-0.45, 0.08, 0.28], color: '#06b6d4', size: 0.042 },
+  { pos: [-1.00, 0.18, -0.18], color: '#06b6d4', size: 0.05 },
+  { pos: [-1.10, 0.24, 0.12], color: '#10b981', size: 0.046 },
+  { pos: [-0.85, -0.22, 0.08], color: '#f59e0b', size: 0.052 }
 ];
 
 const ROUTE_CONNECTIONS = [
@@ -652,8 +654,8 @@ const InteriorNetworkNodeCluster = ({ isOpen }) => {
   });
 
   return (
-    <group ref={groupRef} position={[0, 0, 0]}>
-      <pointLight position={[0.6, 0, 0]} color="#06b6d4" intensity={isOpen ? 3.0 : 0} distance={3.8} />
+    <group ref={groupRef} position={[0, 0, 0]} visible={isOpen}>
+      <pointLight position={[-0.2, 0, 0]} color="#06b6d4" intensity={isOpen ? 3.5 : 0} distance={4.2} />
 
       <lineSegments geometry={routeGeometry}>
         <lineBasicMaterial color="#38bdf8" transparent opacity={0.65} linewidth={1} />
@@ -700,8 +702,9 @@ const InteriorNasaRiskGlobe = ({ isOpen }) => {
   });
 
   return (
-    <group position={[0.65, 0, 0]}>
-      <pointLight color="#f59e0b" intensity={isOpen ? 3.2 : 0} distance={3.8} />
+    // Centered inside the container so the globe is clearly visible from the open door
+    <group position={[-0.15, 0, 0]} visible={isOpen}>
+      <pointLight color="#f59e0b" intensity={isOpen ? 3.5 : 0} distance={4.5} />
 
       <group ref={globeGroupRef} rotation={[0.38, 0, 0]}>
         <mesh>
@@ -1044,7 +1047,7 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
 
       {isTarget && labelData && (
         <Html
-          position={[-1.46, 0.18, 0.60]}
+          position={[-1.52, 0.12, 0.62]}
           center={false}
           distanceFactor={11}
           zIndexRange={[100, 0]}
