@@ -523,7 +523,7 @@ function App() {
                       />
                     </>
                   }>
-                    <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 1, overflow: 'visible' }}>
                       <Hero3DContainer activeTab={activeTab} onTabClick={handleTabClick} articles={articles} />
                     </div>
                   </Suspense>

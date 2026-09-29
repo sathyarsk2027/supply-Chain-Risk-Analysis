@@ -1427,8 +1427,8 @@ h1 {
 .r3f-leader-line {
   display: flex;
   align-items: center;
-  /* 38px total: ~30px dashed line + 8px dot */
-  width: 38px;
+  /* 22px total: ~14px dashed line + 8px dot */
+  width: 22px;
   height: 8px;
   order: 2;
 }
@@ -1522,6 +1522,7 @@ h1 {
   align-items: center;
   transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: center center;
+  overflow: visible;
 }
 
 
