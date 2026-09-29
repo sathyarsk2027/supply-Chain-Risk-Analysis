@@ -1117,7 +1117,7 @@ const Stack = ({ activeTab, onTabClick, articles }) => {
   });
 
   return (
-    <group position={[1.05, 0.08, -0.28]} scale={0.80}>
+    <group position={[1.22, 0.04, -0.28]} scale={0.92}>
       <group ref={floatRef}>
         {containers.map((c) => (
           <AnimatedContainer 
@@ -1146,25 +1146,25 @@ const CameraController = ({ activeTab }) => {
         // Focus cleanly on Container A (top front), framing the live news ticker with stable vertical baseline
         return {
           camPos: new THREE.Vector3(7.9, 5.05, 7.7),
-          camTarget: new THREE.Vector3(0.08, 0.28, -0.10)
+          camTarget: new THREE.Vector3(-0.05, 0.28, -0.10)
         };
       case 'search':
         // Focus on Container B (middle front), 3/4 angle peering inside open doors
         return {
           camPos: new THREE.Vector3(7.95, 4.85, 7.55),
-          camTarget: new THREE.Vector3(0.08, 0.10, -0.10)
+          camTarget: new THREE.Vector3(-0.05, 0.10, -0.10)
         };
       case 'analytics':
         // Focus on Container C (bottom front), showcasing rotating holographic risk globe
         return {
           camPos: new THREE.Vector3(7.9, 4.65, 7.6),
-          camTarget: new THREE.Vector3(0.08, -0.10, -0.10)
+          camTarget: new THREE.Vector3(-0.05, -0.10, -0.10)
         };
       default: // 'overview'
         // Balanced symmetrical isometric view of full 3x3 stack centered in canvas
         return {
           camPos: new THREE.Vector3(8.1, 4.95, 7.8),
-          camTarget: new THREE.Vector3(-0.05, 0.08, -0.20)
+          camTarget: new THREE.Vector3(-0.20, 0.08, -0.20)
         };
     }
   }, [activeTab]);
@@ -1258,16 +1258,16 @@ export default function Hero3DContainer({ activeTab, onTabClick, articles = [] }
       <Stack activeTab={activeTab} onTabClick={onTabClick} articles={articles} />
 
       {/* Soft Ground Shadow Receiver */}
-      <mesh position={[0.2, -1.48, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[18, 18]} />
+      <mesh position={[0.25, -1.74, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[20, 20]} />
         <shadowMaterial opacity={0.38} />
       </mesh>
 
       {/* Ground Contact Shadows */}
       <ContactShadows
-        position={[0.2, -1.47, 0]}
+        position={[0.25, -1.73, 0]}
         opacity={0.72}
-        scale={16}
+        scale={18}
         blur={1.8}
         far={3.2}
         resolution={1024}
