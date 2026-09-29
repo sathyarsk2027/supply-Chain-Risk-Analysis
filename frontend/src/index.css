@@ -1395,15 +1395,18 @@ h1 {
   align-items: center;
   justify-content: center;
   width: 18px;
+  min-width: 18px;
   height: 18px;
   background: #e2e8f0;
   color: #0b0e0c;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
-  font-size: 0.70rem;
+  font-size: 11px;
+  line-height: 1;
   border-radius: 2px;
-  transition: all 0.25s ease;
+  transition: background 0.25s ease, color 0.25s ease;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .r3f-container-label.is-active .r3f-label-marker {
@@ -1420,15 +1423,14 @@ h1 {
   text-transform: uppercase;
 }
 
-/* Leader line sits between pill and dot — order: pill(1) → line(2) → dot(3) */
+/* Leader line + dot: pill(order 1) → line div(order 2) contains BOTH the dashed segment AND the dot */
 .r3f-leader-line {
   display: flex;
   align-items: center;
-  /* 40px wide so the connecting segment is clearly visible */
-  width: 40px;
-  height: 2px;
+  /* 38px total: ~30px dashed line + 8px dot */
+  width: 38px;
+  height: 8px;
   order: 2;
-  position: relative;
 }
 
 .r3f-leader-line::before {
@@ -1447,10 +1449,10 @@ h1 {
   height: 7px;
   border-radius: 50%;
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.5);
   box-shadow: 0 0 7px rgba(255, 255, 255, 0.9), 0 0 14px rgba(255, 255, 255, 0.4);
   flex-shrink: 0;
-  order: 3;
+  /* No order needed – dot is the last child inside r3f-leader-line */
 }
 
 .r3f-container-label.is-active .r3f-leader-dot {

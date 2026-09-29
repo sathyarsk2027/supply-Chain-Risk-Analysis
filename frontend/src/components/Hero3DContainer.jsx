@@ -1051,10 +1051,12 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
           center={false}
           distanceFactor={11}
           zIndexRange={[100, 0]}
+          occlude={false}
           style={{ pointerEvents: 'auto' }}
         >
           <div 
             className={`r3f-container-label ${isActive ? 'is-active' : ''}`}
+            data-tab={labelData.tab}
             onClick={(e) => {
               e.stopPropagation();
               if (onTabClick) {
@@ -1064,7 +1066,29 @@ const AnimatedContainer = ({ c, activeTab, onTabClick, tickerTex }) => {
             title={`Select ${labelData.title}`}
           >
             <div className="r3f-label-pill">
-              <span className="r3f-label-marker">{labelData.marker}</span>
+              <span
+                className="r3f-label-marker"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '18px',
+                  minWidth: '18px',
+                  height: '18px',
+                  background: isActive ? '#8f9e7c' : '#e2e8f0',
+                  color: isActive ? '#ffffff' : '#0b0e0c',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontWeight: '800',
+                  fontSize: '11px',
+                  lineHeight: '1',
+                  borderRadius: '2px',
+                  flexShrink: 0,
+                  boxSizing: 'border-box',
+                  textAlign: 'center',
+                }}
+              >
+                {labelData.marker}
+              </span>
               <span className="r3f-label-text">{labelData.title}</span>
             </div>
             <div className="r3f-leader-line">
