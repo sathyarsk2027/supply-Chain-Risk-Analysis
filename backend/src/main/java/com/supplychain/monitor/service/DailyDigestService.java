@@ -259,6 +259,55 @@ public class DailyDigestService {
                 elevatedCountries.isEmpty() ? null : elevatedCountries);
     }
 
+    /**
+     * Generates the rendered HTML email without sending it,
+     * allowing instant local browser preview and verification.
+     */
+    public String generateDigestPreviewHtml() {
+        LocalDate today = LocalDate.now(IST);
+        List<NewsArticle> allArticles = (newsArticleRepository != null)
+                ? newsArticleRepository.findAllByOrderByPublishedAtDesc()
+                : Collections.emptyList();
+        if (allArticles == null) allArticles = Collections.emptyList();
+
+        List<NewsArticle> indiaArticles = (countryRiskService != null)
+                ? countryRiskService.getMatchedArticles("India")
+                : allArticles.stream()
+                        .filter(a -> COUNTRY_PATTERNS.get("India").matcher(buildSearchableContent(a)).find())
+                        .collect(Collectors.toList());
+
+        Set<Long> indiaArticleIds = indiaArticles.stream()
+                .map(NewsArticle::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<NewsArticle> globalArticles = allArticles.stream()
+                .filter(a -> a.getId() == null || !indiaArticleIds.contains(a.getId()))
+                .collect(Collectors.toList());
+
+        RiskScoreCalculator.RiskResult indiaRisk = (countryRiskService != null)
+                ? countryRiskService.calculateRisk(indiaArticles)
+                : RiskScoreCalculator.compute(indiaArticles);
+
+        Map<String, Integer> elevatedCountries = new LinkedHashMap<>();
+        if (countryRiskService != null) {
+            for (CountryRiskService.CountryPin pin : CountryRiskService.ALL_COUNTRIES) {
+                if ("India".equalsIgnoreCase(pin.query)) continue;
+                RiskScoreCalculator.RiskResult countryResult = countryRiskService.calculateRisk(pin.query);
+                if (countryResult.getScore() >= ELEVATED_THRESHOLD) {
+                    elevatedCountries.put(pin.query, countryResult.getScore());
+                }
+            }
+        }
+
+        String indiaSummary = generateSectionSummary(indiaArticles, "India");
+        String globalSummary = generateSectionSummary(globalArticles, "global supply chain");
+
+        String dateDisplay = today.format(DATE_DISPLAY);
+        return buildHtmlEmail(dateDisplay, indiaRisk, elevatedCountries,
+                indiaSummary, indiaArticles.size(), globalSummary, globalArticles.size(), allArticles.size());
+    }
+
     // --------------------------------------------------------------------------
     // AI Summary Generation
     // --------------------------------------------------------------------------
@@ -276,11 +325,11 @@ public class DailyDigestService {
         for (NewsArticle article : articles) {
             if (count >= 15) break;
             count++;
-            String title = article.getTitle() != null ? article.getTitle() : "";
+            String title = stripHtmlTags(article.getTitle() != null ? article.getTitle() : "");
             String riskCategory = article.getRiskCategory() != null ? article.getRiskCategory() : "Uncategorized";
-            String rawContent = article.getRawContent() != null ? article.getRawContent() : "";
-            if (rawContent.length() > 300) {
-                rawContent = rawContent.substring(0, 300) + "...";
+            String rawContent = stripHtmlTags(article.getRawContent() != null ? article.getRawContent() : "");
+            if (rawContent.length() > 250) {
+                rawContent = rawContent.substring(0, 250) + "...";
             }
             contextBuilder.append(String.format("Article %d: %s | Category: %s\nContent: %s\n\n", count, title, riskCategory, rawContent));
         }
@@ -496,8 +545,8 @@ public class DailyDigestService {
         int riskScore = indiaRisk.getScore();
         int totalArticles = Math.max(scannedCount, indiaCount + globalCount);
 
-        String indiaHtml = escapeHtml(indiaSummary).replace("\n", "<br>");
-        String globalHtml = escapeHtml(globalSummary).replace("\n", "<br>");
+        String indiaHtml = escapeHtml(sanitizeSummaryText(indiaSummary)).replace("\n", "<br>");
+        String globalHtml = escapeHtml(sanitizeSummaryText(globalSummary)).replace("\n", "<br>");
 
         Map<String, Integer> catScores = indiaRisk.getCategoryScores();
         int geo = catScores.getOrDefault("geopolitical", 0);
@@ -657,13 +706,13 @@ public class DailyDigestService {
     // Helper: compact category row with inline mini-bar
     // ──────────────────────────────────────────────────────────────────────────
     private String buildCategoryRow(String color, String label, int score) {
-        int barPct = Math.min(100, Math.max(3, score));
-        String scoreColor = score > 40 ? "#f59e0b" : "#64748b";
+        int barPct = Math.min(100, Math.max(4, score));
+        String scoreColor = score >= 70 ? "#ef4444" : (score >= 40 ? "#d97706" : "#64748b");
         return "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:6px;\"><tr>" +
             "<td style=\"width:80px;font-size:11px;color:#475569;font-weight:500;\">" + label + "</td>" +
             "<td style=\"padding:0 10px;\"><div style=\"width:100%;background:#f1f5f9;border-radius:3px;height:8px;overflow:hidden;font-size:1px;line-height:1px;\">" +
             "<div style=\"width:" + barPct + "%;height:100%;background:" + color + ";border-radius:3px;font-size:1px;line-height:1px;\"></div></div></td>" +
-            "<td style=\"width:28px;text-align:right;font-size:12px;font-weight:800;color:" + scoreColor + ";font-family:'Courier New',monospace;\">" + score + "</td>" +
+            "<td style=\"width:34px;min-width:34px;text-align:right;font-size:12px;font-weight:800;color:" + scoreColor + ";font-family:'Courier New',monospace;\">" + score + "</td>" +
             "</tr></table>";
     }
 
@@ -764,6 +813,28 @@ public class DailyDigestService {
         // Collapse whitespace
         text = text.replaceAll("\\s+", " ").trim();
         return text;
+    }
+
+    /**
+     * Sanitizes executive summary text before rendering into email HTML.
+     * Removes raw URLs, Google News links, residual HTML tags, and leaked 'Content:' tags,
+     * ensuring executive reports are strictly clean prose.
+     */
+    private String sanitizeSummaryText(String text) {
+        if (text == null || text.isEmpty()) return "";
+        // Strip HTML tags and encoded entities
+        String cleaned = text.replaceAll("(?i)<[^>]*>", " ");
+        // Strip any bare or encoded HTTP/HTTPS URLs
+        cleaned = cleaned.replaceAll("https?://\\S+", "");
+        // Strip leaked prefixes like 'Content:' or 'Article 1:' inside body sentences
+        cleaned = cleaned.replaceAll("(?i)\\bContent:\\s*", "");
+        cleaned = cleaned.replaceAll("(?i)\\bArticle\\s+\\d+:\\s*", "");
+        // Normalize whitespace and punctuation spacing
+        cleaned = cleaned.replaceAll("[ \\t]+", " ");
+        cleaned = cleaned.replaceAll("\\s*\\.\\s*\\.", ".");
+        cleaned = cleaned.replaceAll(" ,", ",");
+        cleaned = cleaned.replaceAll(" \\.", ".");
+        return cleaned.trim();
     }
 
     // --------------------------------------------------------------------------

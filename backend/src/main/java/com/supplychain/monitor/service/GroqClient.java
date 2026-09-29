@@ -89,8 +89,30 @@ public class GroqClient {
             // Dynamically ground the fallback summary in the actual context articles
             List<String> headlines = new ArrayList<>();
             for (String line : context.split("\n")) {
-                String clean = line.replaceFirst("^[•\\-*\\d.]+\\s*", "").trim();
-                if (clean.length() > 15 && !clean.toLowerCase().contains("real matched news articles")) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) continue;
+
+                // Strictly ignore non-headline lines (content snippets, summaries, raw links, HTML)
+                String lower = trimmed.toLowerCase();
+                if (lower.startsWith("content:") || lower.startsWith("summary:")
+                        || lower.contains("http://") || lower.contains("https://")
+                        || lower.contains("<a ") || lower.contains("href=")
+                        || lower.contains("real matched news articles")) {
+                    continue;
+                }
+
+                // Strip leading prefixes like "Article 1:", bullets, list numbers
+                String clean = trimmed.replaceFirst("^(?i)article\\s*\\d*\\s*[:\\-]?\\s*", "")
+                                      .replaceFirst("^[•\\-*\\d.]+\\s*", "")
+                                      .trim();
+
+                // Strip trailing category metadata like "| Category: Logistics"
+                clean = clean.replaceFirst("\\s*\\|\\s*(?i)category\\s*:.*$", "").trim();
+
+                // Strip any residual HTML tags or URLs
+                clean = clean.replaceAll("<[^>]*>", "").replaceAll("https?://\\S+", "").trim();
+
+                if (clean.length() > 15) {
                     headlines.add(clean);
                 }
             }

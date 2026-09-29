@@ -134,11 +134,15 @@ public final class RiskScoreCalculator {
 
             int catScore;
             if (catW > 0.0) {
-                double catVolumeBoost = 15.0 * Math.log(1.0 + catW);
-                double catUrgencyBoost = (catUrgent / catW) * 16.0;
-                double shareOfOverall = (catW / totalWeightedVolume) * (overallScore * 0.65);
-                double computed = baseline + (catVolumeBoost * multiplier) + catUrgencyBoost + shareOfOverall;
-                catScore = (int) Math.min(100, Math.max(10, Math.round(computed)));
+                // Category volume evidence scaled smoothly without runaway double-counting
+                double catVolumeBoost = 8.5 * Math.log(1.0 + Math.min(catW, 40.0)) * multiplier;
+                double catUrgencyBoost = (catUrgent / catW) * 10.0;
+                double shareOfOverall = (catW / totalWeightedVolume) * (overallScore * 0.28);
+                double computed = baseline + catVolumeBoost + catUrgencyBoost + shareOfOverall;
+
+                // Calibrate so category score reflects acute disruption without artificial 100 ceiling overflows
+                // Sub-category risk only approaches 85-95 in severe acute multi-incident crises
+                catScore = (int) Math.min(95, Math.max(12, Math.round(computed)));
             } else {
                 // When 0 articles in this category, reflect distinct baseline exposure + slight regional spillover
                 double spillover = Math.min(10.0, overallScore * 0.08);

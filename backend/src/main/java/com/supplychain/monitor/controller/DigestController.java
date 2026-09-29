@@ -99,6 +99,23 @@ public class DigestController {
         }
     }
 
+    /**
+     * Browser preview endpoint — renders the exact email HTML directly in browser
+     * without sending email or invoking external delivery APIs.
+     */
+    @GetMapping(value = "/preview", produces = "text/html;charset=UTF-8")
+    public ResponseEntity<String> previewDigest() {
+        logger.info("Manual digest preview endpoint called.");
+        try {
+            String html = dailyDigestService.generateDigestPreviewHtml();
+            return ResponseEntity.ok(html);
+        } catch (Exception e) {
+            logger.error("Digest preview generation failed: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("<!DOCTYPE html><html><body><h1>Preview Generation Failed</h1><p>" + e.getMessage() + "</p></body></html>");
+        }
+    }
+
     private Map<String, Object> buildResponseMap(DailyDigestService.DigestResult result) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("status", result.getStatus());
