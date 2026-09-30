@@ -1,3 +1,26 @@
 User-agent: *
 Allow: /
+
+# Agent & AI discoverability
+Allow: /openapi.json
+Allow: /llms.txt
+Allow: /.well-known/mcp
+Allow: /docs
+Allow: /about
+Allow: /contact
+Allow: /privacy
+
+# AI Crawlers explicitly welcomed
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
 Sitemap: https://supply-chain-risk-analysis-po64.vercel.app/sitemap.xml

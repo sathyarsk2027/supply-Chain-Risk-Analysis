@@ -6,20 +6,75 @@
 
 Supply Chain Risk Monitor is a comprehensive intelligence platform that tracks real-time global logistics news, carrier disruptions, warehouse incidents, port congestion, and geopolitical events affecting international supply chains. The platform aggregates news from RSS feeds and NewsAPI, applies NLP-powered semantic analysis, overlays NASA satellite imagery, and surfaces country-level risk scores.
 
+## When to Use This
+
+Use Supply Chain Risk Monitor when an agent or user needs to:
+
+- **Monitor supply chain disruptions** — Query the latest global logistics news, port closures, shipping delays, labor strikes, weather events, or regulatory changes affecting trade routes.
+- **Assess country-level supply chain risk** — Get a real-time risk score (0–100) for any of 25+ tracked countries, broken down by geopolitical, logistics, weather, and market categories.
+- **Search for specific disruption scenarios** — Use semantic AI search to find articles related to a natural language query like "semiconductor shortage impact on European auto manufacturers" or "Red Sea shipping disruptions."
+- **Get an overview of active disruption hotspots** — Retrieve a list of countries currently experiencing reported supply chain events, with geographic coordinates for map visualization.
+- **Trigger live feed synchronization** — Force a refresh of all RSS feeds and NewsAPI sources to get the most current disruption data.
+- **Build supply chain intelligence integrations** — Use the public REST API to pipe disruption data into logistics dashboards, ERP systems, or automated risk alerting workflows.
+
+**Do NOT use this for:** General news search outside supply chain/logistics, financial market data, real-time vessel tracking (AIS), or customs/tariff lookup.
+
+## API Access
+
+Base URL: `https://supply-chain-risk-analysis-po64.vercel.app/api`
+Authentication: None required (public read-only API).
+
+### Key Endpoints
+
+- `GET /api/articles` — List all supply chain news articles (newest first)
+- `POST /api/query` — Semantic AI search. Body: `{"query": "your search term"}`
+- `GET /api/countries/risk?query={country}` — Country risk assessment (0–100 score)
+- `GET /api/countries/active` — Countries with active disruption coverage
+- `POST /api/articles/sync` — Trigger live RSS feed synchronization
+- `GET /api/articles/sources` — Article count by news source
+
+### Example: Semantic Search
+
+```
+POST /api/query
+Content-Type: application/json
+
+{"query": "port congestion in Southeast Asia"}
+```
+
+Response includes ranked article matches with relevance scores and an AI-generated summary.
+
+### Example: Country Risk
+
+```
+GET /api/countries/risk?query=India
+```
+
+Response includes risk score, status level, category breakdown, risk driver highlights, and matched articles.
+
+## Developer Resources
+
+- OpenAPI Specification: https://supply-chain-risk-analysis-po64.vercel.app/openapi.json
+- API Documentation: https://supply-chain-risk-analysis-po64.vercel.app/docs
+- MCP Manifest: https://supply-chain-risk-analysis-po64.vercel.app/.well-known/mcp
+- Homepage: https://supply-chain-risk-analysis-po64.vercel.app/
+- Sitemap: https://supply-chain-risk-analysis-po64.vercel.app/sitemap.xml
+- GitHub: https://github.com/sathyarsk2027/supply-Chain-Risk-Analysis
+
 ## Features
 
 - Real-time news aggregation from global logistics, shipping, and trade RSS feeds
-- Semantic AI-powered search using vector embeddings
+- Semantic AI-powered search using vector embeddings (pgvector cosine similarity)
 - NASA satellite imagery integration for geographic risk assessment
 - Country-level risk scoring and analytics dashboard
 - NLP-powered article categorization and relevance scoring
 - Interactive 3D globe visualization with live disruption pins
-
-## URLs
-
-- Homepage: https://supply-chain-risk-analysis-po64.vercel.app/
-- Sitemap: https://supply-chain-risk-analysis-po64.vercel.app/sitemap.xml
+- Daily email digest of top supply chain disruptions
+- Structured JSON error responses for agent consumption
 
 ## Contact
+
+Email: sathyarsk2027@gmail.com
+GitHub: https://github.com/sathyarsk2027/supply-Chain-Risk-Analysis
 
 Built for supply chain professionals, logistics analysts, and risk managers.

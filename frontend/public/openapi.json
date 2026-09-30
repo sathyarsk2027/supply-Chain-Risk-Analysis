@@ -1,0 +1,545 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Supply Chain Risk Monitor API",
+    "description": "REST API for the Supply Chain Risk Monitor platform. Provides real-time access to global supply chain disruption news articles, semantic AI-powered search, country-level risk scoring, and feed synchronization. Designed for integration with AI agents, logistics dashboards, and risk management systems.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Supply Chain Risk Monitor",
+      "url": "https://supply-chain-risk-analysis-po64.vercel.app/"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://supply-chain-risk-analysis-po64.vercel.app",
+      "description": "Production API (proxied through Vercel)"
+    }
+  ],
+  "paths": {
+    "/api/articles": {
+      "get": {
+        "operationId": "listArticles",
+        "summary": "List all supply chain news articles",
+        "description": "Returns all ingested supply chain disruption news articles, ordered by publication date descending. Each article includes title, source, URL, risk category, NLP-extracted entities, and publication timestamp.",
+        "tags": ["Articles"],
+        "responses": {
+          "200": {
+            "description": "A list of news articles sorted by most recent first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NewsArticle"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/sync": {
+      "post": {
+        "operationId": "syncArticles",
+        "summary": "Trigger live RSS feed synchronization",
+        "description": "Polls all configured RSS feeds and NewsAPI sources for new supply chain news articles. Newly discovered articles are processed through the NLP pipeline (entity extraction, risk categorization, vector embedding) and stored in the database. Returns the count of new articles ingested.",
+        "tags": ["Articles"],
+        "responses": {
+          "200": {
+            "description": "Sync completed successfully with count of new articles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/sources": {
+      "get": {
+        "operationId": "getArticleSources",
+        "summary": "Get article count breakdown by source",
+        "description": "Returns a list of all news sources along with the count of articles from each source. Useful for understanding which RSS feeds and news outlets are contributing the most disruption data.",
+        "tags": ["Articles"],
+        "responses": {
+          "200": {
+            "description": "Source breakdown with article counts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceCount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/query": {
+      "post": {
+        "operationId": "semanticSearch",
+        "summary": "Semantic AI search across articles",
+        "description": "Performs a semantic search across all ingested articles using vector embeddings (pgvector cosine similarity). The query text is embedded via the NLP service and compared against article embeddings. Returns ranked matches with relevance scores and an optional AI-generated summary of findings. Falls back to keyword search if the NLP service is unavailable.",
+        "tags": ["Search"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              },
+              "example": {
+                "query": "port congestion in Southeast Asia"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results with ranked matches and AI summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or empty query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/countries/active": {
+      "get": {
+        "operationId": "getActiveCountries",
+        "summary": "List countries with active disruption coverage",
+        "description": "Returns a list of countries that have at least one matching news article in the current dataset. Each country includes its ISO code, name, flag emoji, and geographic coordinates for map visualization.",
+        "tags": ["Countries"],
+        "responses": {
+          "200": {
+            "description": "List of active country pins with geo-coordinates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CountryPin"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/countries/risk": {
+      "get": {
+        "operationId": "getCountryRisk",
+        "summary": "Get risk assessment for a specific country",
+        "description": "Computes a real-time, recency-weighted risk score for a country based on all matching supply chain news articles. Returns an overall risk score (0-100), categorical breakdown (geopolitical, logistics, weather, market), key risk driver highlights extracted from article titles, and the matched articles.",
+        "tags": ["Countries"],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "description": "Country name to assess risk for (e.g., 'India', 'United States', 'China').",
+            "schema": {
+              "type": "string"
+            },
+            "example": "India"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Country risk assessment with scores, status, and matched articles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountryRiskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or empty country query parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/digest/ping": {
+      "get": {
+        "operationId": "pingDigestService",
+        "summary": "Health check for the digest service",
+        "description": "Simple ping endpoint to wake up the server and verify it is ready to process digest requests.",
+        "tags": ["Digest"],
+        "responses": {
+          "200": {
+            "description": "Server is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "awake"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Server is ready."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NewsArticle": {
+        "type": "object",
+        "description": "A supply chain news article ingested from RSS feeds or NewsAPI.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unique identifier for the article."
+          },
+          "title": {
+            "type": "string",
+            "description": "Article headline.",
+            "maxLength": 1024
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Original article URL.",
+            "maxLength": 2048
+          },
+          "source": {
+            "type": "string",
+            "description": "News source or publisher name.",
+            "maxLength": 512
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 publication timestamp."
+          },
+          "rawContent": {
+            "type": "string",
+            "description": "Full article text content."
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the article was ingested."
+          },
+          "riskCategory": {
+            "type": "string",
+            "description": "NLP-classified risk category (e.g., 'geopolitical', 'logistics', 'weather', 'market').",
+            "enum": ["geopolitical", "logistics", "weather", "market", "regulatory", "labor", "cyber", "environmental"]
+          },
+          "entities": {
+            "type": "string",
+            "description": "JSON string of NLP-extracted named entities (countries, organizations, ports, etc.)."
+          }
+        },
+        "required": ["id", "title", "url"]
+      },
+      "SyncResponse": {
+        "type": "object",
+        "description": "Result of a feed synchronization operation.",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the sync completed successfully."
+          },
+          "newArticlesFetched": {
+            "type": "integer",
+            "description": "Number of new articles ingested during this sync."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of when the sync completed."
+          }
+        },
+        "required": ["success", "newArticlesFetched", "timestamp"]
+      },
+      "SourceCount": {
+        "type": "object",
+        "description": "Article count for a single news source.",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "News source name."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of articles from this source."
+          }
+        }
+      },
+      "QueryRequest": {
+        "type": "object",
+        "description": "Semantic search query input.",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Natural language search query describing the supply chain scenario to search for.",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": ["query"]
+      },
+      "QueryResponse": {
+        "type": "object",
+        "description": "Semantic search results including ranked article matches and an AI summary.",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The original search query."
+          },
+          "matches": {
+            "type": "array",
+            "description": "Articles ranked by semantic similarity to the query.",
+            "items": {
+              "$ref": "#/components/schemas/SearchMatch"
+            }
+          },
+          "aiSummary": {
+            "$ref": "#/components/schemas/AiSummary"
+          }
+        }
+      },
+      "SearchMatch": {
+        "type": "object",
+        "description": "A single search result with relevance score.",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Article headline."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Original article URL."
+          },
+          "source": {
+            "type": "string",
+            "description": "News source name."
+          },
+          "riskCategory": {
+            "type": "string",
+            "description": "NLP-classified risk category."
+          },
+          "score": {
+            "type": "number",
+            "format": "double",
+            "description": "Cosine similarity score (0.0 to 1.0, higher is more relevant)."
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 publication timestamp."
+          }
+        }
+      },
+      "AiSummary": {
+        "type": "object",
+        "description": "AI-generated summary of the search results.",
+        "properties": {
+          "summary": {
+            "type": "string",
+            "description": "Natural language summary of the matched articles and their relevance to the query."
+          },
+          "confidenceScore": {
+            "type": "integer",
+            "description": "Confidence level of the AI summary (0-100).",
+            "minimum": 0,
+            "maximum": 100
+          }
+        }
+      },
+      "CountryPin": {
+        "type": "object",
+        "description": "A country with active disruption coverage and map coordinates.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 country code."
+          },
+          "query": {
+            "type": "string",
+            "description": "Country name used for risk queries."
+          },
+          "flag": {
+            "type": "string",
+            "description": "Unicode flag emoji."
+          },
+          "lat": {
+            "type": "number",
+            "format": "double",
+            "description": "Latitude coordinate."
+          },
+          "lng": {
+            "type": "number",
+            "format": "double",
+            "description": "Longitude coordinate."
+          },
+          "baseScore": {
+            "type": "integer",
+            "description": "Default base risk score."
+          }
+        }
+      },
+      "CountryRiskResponse": {
+        "type": "object",
+        "description": "Comprehensive risk assessment for a specific country.",
+        "properties": {
+          "hasData": {
+            "type": "boolean",
+            "description": "Whether any matching articles were found."
+          },
+          "countryName": {
+            "type": "string",
+            "description": "The queried country name."
+          },
+          "baseScore": {
+            "type": "integer",
+            "description": "Overall risk score (0-100).",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "status": {
+            "type": "string",
+            "description": "Human-readable risk level.",
+            "enum": ["LOW RISK", "MODERATE RISK", "ELEVATED RISK", "HIGH RISK (CRITICAL)", "INSUFFICIENT DATA"]
+          },
+          "categoryScores": {
+            "type": "object",
+            "description": "Risk score breakdown by category.",
+            "properties": {
+              "geopolitical": { "type": "integer" },
+              "logistics": { "type": "integer" },
+              "weather": { "type": "integer" },
+              "market": { "type": "integer" }
+            }
+          },
+          "highlights": {
+            "type": "array",
+            "description": "Key risk driver summaries extracted from matched articles.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "matchedArticles": {
+            "type": "array",
+            "description": "Articles that matched this country's risk assessment.",
+            "items": {
+              "$ref": "#/components/schemas/NewsArticle"
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Structured JSON error response.",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Machine-readable error code.",
+                "example": "NOT_FOUND"
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable error message.",
+                "example": "The requested resource was not found."
+              },
+              "hint": {
+                "type": "string",
+                "description": "Suggested resolution for the error.",
+                "example": "Check the API documentation at /docs for valid endpoints."
+              }
+            },
+            "required": ["code", "message"]
+          }
+        },
+        "required": ["error"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Articles",
+      "description": "Supply chain news article ingestion and retrieval."
+    },
+    {
+      "name": "Search",
+      "description": "Semantic AI-powered search across all articles."
+    },
+    {
+      "name": "Countries",
+      "description": "Country-level risk scoring and active disruption tracking."
+    },
+    {
+      "name": "Digest",
+      "description": "Daily digest email service management."
+    }
+  ]
+}
