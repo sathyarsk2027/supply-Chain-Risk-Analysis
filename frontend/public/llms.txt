@@ -1,0 +1,25 @@
+# Supply Chain Risk Monitor
+
+> Real-Time Global Disruption Intelligence Platform
+
+## About
+
+Supply Chain Risk Monitor is a comprehensive intelligence platform that tracks real-time global logistics news, carrier disruptions, warehouse incidents, port congestion, and geopolitical events affecting international supply chains. The platform aggregates news from RSS feeds and NewsAPI, applies NLP-powered semantic analysis, overlays NASA satellite imagery, and surfaces country-level risk scores.
+
+## Features
+
+- Real-time news aggregation from global logistics, shipping, and trade RSS feeds
+- Semantic AI-powered search using vector embeddings
+- NASA satellite imagery integration for geographic risk assessment
+- Country-level risk scoring and analytics dashboard
+- NLP-powered article categorization and relevance scoring
+- Interactive 3D globe visualization with live disruption pins
+
+## URLs
+
+- Homepage: https://supply-chain-risk-analysis-po64.vercel.app/
+- Sitemap: https://supply-chain-risk-analysis-po64.vercel.app/sitemap.xml
+
+## Contact
+
+Built for supply chain professionals, logistics analysts, and risk managers.

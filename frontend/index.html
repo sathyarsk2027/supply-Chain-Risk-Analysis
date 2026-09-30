@@ -6,9 +6,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- SEO Meta Tags -->
-    <title>Supply chain risk monitor | News article dashboard</title>
-    <meta name="description" content="Track real-time global logistics news, carrier updates, warehouse events, and potential supply chain disruption alerts with visual analytics." />
+    <title>Supply Chain Risk Monitor — Real-Time Global Disruption Intelligence</title>
+    <meta name="description" content="Supply Chain Risk Monitor tracks real-time global logistics news, carrier updates, warehouse events, and potential supply chain disruption alerts with satellite imagery, semantic AI search, and visual analytics." />
+    <link rel="canonical" href="https://supply-chain-risk-analysis-po64.vercel.app/" />
     
+    <!-- JSON-LD Structured Data (SoftwareApplication) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Supply Chain Risk Monitor",
+      "url": "https://supply-chain-risk-analysis-po64.vercel.app/",
+      "description": "Supply Chain Risk Monitor is a real-time global disruption intelligence platform that aggregates logistics news from RSS feeds and NewsAPI, applies NLP-powered semantic analysis, overlays NASA satellite imagery, and surfaces country-level risk scores to help supply chain professionals identify and respond to disruptions faster.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Real-time supply chain news aggregation from RSS and NewsAPI",
+        "Semantic AI-powered search across disruption events",
+        "NASA satellite imagery overlay for geographic risk assessment",
+        "Country-level risk scoring and analytics dashboard",
+        "NLP-powered article categorization and relevance scoring",
+        "Interactive 3D globe visualization with live disruption pins"
+      ],
+      "screenshot": "https://supply-chain-risk-analysis-po64.vercel.app/assets/containers_closed.jpg"
+    }
+    </script>
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +49,45 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static pre-render content for crawlers and no-JS agents (replaced by React on hydration) -->
+      <header>
+        <h1>Supply Chain Risk Monitor</h1>
+        <h2>Real-Time Global Disruption Intelligence</h2>
+        <p>Supply Chain Risk Monitor is a comprehensive intelligence platform that tracks real-time global logistics news, carrier disruptions, warehouse incidents, port congestion, and geopolitical events affecting international supply chains. Powered by semantic AI search, NASA satellite imagery overlays, and NLP-driven article analysis, the platform aggregates news from multiple RSS feeds and NewsAPI sources to surface emerging risks before they cascade through the supply chain.</p>
+      </header>
+      <main>
+        <section>
+          <h3>Core Capabilities</h3>
+          <ul>
+            <li>Real-time news aggregation from global logistics, shipping, and trade RSS feeds with 15-minute automatic synchronization</li>
+            <li>Semantic AI-powered search using vector embeddings to find contextually relevant disruption reports across all ingested articles</li>
+            <li>NASA satellite imagery integration for geographic risk assessment and visual verification of disruption events</li>
+            <li>Country-level risk scoring combining news sentiment, event frequency, and geopolitical indicators into actionable risk dashboards</li>
+            <li>NLP-powered categorization that classifies articles by disruption type: port congestion, weather events, labor disputes, regulatory changes, and more</li>
+            <li>Interactive 3D globe visualization with live disruption pins showing active incidents across global shipping routes</li>
+          </ul>
+        </section>
+        <section>
+          <h3>How It Works</h3>
+          <p>The platform continuously polls RSS feeds and news APIs for supply chain-related articles. Each article is processed through an NLP pipeline that extracts entities, classifies disruption categories, assigns relevance scores, and maps events to affected countries and shipping corridors. Users can explore disruptions through an interactive feed, search semantically for specific risk scenarios, or visualize global risk patterns on the satellite-powered analytics dashboard.</p>
+        </section>
+        <section>
+          <h3>Get Started</h3>
+          <p>Enable JavaScript to access the full interactive dashboard with 3D globe visualization, real-time feed synchronization, and AI-powered semantic search. The platform works best in modern browsers with WebGL support.</p>
+        </section>
+      </main>
+      <footer>
+        <p>&copy; 2026 Supply Chain Risk Monitor. Built for supply chain professionals, logistics analysts, and risk managers.</p>
+      </footer>
+    </div>
+    <noscript>
+      <style>
+        body { font-family: Inter, system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; }
+        h1 { color: #8f9e7c; font-size: 2rem; } h2 { color: #a0a0a0; } h3 { color: #8f9e7c; } a { color: #60a5fa; }
+        ul { padding-left: 1.5rem; } li { margin-bottom: 0.5rem; }
+      </style>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
