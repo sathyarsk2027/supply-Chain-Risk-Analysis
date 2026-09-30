@@ -15,31 +15,51 @@ Use Supply Chain Risk Monitor when an agent or user needs to:
 - **Search for specific disruption scenarios** — Use semantic AI search to find articles related to a natural language query like "semiconductor shortage impact on European auto manufacturers" or "Red Sea shipping disruptions."
 - **Get an overview of active disruption hotspots** — Retrieve a list of countries currently experiencing reported supply chain events, with geographic coordinates for map visualization.
 - **Trigger live feed synchronization** — Force a refresh of all RSS feeds and NewsAPI sources to get the most current disruption data.
-- **Build supply chain intelligence integrations** — Use the public REST API to pipe disruption data into logistics dashboards, ERP systems, or automated risk alerting workflows.
+- **Build supply chain intelligence integrations** — Use the versioned REST API or official SDKs to pipe disruption data into logistics dashboards, ERP systems, or automated risk alerting workflows.
 
 **Do NOT use this for:** General news search outside supply chain/logistics, financial market data, real-time vessel tracking (AIS), or customs/tariff lookup.
 
-## API Access
+## API Access & Versioning
 
-Base URL: `https://supply-chain-risk-analysis-po64.vercel.app/api`
-Authentication: None required (public read-only API).
+Base URL (Versioned): `https://supply-chain-risk-analysis-po64.vercel.app/api/v1`
+Unversioned Default Alias: `https://supply-chain-risk-analysis-po64.vercel.app/api`
+Authentication: None required (public read-only API). Optional Bearer token for enterprise quotas.
+Current Version: `v1` (1.0.0)
+
+### Versioning & Deprecation Policy
+
+- All production endpoints are versioned under `/api/v1/...`.
+- All responses include the `API-Version: 1.0.0` header.
+- Breaking changes will be introduced under a new version prefix (e.g. `/api/v2/`).
+- Deprecation notices are published at least 6 months prior to retirement. Deprecated endpoints return standard RFC 8594 `Deprecation: @<timestamp>` and `Sunset: <date>` HTTP headers.
+
+### Rate Limiting & Response Headers
+
+- Standard Quota: 100 requests per minute per IP address.
+- Response Headers:
+  - `RateLimit-Limit`: Maximum requests per 60-second window (100)
+  - `RateLimit-Remaining`: Remaining requests in current window
+  - `RateLimit-Reset`: Seconds remaining until quota window resets
+  - `RateLimit-Policy`: Quota specification string (e.g., `100;w=60`)
+  - `Retry-After`: Returned on HTTP 429 indicating seconds to wait before retrying
 
 ### Key Endpoints
 
-- `GET /api/articles` — List all supply chain news articles (newest first)
-- `POST /api/query` — Semantic AI search. Body: `{"query": "your search term"}`
-- `GET /api/countries/risk?query={country}` — Country risk assessment (0–100 score)
-- `GET /api/countries/active` — Countries with active disruption coverage
-- `POST /api/articles/sync` — Trigger live RSS feed synchronization
-- `GET /api/articles/sources` — Article count by news source
+- `GET /api/v1/articles` — List supply chain news articles. Query params: `limit`, `category`, `source`, `country`
+- `POST /api/v1/query` — Semantic AI search. Body: `{"query": "your search term", "topK": 10}`
+- `GET /api/v1/countries/risk?query={country}` — Country risk assessment (0–100 score). Query params: `query`, `days`
+- `GET /api/v1/countries/active` — Countries with active disruption coverage. Query params: `region`, `minRiskArticles`
+- `POST /api/v1/articles/sync` — Trigger live RSS feed synchronization. Body: `{"force": false}`
+- `GET /api/v1/articles/sources` — Article count by news source. Query params: `minArticles`, `limit`
+- `GET /api/v1/digest/ping` — Health check endpoint. Query params: `verbose`
 
 ### Example: Semantic Search
 
 ```
-POST /api/query
+POST /api/v1/query
 Content-Type: application/json
 
-{"query": "port congestion in Southeast Asia"}
+{"query": "port congestion in Southeast Asia", "topK": 5}
 ```
 
 Response includes ranked article matches with relevance scores and an AI-generated summary.
@@ -47,30 +67,56 @@ Response includes ranked article matches with relevance scores and an AI-generat
 ### Example: Country Risk
 
 ```
-GET /api/countries/risk?query=India
+GET /api/v1/countries/risk?query=India
 ```
 
 Response includes risk score, status level, category breakdown, risk driver highlights, and matched articles.
 
+## Official SDKs
+
+### Python SDK (`scrm-client`)
+
+```bash
+pip install scrm-client
+```
+
+```python
+from scrm import SupplyChainRiskClient
+
+client = SupplyChainRiskClient()
+results = client.search.query("port congestion in Southeast Asia")
+print(results.summary)
+```
+
+Documentation: https://supply-chain-risk-analysis-po64.vercel.app/sdk
+
+### TypeScript / Node.js SDK (`@scrm/sdk`)
+
+```bash
+npm install @scrm/sdk
+```
+
+```typescript
+import { SupplyChainRiskClient } from '@scrm/sdk';
+
+const client = new SupplyChainRiskClient();
+const risk = await client.countries.getRisk({ query: 'India' });
+console.log(risk.baseScore, risk.status);
+```
+
+Documentation: https://supply-chain-risk-analysis-po64.vercel.app/sdk
+
 ## Developer Resources
 
-- OpenAPI Specification: https://supply-chain-risk-analysis-po64.vercel.app/openapi.json
+- Developer Portal: https://supply-chain-risk-analysis-po64.vercel.app/developers
+- SDK Documentation: https://supply-chain-risk-analysis-po64.vercel.app/sdk
+- Authentication & API Keys: https://supply-chain-risk-analysis-po64.vercel.app/docs/auth
 - API Documentation: https://supply-chain-risk-analysis-po64.vercel.app/docs
+- OpenAPI Specification: https://supply-chain-risk-analysis-po64.vercel.app/openapi.json
 - MCP Manifest: https://supply-chain-risk-analysis-po64.vercel.app/.well-known/mcp
 - Homepage: https://supply-chain-risk-analysis-po64.vercel.app/
 - Sitemap: https://supply-chain-risk-analysis-po64.vercel.app/sitemap.xml
 - GitHub: https://github.com/sathyarsk2027/supply-Chain-Risk-Analysis
-
-## Features
-
-- Real-time news aggregation from global logistics, shipping, and trade RSS feeds
-- Semantic AI-powered search using vector embeddings (pgvector cosine similarity)
-- NASA satellite imagery integration for geographic risk assessment
-- Country-level risk scoring and analytics dashboard
-- NLP-powered article categorization and relevance scoring
-- Interactive 3D globe visualization with live disruption pins
-- Daily email digest of top supply chain disruptions
-- Structured JSON error responses for agent consumption
 
 ## Contact
 

@@ -5,17 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- SEO Meta Tags -->
+    <!-- SEO & Brand Meta Tags (Fix #1: Brand Name Discoverability) -->
     <title>Supply Chain Risk Monitor — Real-Time Global Disruption Intelligence</title>
     <meta name="description" content="Supply Chain Risk Monitor tracks real-time global logistics news, carrier updates, warehouse events, and potential supply chain disruption alerts with satellite imagery, semantic AI search, and visual analytics." />
+    <meta name="application-name" content="Supply Chain Risk Monitor" />
+    <meta name="apple-mobile-web-app-title" content="Supply Chain Risk Monitor" />
+    <meta name="author" content="Supply Chain Risk Monitor" />
+    <meta name="keywords" content="Supply Chain Risk Monitor, SCRM, supply chain disruptions, port congestion, logistics risk, cargo delay intelligence, real-time risk monitor, global trade alerts" />
     <link rel="canonical" href="https://supply-chain-risk-analysis-po64.vercel.app/" />
+    
+    <!-- OpenGraph & Social Metadata -->
     <meta property="og:title" content="Supply Chain Risk Monitor — Real-Time Global Disruption Intelligence" />
+    <meta property="og:site_name" content="Supply Chain Risk Monitor" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://supply-chain-risk-analysis-po64.vercel.app/" />
     <meta property="og:image" content="https://supply-chain-risk-analysis-po64.vercel.app/assets/containers_closed.jpg" />
     <meta property="og:description" content="Track real-time global logistics news, carrier disruptions, and supply chain risk with satellite imagery, semantic AI search, and visual analytics." />
     
-    <!-- JSON-LD Structured Data (SoftwareApplication) -->
+    <!-- JSON-LD Structured Data: SoftwareApplication -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -30,27 +37,40 @@
         "price": "0",
         "priceCurrency": "USD"
       },
+      "brand": {
+        "@type": "Brand",
+        "name": "Supply Chain Risk Monitor"
+      },
       "featureList": [
         "Real-time supply chain news aggregation from RSS and NewsAPI",
         "Semantic AI-powered search across disruption events",
         "NASA satellite imagery overlay for geographic risk assessment",
         "Country-level risk scoring and analytics dashboard",
         "NLP-powered article categorization and relevance scoring",
-        "Interactive 3D globe visualization with live disruption pins"
+        "Interactive 3D globe visualization with live disruption pins",
+        "Official SDKs for Python and TypeScript/Node.js",
+        "Model Context Protocol (MCP) server integration"
       ],
       "screenshot": "https://supply-chain-risk-analysis-po64.vercel.app/assets/containers_closed.jpg"
     }
     </script>
 
-    <!-- Organization JSON-LD (Fix #7) -->
+    <!-- JSON-LD Structured Data: Organization (Fix #7 & Brand discoverability) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "Supply Chain Risk Monitor",
+      "legalName": "Supply Chain Risk Monitor",
+      "alternateName": ["SCRM", "Supply Chain Risk Analysis Platform"],
       "url": "https://supply-chain-risk-analysis-po64.vercel.app/",
-      "description": "Real-time global disruption intelligence platform for supply chain professionals.",
+      "description": "Real-time global disruption intelligence platform for supply chain professionals, risk managers, and AI agents.",
       "logo": "https://supply-chain-risk-analysis-po64.vercel.app/assets/containers_closed.jpg",
+      "brand": {
+        "@type": "Brand",
+        "@id": "https://supply-chain-risk-analysis-po64.vercel.app/#brand",
+        "name": "Supply Chain Risk Monitor"
+      },
       "contactPoint": {
         "@type": "ContactPoint",
         "email": "sathyarsk2027@gmail.com",
@@ -66,6 +86,20 @@
       "sameAs": [
         "https://github.com/sathyarsk2027/supply-Chain-Risk-Analysis"
       ]
+    }
+    </script>
+
+    <!-- JSON-LD Structured Data: Brand Entity (Fix #1) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Brand",
+      "@id": "https://supply-chain-risk-analysis-po64.vercel.app/#brand",
+      "name": "Supply Chain Risk Monitor",
+      "alternateName": ["Supply Chain Risk Monitor (SCRM)", "SCRM Disruption Monitor"],
+      "url": "https://supply-chain-risk-analysis-po64.vercel.app/",
+      "logo": "https://supply-chain-risk-analysis-po64.vercel.app/assets/containers_closed.jpg",
+      "description": "Supply Chain Risk Monitor is an intelligence platform providing real-time tracking and predictive risk scoring for global logistics disruptions."
     }
     </script>
 
@@ -110,14 +144,18 @@
         </section>
         <section>
           <h3>Developer Resources</h3>
-          <p>Supply Chain Risk Monitor provides a public REST API for programmatic access. AI agents, logistics dashboards, and risk management systems can integrate directly.</p>
+          <p>Supply Chain Risk Monitor provides a versioned REST API, official SDKs, and Model Context Protocol (MCP) server for automated agent integration and programmatic access.</p>
           <ul>
-            <li><a href="/docs">API Documentation</a> — Interactive endpoint reference with examples</li>
-            <li><a href="/openapi.json">OpenAPI Specification</a> — Machine-readable API spec (OpenAPI 3.1.0)</li>
-            <li><a href="/llms.txt">llms.txt</a> — AI agent integration and usage guide</li>
+            <li><a href="/developers">Developer Portal</a> — Central hub for API reference, SDKs, and integration tutorials</li>
+            <li><a href="/docs">API Documentation</a> — Interactive endpoint reference with curl examples and schemas</li>
+            <li><a href="/sdk">SDK Documentation</a> — Client libraries for Python (scrm-client) and TypeScript (@scrm/sdk)</li>
+            <li><a href="/docs/auth">Authentication &amp; API Keys</a> — Public access tier, rate limits (100 req/min), and key guidance</li>
+            <li><a href="/openapi.json">OpenAPI Specification</a> — Machine-readable OpenAPI 3.1.0 specification</li>
+            <li><a href="/.well-known/mcp">MCP Server Manifest</a> — Model Context Protocol tools for Claude Desktop and agents</li>
+            <li><a href="/llms.txt">llms.txt</a> — AI agent instructions and prompt engineering guide</li>
             <li><a href="/about">About</a> — Platform overview and mission</li>
-            <li><a href="/contact">Contact</a> — Support and partnership inquiries</li>
-            <li><a href="/privacy">Privacy Policy</a> — Data handling and privacy practices</li>
+            <li><a href="/contact">Contact</a> — Support and developer inquiries</li>
+            <li><a href="/privacy">Privacy Policy</a> — Data handling and security practices</li>
           </ul>
         </section>
       </main>

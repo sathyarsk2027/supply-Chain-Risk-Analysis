@@ -3,6 +3,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
+    { "source": "/api/v1/:path*", "destination": "/api/[...path]" },
     { "source": "/api/:path*", "destination": "/api/[...path]" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
@@ -10,7 +11,7 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Vary", "value": "Accept" }
+        { "key": "Vary", "value": "Accept, X-API-Version" }
       ]
     },
     {
@@ -40,7 +41,25 @@
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Accept" }
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Accept, X-API-Version, Authorization" },
+        { "key": "RateLimit-Limit", "value": "100" },
+        { "key": "RateLimit-Policy", "value": "100;w=60" },
+        { "key": "X-RateLimit-Limit", "value": "100" },
+        { "key": "API-Version", "value": "1.0.0" },
+        { "key": "X-API-Version", "value": "1.0.0" }
+      ]
+    },
+    {
+      "source": "/api/v1/:path*",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Accept, X-API-Version, Authorization" },
+        { "key": "RateLimit-Limit", "value": "100" },
+        { "key": "RateLimit-Policy", "value": "100;w=60" },
+        { "key": "X-RateLimit-Limit", "value": "100" },
+        { "key": "API-Version", "value": "1.0.0" },
+        { "key": "X-API-Version", "value": "1.0.0" }
       ]
     }
   ]

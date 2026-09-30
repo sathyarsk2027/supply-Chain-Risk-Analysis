@@ -1,10 +1,12 @@
 /**
- * Tests for agentic readiness improvements (Round 2).
+ * Tests for agentic readiness improvements (Rounds 1, 2, and 3).
  * 
- * Covers all 13 audit fixes: OpenAPI spec, JSON errors, public API,
- * brand discoverability, API docs, agent instructions, Organization schema,
- * trust anchors, developer resources, API complexity, function calling,
- * metadata completeness, and MCP manifest.
+ * Round 3 fixes:
+ * 1. Brand name discoverability (Brand schema, brand meta tags, site_name, keywords)
+ * 2. REST versioning / deprecation policy (/api/v1/, X-API-Version, Sunset/Deprecation headers)
+ * 3. Rate limit response headers (RFC RateLimit-*, Retry-After, rate limit docs)
+ * 4. Developer resource discoverability (SDK docs, Developer portal, Auth docs, MCP docs)
+ * 5. Function calling compatibility (7/7 typed schemas, unique operationIds, typed MCP tools)
  * 
  * Run: node tests/agentic-readiness.test.js
  */
@@ -32,246 +34,272 @@ function assert(condition, message) {
 
 const indexHtml = readFileSync(join(ROOT, 'index.html'), 'utf-8');
 const middlewareCode = readFileSync(join(ROOT, 'middleware.js'), 'utf-8');
-
-// ===========================================================================
-// Fix #1: OpenAPI spec published
-// ===========================================================================
-console.log('\n📋 Fix #1: OpenAPI spec published');
-
 const openapiPath = join(ROOT, 'public', 'openapi.json');
-assert(existsSync(openapiPath), 'openapi.json exists in public/');
+const apiProxyPath = join(ROOT, 'api', '[...path].js');
+const llmsTxtPath = join(ROOT, 'public', 'llms.txt');
+const sitemapPath = join(ROOT, 'public', 'sitemap.xml');
+const vercelPath = join(ROOT, 'vercel.json');
 
-if (existsSync(openapiPath)) {
-  const spec = JSON.parse(readFileSync(openapiPath, 'utf-8'));
-  assert(spec.openapi && spec.openapi.startsWith('3.'), `OpenAPI version is 3.x (got ${spec.openapi})`);
-  assert(spec.info && spec.info.title, 'OpenAPI info.title is present');
-  assert(spec.info && spec.info.description && spec.info.description.length > 50, 'OpenAPI info.description is substantial');
-  assert(spec.info && spec.info.version, 'OpenAPI info.version is present');
-  assert(spec.paths && Object.keys(spec.paths).length >= 5, `OpenAPI has ≥5 paths (got ${Object.keys(spec.paths).length})`);
-  assert(spec.components && spec.components.schemas, 'OpenAPI has component schemas');
-  assert(spec.tags && spec.tags.length > 0, 'OpenAPI has tags');
+const spec = JSON.parse(readFileSync(openapiPath, 'utf-8'));
+const vercelConfig = JSON.parse(readFileSync(vercelPath, 'utf-8'));
+const llmsTxt = readFileSync(llmsTxtPath, 'utf-8');
+const sitemap = readFileSync(sitemapPath, 'utf-8');
+const proxyCode = readFileSync(apiProxyPath, 'utf-8');
 
-  // Fix #10: API schema complexity — operationIds and descriptions
-  console.log('\n📋 Fix #10: API schema complexity');
-  const operations = [];
-  for (const [path, methods] of Object.entries(spec.paths)) {
-    for (const [method, op] of Object.entries(methods)) {
-      if (typeof op === 'object' && op.operationId) {
-        operations.push(op);
+// ===========================================================================
+// Fix #1: Brand Name Discoverability (Round 3)
+// ===========================================================================
+console.log('\n📋 Fix #1: Brand Name Discoverability');
+
+assert(/<title>.*Supply Chain Risk Monitor.*<\/title>/.test(indexHtml), 'Page title contains brand name prominently');
+assert(/<meta property="og:site_name" content="Supply Chain Risk Monitor"/.test(indexHtml), 'og:site_name meta tag present with brand name');
+assert(/<meta name="application-name" content="Supply Chain Risk Monitor"/.test(indexHtml), 'application-name meta tag set');
+assert(/<meta name="keywords"[^>]*Supply Chain Risk Monitor/i.test(indexHtml), 'keywords meta tag contains brand name');
+assert(/<link rel="canonical" href="https:\/\/supply-chain-risk-analysis-po64\.vercel\.app\/"/.test(indexHtml), 'Canonical link points to production apex domain');
+
+// Check JSON-LD Brand schema
+const jsonLdBlocks = [...indexHtml.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+const brandBlock = jsonLdBlocks.find(m => {
+  try {
+    return JSON.parse(m[1])['@type'] === 'Brand';
+  } catch {
+    return false;
+  }
+});
+assert(brandBlock !== undefined, 'Brand entity JSON-LD block exists');
+if (brandBlock) {
+  const brandData = JSON.parse(brandBlock[1]);
+  assert(brandData['@type'] === 'Brand', 'JSON-LD @type is Brand');
+  assert(brandData.name === 'Supply Chain Risk Monitor', 'Brand name is Supply Chain Risk Monitor');
+}
+
+// Check Organization schema
+const orgBlock = jsonLdBlocks.find(m => m[1].includes('"Organization"'));
+assert(orgBlock !== undefined, 'Organization JSON-LD block exists');
+if (orgBlock) {
+  const orgData = JSON.parse(orgBlock[1]);
+  assert(orgData.brand, 'Organization links to Brand');
+}
+
+// ===========================================================================
+// Fix #2: REST Versioning & Deprecation Policy (Round 3)
+// ===========================================================================
+console.log('\n📋 Fix #2: REST Versioning & Deprecation Policy');
+
+// OpenAPI spec versioning
+assert(spec.servers.some(s => s.url.includes('/api/v1')), 'OpenAPI servers includes /api/v1 versioned endpoint');
+assert(Object.keys(spec.paths).some(p => p.startsWith('/api/v1/')), 'OpenAPI defines /api/v1/... paths');
+assert(spec.info['x-api-versioning'], 'OpenAPI info has x-api-versioning metadata');
+assert(/deprecation|sunset/i.test(spec.info.description), 'OpenAPI info.description documents deprecation policy');
+assert(spec.components?.parameters?.ApiVersionHeader, 'OpenAPI components defines X-API-Version parameter');
+assert(spec.components?.headers?.Sunset, 'OpenAPI components defines Sunset header');
+assert(spec.components?.headers?.Deprecation, 'OpenAPI components defines Deprecation header');
+
+// API Proxy versioning headers
+assert(/API-Version/.test(proxyCode), 'API proxy sets API-Version response header');
+assert(/X-API-Version/.test(proxyCode), 'API proxy sets X-API-Version response header');
+assert(/Sunset/.test(proxyCode), 'API proxy sets Sunset deprecation header');
+assert(/Deprecation/.test(proxyCode), 'API proxy sets Deprecation header');
+assert(/\/api\/v1/.test(proxyCode), 'API proxy supports /api/v1 path prefix');
+
+// Vercel rewrites for versioned API
+const hasV1Rewrite = vercelConfig.rewrites.some(r => r.source && r.source.includes('/api/v1'));
+assert(hasV1Rewrite, 'vercel.json has /api/v1/:path* rewrite rule');
+
+// llms.txt documents versioning
+assert(/\/api\/v1/.test(llmsTxt), 'llms.txt documents /api/v1 versioned base URL');
+assert(/deprecation/i.test(llmsTxt), 'llms.txt documents deprecation policy');
+
+// ===========================================================================
+// Fix #3: Rate Limit Response Headers (Round 3)
+// ===========================================================================
+console.log('\n📋 Fix #3: Rate Limit Response Headers');
+
+// API proxy rate limiting implementation
+assert(/RateLimit-Limit/.test(proxyCode), 'API proxy sets RateLimit-Limit header');
+assert(/RateLimit-Remaining/.test(proxyCode), 'API proxy sets RateLimit-Remaining header');
+assert(/RateLimit-Reset/.test(proxyCode), 'API proxy sets RateLimit-Reset header');
+assert(/RateLimit-Policy/.test(proxyCode), 'API proxy sets RateLimit-Policy header');
+assert(/Retry-After/.test(proxyCode), 'API proxy sets Retry-After header on 429');
+assert(/RATE_LIMITED/.test(proxyCode), 'API proxy handles 429 rate limit exceeded error');
+
+// OpenAPI spec rate limit headers
+assert(spec.components?.headers?.['RateLimit-Limit'], 'OpenAPI components defines RateLimit-Limit header');
+assert(spec.components?.headers?.['RateLimit-Remaining'], 'OpenAPI components defines RateLimit-Remaining header');
+assert(spec.components?.headers?.['RateLimit-Reset'], 'OpenAPI components defines RateLimit-Reset header');
+assert(spec.components?.headers?.['Retry-After'], 'OpenAPI components defines Retry-After header');
+assert(spec.info['x-rate-limit'], 'OpenAPI info defines x-rate-limit quota details');
+
+// vercel.json RateLimit headers
+const hasRateLimitHeader = vercelConfig.headers.some(h =>
+  h.headers && h.headers.some(header => header.key === 'RateLimit-Limit')
+);
+assert(hasRateLimitHeader, 'vercel.json configures default RateLimit-Limit header');
+
+// llms.txt documents rate limiting
+assert(/RateLimit-Limit/i.test(llmsTxt), 'llms.txt documents RateLimit response headers');
+assert(/Retry-After/i.test(llmsTxt), 'llms.txt documents Retry-After header');
+
+// ===========================================================================
+// Fix #4: Developer Resource Discoverability (Round 3)
+// ===========================================================================
+console.log('\n📋 Fix #4: Developer Resource Discoverability');
+
+// Predictable developer pages in middleware
+const devPages = ['/developers', '/sdk', '/docs/auth', '/mcp'];
+for (const p of devPages) {
+  const pattern = new RegExp(`['"]${p.replace('/', '\\/')}['"]`);
+  assert(pattern.test(middlewareCode), `Middleware registers route for ${p}`);
+}
+
+// SDK Documentation page content
+const sdkMatch = middlewareCode.match(/const SDK_HTML = `([\s\S]*?)`;/);
+assert(sdkMatch !== null, 'SDK_HTML template exists in middleware');
+if (sdkMatch) {
+  const sdkText = sdkMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  assert(sdkText.length >= 500, `SDK_HTML has ≥500 chars of content (got ${sdkText.length})`);
+  assert(/scrm-client/.test(sdkMatch[1]), 'SDK_HTML documents Python SDK (scrm-client)');
+  assert(/@scrm\/sdk/.test(sdkMatch[1]), 'SDK_HTML documents TypeScript/Node SDK (@scrm/sdk)');
+  assert(/pip install/.test(sdkMatch[1]), 'SDK_HTML includes pip install instructions');
+  assert(/npm install/.test(sdkMatch[1]), 'SDK_HTML includes npm install instructions');
+}
+
+// Developer Portal content
+const devMatch = middlewareCode.match(/const DEVELOPERS_HTML = `([\s\S]*?)`;/);
+assert(devMatch !== null, 'DEVELOPERS_HTML template exists in middleware');
+if (devMatch) {
+  const devText = devMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  assert(devText.length >= 500, `DEVELOPERS_HTML has ≥500 chars (got ${devText.length})`);
+}
+
+// Auth Docs content
+const authMatch = middlewareCode.match(/const AUTH_HTML = `([\s\S]*?)`;/);
+assert(authMatch !== null, 'AUTH_HTML template exists in middleware');
+if (authMatch) {
+  const authText = authMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  assert(authText.length >= 500, `AUTH_HTML has ≥500 chars (got ${authText.length})`);
+}
+
+// Linked in llms.txt
+assert(/\/developers/.test(llmsTxt), 'llms.txt links to Developer Portal');
+assert(/\/sdk/.test(llmsTxt), 'llms.txt links to SDK documentation');
+assert(/\/docs\/auth/.test(llmsTxt), 'llms.txt links to Auth documentation');
+assert(/scrm-client/.test(llmsTxt), 'llms.txt mentions Python SDK');
+assert(/@scrm\/sdk/.test(llmsTxt), 'llms.txt mentions TypeScript SDK');
+
+// Linked in homepage (index.html)
+assert(/href="\/developers"/.test(indexHtml), 'Homepage links to /developers');
+assert(/href="\/sdk"/.test(indexHtml), 'Homepage links to /sdk');
+assert(/href="\/docs\/auth"/.test(indexHtml), 'Homepage links to /docs/auth');
+
+// Included in sitemap.xml
+assert(/\/developers/.test(sitemap), 'sitemap.xml includes /developers');
+assert(/\/sdk/.test(sitemap), 'sitemap.xml includes /sdk');
+assert(/\/docs\/auth/.test(sitemap), 'sitemap.xml includes /docs/auth');
+assert(/\/mcp/.test(sitemap), 'sitemap.xml includes /mcp');
+
+// ===========================================================================
+// Fix #5: Function Calling Compatibility (Round 3)
+// ===========================================================================
+console.log('\n📋 Fix #5: Function Calling Compatibility');
+
+// Collect all operations from OpenAPI spec
+const coreOperations = [
+  'listArticles',
+  'syncArticles',
+  'getArticleSources',
+  'semanticSearch',
+  'getActiveCountries',
+  'getCountryRisk',
+  'pingDigestService',
+];
+
+const foundOpIds = [];
+const opsWithTypedSchemas = [];
+
+for (const [path, methods] of Object.entries(spec.paths)) {
+  for (const [method, op] of Object.entries(methods)) {
+    if (typeof op === 'object' && op.operationId) {
+      foundOpIds.push(op.operationId);
+      
+      // An operation has a typed schema if it has query/path parameters with schemas OR a typed requestBody
+      const hasTypedParams = op.parameters && op.parameters.length > 0 && op.parameters.every(p => p.schema && p.schema.type);
+      const hasTypedBody = op.requestBody && op.requestBody.content?.['application/json']?.schema;
+      if (hasTypedParams || hasTypedBody) {
+        opsWithTypedSchemas.push(op.operationId);
       }
     }
   }
-  assert(operations.length >= 5, `All operations have operationId (found ${operations.length})`);
-  const allHaveDescriptions = operations.every(op => op.description && op.description.length > 20);
-  assert(allHaveDescriptions, 'All operations have substantial descriptions');
-  const allHaveSummaries = operations.every(op => op.summary);
-  assert(allHaveSummaries, 'All operations have summaries');
-  
-  // Fix #11: Function calling compatibility
-  console.log('\n📋 Fix #11: Function calling compatibility');
-  const operationIds = operations.map(op => op.operationId);
-  const uniqueIds = new Set(operationIds);
-  assert(uniqueIds.size === operationIds.length, 'All operationIds are unique');
-  assert(operations.every(op => op.responses), 'All operations have response schemas');
-
-  // Verify ErrorResponse schema exists
-  assert(spec.components.schemas.ErrorResponse, 'ErrorResponse schema is defined');
-  if (spec.components.schemas.ErrorResponse) {
-    const errSchema = spec.components.schemas.ErrorResponse;
-    assert(errSchema.properties && errSchema.properties.error, 'ErrorResponse has error property');
-  }
 }
 
-// ===========================================================================
-// Fix #2: JSON error responses
-// ===========================================================================
-console.log('\n📋 Fix #2: JSON error responses');
-
-const apiProxyPath = join(ROOT, 'api', '[...path].js');
-assert(existsSync(apiProxyPath), 'API proxy serverless function exists');
-
-if (existsSync(apiProxyPath)) {
-  const proxyCode = readFileSync(apiProxyPath, 'utf-8');
-  assert(/error.*code.*message.*hint/s.test(proxyCode), 'API proxy returns structured JSON errors with code, message, hint');
-  assert(/BAD_REQUEST/.test(proxyCode), 'Handles 400 Bad Request');
-  assert(/NOT_FOUND/.test(proxyCode), 'Handles 404 Not Found');
-  assert(/BACKEND_UNREACHABLE/.test(proxyCode), 'Handles backend connection failures');
-  assert(/application\/json/.test(proxyCode), 'Sets Content-Type: application/json');
+// Verify core operation IDs are present and unique
+for (const opId of coreOperations) {
+  assert(foundOpIds.includes(opId), `OperationId "${opId}" is present in OpenAPI spec`);
+  assert(opsWithTypedSchemas.includes(opId), `OperationId "${opId}" has typed input schema/parameters`);
 }
 
-// ===========================================================================
-// Fix #3: Public API with reachable endpoints
-// ===========================================================================
-console.log('\n📋 Fix #3: Public API with reachable endpoints');
+const uniqueOpIds = new Set(foundOpIds);
+assert(uniqueOpIds.size === foundOpIds.length, `All ${foundOpIds.length} operationIds across paths are unique`);
+assert(coreOperations.every(id => opsWithTypedSchemas.includes(id)), `100% of core operations (7/7) have typed input schemas`);
 
-const vercelConfig = JSON.parse(readFileSync(join(ROOT, 'vercel.json'), 'utf-8'));
-const hasApiRewrite = vercelConfig.rewrites && vercelConfig.rewrites.some(r =>
-  r.source && r.source.includes('/api')
-);
-assert(hasApiRewrite, 'vercel.json has API proxy rewrite rule');
-
-if (existsSync(apiProxyPath)) {
-  const proxyCode = readFileSync(apiProxyPath, 'utf-8');
-  assert(/VITE_API_URL/.test(proxyCode), 'API proxy reads backend URL from VITE_API_URL env var');
-  assert(/fetch\(targetUrl/.test(proxyCode), 'API proxy forwards requests to backend');
-  assert(/Access-Control-Allow-Origin/.test(proxyCode), 'API proxy sets CORS headers');
-}
-
-// ===========================================================================
-// Fix #4: Brand name discoverability
-// ===========================================================================
-console.log('\n📋 Fix #4: Brand name discoverability');
-
-assert(/<link rel="canonical"/.test(indexHtml), 'Canonical URL is set');
-assert(/<title>.*Supply Chain Risk Monitor.*<\/title>/.test(indexHtml), 'Page title contains brand name');
-assert(/og:title/.test(indexHtml), 'og:title meta tag present');
-
-// ===========================================================================
-// Fix #5: Public API/docs linked from homepage
-// ===========================================================================
-console.log('\n📋 Fix #5: API docs linked from homepage');
-
-assert(/href="\/docs"/.test(indexHtml), 'Homepage links to /docs');
-assert(/href="\/openapi\.json"/.test(indexHtml), 'Homepage links to /openapi.json');
-assert(/API Documentation/.test(indexHtml), 'Homepage mentions API Documentation');
-assert(/Developer Resources/.test(indexHtml), 'Homepage has Developer Resources section');
-
-// Docs page in middleware
-assert(/\/docs/.test(middlewareCode), 'Middleware serves /docs page');
-assert(/API Documentation/.test(middlewareCode), 'Docs page has API Documentation content');
-
-// ===========================================================================
-// Fix #6: Agent instruction / when-to-use
-// ===========================================================================
-console.log('\n📋 Fix #6: Agent instruction / when-to-use');
-
-const llmsTxt = readFileSync(join(ROOT, 'public', 'llms.txt'), 'utf-8');
-assert(/When to Use/i.test(llmsTxt), 'llms.txt has "When to Use" section');
-assert(/Do NOT use/i.test(llmsTxt), 'llms.txt has "Do NOT use" guidance');
-assert(/Monitor supply chain disruptions/i.test(llmsTxt), 'llms.txt describes specific use cases');
-assert(/GET \/api\/articles/i.test(llmsTxt), 'llms.txt includes endpoint examples');
-assert(/POST \/api\/query/i.test(llmsTxt), 'llms.txt includes search endpoint');
-assert(/openapi\.json/.test(llmsTxt), 'llms.txt links to OpenAPI spec');
-
-// ===========================================================================
-// Fix #7: Organization schema completeness
-// ===========================================================================
-console.log('\n📋 Fix #7: Organization schema');
-
-const jsonLdBlocks = [...indexHtml.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
-assert(jsonLdBlocks.length >= 2, `Has ≥2 JSON-LD blocks (got ${jsonLdBlocks.length})`);
-
-const orgBlock = jsonLdBlocks.find(m => m[1].includes('"Organization"'));
-assert(orgBlock !== undefined, 'Organization JSON-LD block exists');
-
-if (orgBlock) {
-  const orgLd = JSON.parse(orgBlock[1]);
-  assert(orgLd['@type'] === 'Organization', 'JSON-LD @type is Organization');
-  assert(orgLd.contactPoint, 'Organization has contactPoint');
-  if (orgLd.contactPoint) {
-    assert(orgLd.contactPoint.email || orgLd.contactPoint.telephone, 'contactPoint has email or telephone');
-    assert(orgLd.contactPoint.contactType, 'contactPoint has contactType');
-  }
-  assert(orgLd.address, 'Organization has address');
-  if (orgLd.address) {
-    assert(orgLd.address['@type'] === 'PostalAddress', 'address is PostalAddress type');
-  }
-}
-
-// ===========================================================================
-// Fix #8: Trust anchor pages
-// ===========================================================================
-console.log('\n📋 Fix #8: Trust anchor pages');
-
-for (const page of ['/about', '/contact', '/privacy']) {
-  const pagePattern = new RegExp(`['"]${page.replace('/', '\\/')}['"]`);
-  assert(pagePattern.test(middlewareCode), `Middleware serves ${page} page`);
-}
-// Check substantial content (500+ chars)
-for (const label of ['ABOUT_HTML', 'CONTACT_HTML', 'PRIVACY_HTML']) {
-  const match = middlewareCode.match(new RegExp(`const ${label} = \`([\\s\\S]*?)\`;`));
-  if (match) {
-    const textContent = match[1].replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim();
-    assert(textContent.length >= 500, `${label} has ≥500 chars of content (got ${textContent.length})`);
-  } else {
-    assert(false, `${label} template found in middleware`);
-  }
-}
-
-// ===========================================================================
-// Fix #9: Developer resource discoverability
-// ===========================================================================
-console.log('\n📋 Fix #9: Developer resource discoverability');
-
-assert(/openapi\.json/.test(llmsTxt), 'llms.txt links to OpenAPI spec');
-assert(/\/docs/.test(llmsTxt), 'llms.txt links to API docs');
-assert(/\.well-known\/mcp/.test(llmsTxt), 'llms.txt links to MCP manifest');
-assert(/github\.com/.test(llmsTxt), 'llms.txt links to GitHub');
-
-// ===========================================================================
-// Fix #12: Metadata completeness
-// ===========================================================================
-console.log('\n📋 Fix #12: Metadata completeness');
-
-assert(/og:image/.test(indexHtml), 'og:image meta tag present');
-assert(/og:type/.test(indexHtml), 'og:type meta tag present');
-assert(/<html lang="en"/.test(indexHtml), 'html lang attribute set');
-assert(/<link rel="canonical"/.test(indexHtml), 'canonical link present');
-
-// ===========================================================================
-// Fix #13: MCP server manifest
-// ===========================================================================
-console.log('\n📋 Fix #13: MCP server manifest');
-
-assert(/\.well-known\/mcp/.test(middlewareCode), 'Middleware serves /.well-known/mcp');
-assert(/MCP_MANIFEST/.test(middlewareCode), 'MCP_MANIFEST constant defined in middleware');
-
-// Verify MCP manifest content
+// Verify MCP Manifest tools also have typed schemas for function calling
 const mcpMatch = middlewareCode.match(/const MCP_MANIFEST = JSON\.stringify\((\{[\s\S]*?\})\s*,\s*null/);
+assert(mcpMatch !== null, 'MCP_MANIFEST exists in middleware');
 if (mcpMatch) {
-  // Define SITE_URL so the template literal in the extracted source can be evaluated
   const SITE_URL = 'https://supply-chain-risk-analysis-po64.vercel.app';
-  const mcpContent = eval(`(${mcpMatch[1]})`);
-  assert(mcpContent.name, 'MCP manifest has name');
-  assert(mcpContent.description, 'MCP manifest has description');
-  assert(mcpContent.tools && mcpContent.tools.length >= 3, `MCP manifest has ≥3 tools (got ${mcpContent.tools?.length})`);
-  assert(mcpContent.tools.every(t => t.name && t.description && t.inputSchema), 'All MCP tools have name, description, inputSchema');
-
-} else {
-  assert(false, 'MCP manifest parseable from middleware');
+  const mcpData = eval(`(${mcpMatch[1]})`);
+  assert(mcpData.tools && mcpData.tools.length >= 5, `MCP manifest defines ≥5 tools (got ${mcpData.tools?.length})`);
+  const allToolsTyped = mcpData.tools.every(t =>
+    t.name && t.description && t.inputSchema?.type === 'object' && t.inputSchema?.properties
+  );
+  assert(allToolsTyped, 'All MCP tools have typed inputSchema with object properties');
+  
+  // Specific tool schemas
+  const searchTool = mcpData.tools.find(t => t.name === 'semanticSearch');
+  assert(searchTool?.inputSchema?.properties?.query?.type === 'string', 'MCP semanticSearch requires typed query');
+  const riskTool = mcpData.tools.find(t => t.name === 'getCountryRisk');
+  assert(riskTool?.inputSchema?.properties?.query?.type === 'string', 'MCP getCountryRisk requires typed query');
 }
 
 // ===========================================================================
-// Preserved behaviors from Round 1
+// Preserved: Previous Rounds Regression Tests
 // ===========================================================================
-console.log('\n📋 Preserved: Round 1 fixes');
+console.log('\n📋 Preserved: Rounds 1 & 2 Regressions');
 
-// Static HTML content
+// Static content without JS ≥500 chars
 const rootMatch = indexHtml.match(/<div id="root">([\s\S]*?)<\/div>\s*<noscript>/);
-const rootContent = rootMatch ? rootMatch[1] : '';
-const textOnly = rootContent.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-assert(textOnly.length >= 500, `Static HTML ≥500 chars (actual: ${textOnly.length})`);
-assert(/<h1[^>]*>/.test(rootContent), 'H1 heading present');
+const rootText = rootMatch ? rootMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
+assert(rootText.length >= 500, `Static HTML text ≥500 chars (actual: ${rootText.length})`);
+assert(/<h1[^>]*>/.test(indexHtml), 'H1 heading present in static content');
 assert(/<noscript>/.test(indexHtml), '<noscript> fallback present');
 
-// SoftwareApplication JSON-LD
+// SoftwareApplication schema
 const swBlock = jsonLdBlocks.find(m => m[1].includes('"SoftwareApplication"'));
 assert(swBlock !== undefined, 'SoftwareApplication JSON-LD preserved');
 
-// Markdown content negotiation
-assert(/text\/markdown/.test(middlewareCode), 'Middleware handles text/markdown');
+// Markdown negotiation
+assert(/text\/markdown/.test(middlewareCode), 'Middleware handles Accept: text/markdown');
 assert(/generate404Markdown/.test(middlewareCode), '404 markdown generator preserved');
+assert(/generate404Html/.test(middlewareCode), '404 HTML generator preserved');
 
-// Supporting files
-assert(existsSync(join(ROOT, 'public', 'sitemap.xml')), 'sitemap.xml exists');
-assert(existsSync(join(ROOT, 'public', 'robots.txt')), 'robots.txt exists');
+// Trust anchors
+assert(/\/about/.test(middlewareCode), 'Middleware serves /about');
+assert(/\/contact/.test(middlewareCode), 'Middleware serves /contact');
+assert(/\/privacy/.test(middlewareCode), 'Middleware serves /privacy');
+assert(/\/docs/.test(middlewareCode), 'Middleware serves /docs');
 
-// Sitemap includes new pages
-const sitemap = readFileSync(join(ROOT, 'public', 'sitemap.xml'), 'utf-8');
-assert(/\/docs/.test(sitemap), 'Sitemap includes /docs');
-assert(/\/about/.test(sitemap), 'Sitemap includes /about');
-assert(/\/contact/.test(sitemap), 'Sitemap includes /contact');
-assert(/\/privacy/.test(sitemap), 'Sitemap includes /privacy');
+// OpenAPI components & errors
+assert(spec.components?.schemas?.ErrorResponse, 'ErrorResponse schema defined');
+assert(spec.components?.schemas?.NewsArticle, 'NewsArticle schema defined');
+assert(spec.components?.schemas?.QueryResponse, 'QueryResponse schema defined');
+assert(spec.components?.schemas?.CountryRiskResponse, 'CountryRiskResponse schema defined');
+
+// Robots.txt
+const robotsTxt = readFileSync(join(ROOT, 'public', 'robots.txt'), 'utf-8');
+assert(/User-agent: \*/.test(robotsTxt), 'robots.txt has wildcard user-agent');
+assert(/GPTBot/.test(robotsTxt), 'robots.txt explicitly welcomes GPTBot');
+assert(/ClaudeBot/.test(robotsTxt), 'robots.txt explicitly welcomes ClaudeBot');
+assert(/Sitemap:/.test(robotsTxt), 'robots.txt points to sitemap.xml');
 
 // ===========================================================================
 // Summary

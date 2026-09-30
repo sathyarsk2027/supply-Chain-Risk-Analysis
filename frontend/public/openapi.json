@@ -2,32 +2,102 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Supply Chain Risk Monitor API",
-    "description": "REST API for the Supply Chain Risk Monitor platform. Provides real-time access to global supply chain disruption news articles, semantic AI-powered search, country-level risk scoring, and feed synchronization. Designed for integration with AI agents, logistics dashboards, and risk management systems.",
+    "description": "REST API for the Supply Chain Risk Monitor platform. Provides real-time access to global supply chain disruption news articles, semantic AI-powered search, country-level risk scoring, and feed synchronization. Designed for integration with AI agents, logistics dashboards, and risk management systems.\n\n### Versioning Strategy\nThis API uses URL path versioning (`/api/v1/...`) with an unversioned default alias (`/api/...`) pointing to the latest stable release. Clients can also supply the `X-API-Version: 1.0` header.\n\n### Deprecation Policy\nDeprecation notices are published at least 6 months prior to retirement. Deprecated endpoints return RFC 8594 standard headers: `Deprecation: @<timestamp>` and `Sunset: <date>`.\n\n### Rate Limiting\nRequests are limited to 100 requests per minute per IP. All responses return standard RFC rate-limit headers: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, `RateLimit-Policy`, as well as legacy `X-RateLimit-*` headers. When exceeded, the API returns HTTP 429 with a `Retry-After` header.",
     "version": "1.0.0",
     "contact": {
-      "name": "Supply Chain Risk Monitor",
-      "url": "https://supply-chain-risk-analysis-po64.vercel.app/"
+      "name": "Supply Chain Risk Monitor Developer Support",
+      "url": "https://supply-chain-risk-analysis-po64.vercel.app/developers",
+      "email": "sathyarsk2027@gmail.com"
     },
     "license": {
       "name": "MIT"
+    },
+    "x-api-versioning": {
+      "current_version": "v1",
+      "strategy": "URL path (/api/v1/) and optional X-API-Version header",
+      "supported_versions": ["v1"],
+      "deprecation_policy": "Deprecation announced at least 6 months in advance with RFC 8594 Sunset and Deprecation HTTP headers."
+    },
+    "x-rate-limit": {
+      "quota": "100 requests per minute per client IP",
+      "headers": [
+        "RateLimit-Limit",
+        "RateLimit-Remaining",
+        "RateLimit-Reset",
+        "RateLimit-Policy",
+        "Retry-After",
+        "X-RateLimit-Limit",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Reset"
+      ]
     }
   },
   "servers": [
     {
-      "url": "https://supply-chain-risk-analysis-po64.vercel.app",
-      "description": "Production API (proxied through Vercel)"
+      "url": "https://supply-chain-risk-analysis-po64.vercel.app/api/v1",
+      "description": "Production API v1 (Recommended versioned endpoint)"
+    },
+    {
+      "url": "https://supply-chain-risk-analysis-po64.vercel.app/api",
+      "description": "Production API (Unversioned default alias)"
     }
   ],
   "paths": {
-    "/api/articles": {
+    "/api/v1/articles": {
       "get": {
         "operationId": "listArticles",
         "summary": "List all supply chain news articles",
-        "description": "Returns all ingested supply chain disruption news articles, ordered by publication date descending. Each article includes title, source, URL, risk category, NLP-extracted entities, and publication timestamp.",
+        "description": "Returns ingested supply chain disruption news articles, ordered by publication date descending. Supports filtering by disruption category, news source, country, and result limit. Compatible with LLM function calling.",
         "tags": ["Articles"],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of articles to return (1-500). Defaults to 50.",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "Filter by disruption category (e.g., 'Port Congestion', 'Labor Strike', 'Weather Event', 'Regulatory Changes').",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "description": "Filter by news publisher or RSS feed source name.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "Filter articles that mention a specific country by name or ISO code.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "A list of news articles sorted by most recent first.",
+            "headers": {
+              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimit-Limit" },
+              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimit-Remaining" },
+              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimit-Reset" }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -38,6 +108,124 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Rate limit exceeded (100 req/min quota)",
+            "headers": {
+              "Retry-After": { "$ref": "#/components/headers/Retry-After" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles": {
+      "get": {
+        "operationId": "listArticlesAlias",
+        "summary": "List all supply chain news articles (unversioned alias)",
+        "description": "Unversioned alias for /api/v1/articles. Returns ingested supply chain disruption news articles.",
+        "tags": ["Articles"],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of articles to return (1-500).",
+            "schema": { "type": "integer", "default": 50 }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "Filter by disruption category.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "description": "Filter by news publisher source.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "Filter by country.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of news articles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/NewsArticle" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/articles/sync": {
+      "post": {
+        "operationId": "syncArticles",
+        "summary": "Trigger live RSS feed synchronization",
+        "description": "Polls all configured RSS feeds and NewsAPI sources for new supply chain news articles. Newly discovered articles are processed through the NLP pipeline (entity extraction, risk categorization, vector embedding) and stored in the database. Returns the count of new articles ingested.",
+        "tags": ["Articles"],
+        "requestBody": {
+          "required": false,
+          "description": "Optional synchronization parameters to target specific feeds or force re-indexing.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRequest"
+              },
+              "example": {
+                "force": false,
+                "sources": ["SupplyChainBrain", "FreightWaves"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sync completed successfully with count of new articles.",
+            "headers": {
+              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimit-Limit" },
+              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimit-Remaining" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": { "Retry-After": { "$ref": "#/components/headers/Retry-After" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
           },
           "500": {
             "description": "Internal server error",
@@ -54,20 +242,78 @@
     },
     "/api/articles/sync": {
       "post": {
-        "operationId": "syncArticles",
-        "summary": "Trigger live RSS feed synchronization",
-        "description": "Polls all configured RSS feeds and NewsAPI sources for new supply chain news articles. Newly discovered articles are processed through the NLP pipeline (entity extraction, risk categorization, vector embedding) and stored in the database. Returns the count of new articles ingested.",
+        "operationId": "syncArticlesAlias",
+        "summary": "Trigger live RSS feed synchronization (unversioned alias)",
+        "description": "Unversioned alias for /api/v1/articles/sync.",
         "tags": ["Articles"],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SyncRequest" }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Sync completed successfully with count of new articles.",
+            "description": "Sync completed successfully.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SyncResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/articles/sources": {
+      "get": {
+        "operationId": "getArticleSources",
+        "summary": "Get article count breakdown by source",
+        "description": "Returns a list of all news sources along with the count of articles from each source. Supports filtering by minimum article threshold and count limit.",
+        "tags": ["Articles"],
+        "parameters": [
+          {
+            "name": "minArticles",
+            "in": "query",
+            "required": false,
+            "description": "Minimum article count threshold for returned sources. Defaults to 1.",
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of sources to return. Defaults to 50.",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source breakdown with article counts.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SyncResponse"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceCount"
+                  }
                 }
               }
             }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
           },
           "500": {
             "description": "Internal server error",
@@ -84,20 +330,26 @@
     },
     "/api/articles/sources": {
       "get": {
-        "operationId": "getArticleSources",
-        "summary": "Get article count breakdown by source",
-        "description": "Returns a list of all news sources along with the count of articles from each source. Useful for understanding which RSS feeds and news outlets are contributing the most disruption data.",
+        "operationId": "getArticleSourcesAlias",
+        "summary": "Get article count breakdown by source (unversioned alias)",
+        "description": "Unversioned alias for /api/v1/articles/sources.",
         "tags": ["Articles"],
+        "parameters": [
+          {
+            "name": "minArticles",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Source breakdown with article counts.",
+            "description": "Source breakdown.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SourceCount"
-                  }
+                  "items": { "$ref": "#/components/schemas/SourceCount" }
                 }
               }
             }
@@ -105,21 +357,23 @@
         }
       }
     },
-    "/api/query": {
+    "/api/v1/query": {
       "post": {
         "operationId": "semanticSearch",
         "summary": "Semantic AI search across articles",
-        "description": "Performs a semantic search across all ingested articles using vector embeddings (pgvector cosine similarity). The query text is embedded via the NLP service and compared against article embeddings. Returns ranked matches with relevance scores and an optional AI-generated summary of findings. Falls back to keyword search if the NLP service is unavailable.",
+        "description": "Performs a semantic search across all ingested articles using vector embeddings (pgvector cosine similarity). Query text is embedded via the NLP service and compared against article embeddings. Returns ranked matches with relevance scores and an optional AI summary.",
         "tags": ["Search"],
         "requestBody": {
           "required": true,
+          "description": "Search query parameters containing the natural language query and optional retrieval limit.",
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/QueryRequest"
               },
               "example": {
-                "query": "port congestion in Southeast Asia"
+                "query": "port congestion in Southeast Asia",
+                "topK": 10
               }
             }
           }
@@ -127,6 +381,10 @@
         "responses": {
           "200": {
             "description": "Search results with ranked matches and AI summary.",
+            "headers": {
+              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimit-Limit" },
+              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimit-Remaining" }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -144,16 +402,68 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
           }
         }
       }
     },
-    "/api/countries/active": {
+    "/api/query": {
+      "post": {
+        "operationId": "semanticSearchAlias",
+        "summary": "Semantic AI search across articles (unversioned alias)",
+        "description": "Unversioned alias for /api/v1/query.",
+        "tags": ["Search"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/QueryRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QueryResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/countries/active": {
       "get": {
         "operationId": "getActiveCountries",
         "summary": "List countries with active disruption coverage",
-        "description": "Returns a list of countries that have at least one matching news article in the current dataset. Each country includes its ISO code, name, flag emoji, and geographic coordinates for map visualization.",
+        "description": "Returns a list of countries that have matching news articles in the current dataset. Each country includes its ISO code, name, flag emoji, and geographic coordinates for map visualization. Supports optional region filtering.",
         "tags": ["Countries"],
+        "parameters": [
+          {
+            "name": "minRiskArticles",
+            "in": "query",
+            "required": false,
+            "description": "Filter countries having at least this number of active articles. Defaults to 1.",
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "description": "Filter by geographic region (e.g. 'Asia', 'Europe', 'Americas', 'Middle East', 'Africa').",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of active country pins with geo-coordinates.",
@@ -167,26 +477,71 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
           }
         }
       }
     },
-    "/api/countries/risk": {
+    "/api/countries/active": {
+      "get": {
+        "operationId": "getActiveCountriesAlias",
+        "summary": "List countries with active disruption coverage (unversioned alias)",
+        "description": "Unversioned alias for /api/v1/countries/active.",
+        "tags": ["Countries"],
+        "parameters": [
+          {
+            "name": "minRiskArticles",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active country pins.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CountryPin" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/countries/risk": {
       "get": {
         "operationId": "getCountryRisk",
         "summary": "Get risk assessment for a specific country",
-        "description": "Computes a real-time, recency-weighted risk score for a country based on all matching supply chain news articles. Returns an overall risk score (0-100), categorical breakdown (geopolitical, logistics, weather, market), key risk driver highlights extracted from article titles, and the matched articles.",
+        "description": "Computes a real-time, recency-weighted risk score for a country based on matching supply chain news articles. Returns an overall risk score (0-100), categorical breakdown (geopolitical, logistics, weather, market), key risk driver highlights, and matched articles.",
         "tags": ["Countries"],
         "parameters": [
           {
             "name": "query",
             "in": "query",
             "required": true,
-            "description": "Country name to assess risk for (e.g., 'India', 'United States', 'China').",
+            "description": "Country name to assess risk for (e.g., 'India', 'United States', 'China', 'Germany').",
             "schema": {
               "type": "string"
             },
             "example": "India"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Lookback window in days for recency weighting (default 30 days, min 1, max 365).",
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "minimum": 1,
+              "maximum": 365
+            }
           }
         ],
         "responses": {
@@ -209,16 +564,58 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
           }
         }
       }
     },
-    "/api/digest/ping": {
+    "/api/countries/risk": {
+      "get": {
+        "operationId": "getCountryRiskAlias",
+        "summary": "Get risk assessment for a specific country (unversioned alias)",
+        "description": "Unversioned alias for /api/v1/countries/risk.",
+        "tags": ["Countries"],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Country risk assessment.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CountryRiskResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/digest/ping": {
       "get": {
         "operationId": "pingDigestService",
         "summary": "Health check for the digest service",
-        "description": "Simple ping endpoint to wake up the server and verify it is ready to process digest requests.",
+        "description": "Ping endpoint to verify server readiness and wake up background workers. Supports optional verbose status flag.",
         "tags": ["Digest"],
+        "parameters": [
+          {
+            "name": "verbose",
+            "in": "query",
+            "required": false,
+            "description": "Whether to return extended health telemetry, uptime, and memory usage.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Server is ready.",
@@ -234,7 +631,40 @@
                     "message": {
                       "type": "string",
                       "example": "Server is ready."
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
                     }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+          }
+        }
+      }
+    },
+    "/api/digest/ping": {
+      "get": {
+        "operationId": "pingDigestServiceAlias",
+        "summary": "Health check for the digest service (unversioned alias)",
+        "description": "Unversioned alias for /api/v1/digest/ping.",
+        "tags": ["Digest"],
+        "responses": {
+          "200": {
+            "description": "Server is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" },
+                    "message": { "type": "string" }
                   }
                 }
               }
@@ -245,205 +675,273 @@
     }
   },
   "components": {
+    "parameters": {
+      "ApiVersionHeader": {
+        "name": "X-API-Version",
+        "in": "header",
+        "required": false,
+        "description": "Target API version. Supported values: '1.0', '1'. Defaults to '1.0'.",
+        "schema": {
+          "type": "string",
+          "default": "1.0",
+          "enum": ["1.0", "1"]
+        }
+      }
+    },
+    "headers": {
+      "RateLimit-Limit": {
+        "description": "The maximum number of allowed requests in the current 60-second window (standard quota: 100).",
+        "schema": {
+          "type": "integer",
+          "example": 100
+        }
+      },
+      "RateLimit-Remaining": {
+        "description": "The number of remaining requests allowed in the current 60-second window.",
+        "schema": {
+          "type": "integer",
+          "example": 98
+        }
+      },
+      "RateLimit-Reset": {
+        "description": "Number of seconds until the current rate limit window resets.",
+        "schema": {
+          "type": "integer",
+          "example": 45
+        }
+      },
+      "RateLimit-Policy": {
+        "description": "The rate limit quota policy per RFC draft specification.",
+        "schema": {
+          "type": "string",
+          "example": "100;w=60"
+        }
+      },
+      "Retry-After": {
+        "description": "Number of seconds client should wait before making subsequent requests after a 429 response.",
+        "schema": {
+          "type": "integer",
+          "example": 60
+        }
+      },
+      "Sunset": {
+        "description": "RFC 8594 Sunset date when a deprecated version will be retired.",
+        "schema": {
+          "type": "string",
+          "example": "Fri, 31 Dec 2027 23:59:59 GMT"
+        }
+      },
+      "Deprecation": {
+        "description": "RFC 8594 Deprecation indicator or date.",
+        "schema": {
+          "type": "string",
+          "example": "false"
+        }
+      }
+    },
     "schemas": {
       "NewsArticle": {
         "type": "object",
-        "description": "A supply chain news article ingested from RSS feeds or NewsAPI.",
+        "description": "A supply chain disruption news article.",
         "properties": {
           "id": {
             "type": "integer",
-            "format": "int64",
-            "description": "Unique identifier for the article."
+            "description": "Unique article ID.",
+            "example": 142
           },
           "title": {
             "type": "string",
             "description": "Article headline.",
-            "maxLength": 1024
+            "example": "Red Sea shipping diversions add 10-14 days to Asia-Europe transit times"
+          },
+          "source": {
+            "type": "string",
+            "description": "News publisher name or RSS feed source.",
+            "example": "SupplyChainBrain"
           },
           "url": {
             "type": "string",
             "format": "uri",
             "description": "Original article URL.",
-            "maxLength": 2048
+            "example": "https://www.supplychainbrain.com/articles/38912"
           },
-          "source": {
+          "category": {
             "type": "string",
-            "description": "News source or publisher name.",
-            "maxLength": 512
+            "description": "Disruption category assigned by NLP pipeline.",
+            "example": "Port Congestion"
+          },
+          "entities": {
+            "type": "array",
+            "description": "Named entities (ports, countries, companies) extracted from the article.",
+            "items": {
+              "type": "string"
+            },
+            "example": ["Red Sea", "Suez Canal", "Maersk", "Rotterdam"]
           },
           "publishedAt": {
             "type": "string",
             "format": "date-time",
-            "description": "ISO 8601 publication timestamp."
+            "description": "Publication timestamp in ISO 8601 format.",
+            "example": "2026-09-30T10:15:00Z"
           },
-          "rawContent": {
-            "type": "string",
-            "description": "Full article text content."
-          },
-          "fetchedAt": {
+          "createdAt": {
             "type": "string",
             "format": "date-time",
-            "description": "ISO 8601 timestamp when the article was ingested."
-          },
-          "riskCategory": {
-            "type": "string",
-            "description": "NLP-classified risk category (e.g., 'geopolitical', 'logistics', 'weather', 'market').",
-            "enum": ["geopolitical", "logistics", "weather", "market", "regulatory", "labor", "cyber", "environmental"]
-          },
-          "entities": {
-            "type": "string",
-            "description": "JSON string of NLP-extracted named entities (countries, organizations, ports, etc.)."
+            "description": "Ingestion timestamp in ISO 8601 format.",
+            "example": "2026-09-30T10:30:12Z"
           }
         },
-        "required": ["id", "title", "url"]
+        "required": ["id", "title", "source", "url"]
+      },
+      "SyncRequest": {
+        "type": "object",
+        "description": "Request body for triggering feed synchronization.",
+        "properties": {
+          "force": {
+            "type": "boolean",
+            "description": "Force re-polling of all feeds even if recently polled.",
+            "default": false
+          },
+          "sources": {
+            "type": "array",
+            "description": "Optional list of specific feed names to synchronize.",
+            "items": {
+              "type": "string"
+            },
+            "example": ["SupplyChainBrain", "FreightWaves"]
+          }
+        }
       },
       "SyncResponse": {
         "type": "object",
-        "description": "Result of a feed synchronization operation.",
+        "description": "Result of an RSS feed synchronization.",
         "properties": {
-          "success": {
-            "type": "boolean",
-            "description": "Whether the sync completed successfully."
+          "message": {
+            "type": "string",
+            "example": "Sync completed successfully."
           },
-          "newArticlesFetched": {
+          "newArticles": {
             "type": "integer",
-            "description": "Number of new articles ingested during this sync."
+            "description": "Count of new articles ingested and processed.",
+            "example": 14
           },
           "timestamp": {
             "type": "string",
             "format": "date-time",
-            "description": "ISO 8601 timestamp of when the sync completed."
+            "example": "2026-09-30T12:00:00Z"
           }
         },
-        "required": ["success", "newArticlesFetched", "timestamp"]
+        "required": ["message", "newArticles"]
       },
       "SourceCount": {
         "type": "object",
-        "description": "Article count for a single news source.",
+        "description": "Article count for a specific news source.",
         "properties": {
           "source": {
             "type": "string",
-            "description": "News source name."
+            "description": "Name of the news source.",
+            "example": "FreightWaves"
           },
           "count": {
             "type": "integer",
-            "description": "Number of articles from this source."
+            "description": "Total number of articles from this source.",
+            "example": 47
           }
-        }
+        },
+        "required": ["source", "count"]
       },
       "QueryRequest": {
         "type": "object",
-        "description": "Semantic search query input.",
+        "description": "Request body for semantic search across articles.",
         "properties": {
           "query": {
             "type": "string",
-            "description": "Natural language search query describing the supply chain scenario to search for.",
-            "minLength": 1,
-            "maxLength": 500
+            "description": "The natural language search query. Can describe a scenario, disruption type, region, or company.",
+            "example": "port congestion in Southeast Asia"
+          },
+          "topK": {
+            "type": "integer",
+            "description": "Maximum number of semantically relevant articles to retrieve (1-50). Defaults to 10.",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50
           }
         },
         "required": ["query"]
       },
       "QueryResponse": {
         "type": "object",
-        "description": "Semantic search results including ranked article matches and an AI summary.",
+        "description": "Results from semantic AI search.",
         "properties": {
           "query": {
             "type": "string",
-            "description": "The original search query."
+            "description": "The original search query.",
+            "example": "port congestion in Southeast Asia"
           },
           "matches": {
             "type": "array",
-            "description": "Articles ranked by semantic similarity to the query.",
+            "description": "Ranked article matches ordered by semantic similarity score.",
             "items": {
-              "$ref": "#/components/schemas/SearchMatch"
+              "type": "object",
+              "properties": {
+                "article": {
+                  "$ref": "#/components/schemas/NewsArticle"
+                },
+                "score": {
+                  "type": "number",
+                  "format": "float",
+                  "description": "Cosine similarity score (0.0 to 1.0).",
+                  "example": 0.87
+                }
+              }
             }
           },
-          "aiSummary": {
-            "$ref": "#/components/schemas/AiSummary"
-          }
-        }
-      },
-      "SearchMatch": {
-        "type": "object",
-        "description": "A single search result with relevance score.",
-        "properties": {
-          "title": {
-            "type": "string",
-            "description": "Article headline."
-          },
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "description": "Original article URL."
-          },
-          "source": {
-            "type": "string",
-            "description": "News source name."
-          },
-          "riskCategory": {
-            "type": "string",
-            "description": "NLP-classified risk category."
-          },
-          "score": {
-            "type": "number",
-            "format": "double",
-            "description": "Cosine similarity score (0.0 to 1.0, higher is more relevant)."
-          },
-          "publishedAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "ISO 8601 publication timestamp."
-          }
-        }
-      },
-      "AiSummary": {
-        "type": "object",
-        "description": "AI-generated summary of the search results.",
-        "properties": {
           "summary": {
             "type": "string",
-            "description": "Natural language summary of the matched articles and their relevance to the query."
-          },
-          "confidenceScore": {
-            "type": "integer",
-            "description": "Confidence level of the AI summary (0-100).",
-            "minimum": 0,
-            "maximum": 100
+            "description": "AI-generated synthesis of findings across matched articles.",
+            "example": "Multiple reports indicate increasing vessel wait times at Singapore and Port Klang due to weather delays and rerouted Red Sea cargo."
           }
-        }
+        },
+        "required": ["query", "matches"]
       },
       "CountryPin": {
         "type": "object",
-        "description": "A country with active disruption coverage and map coordinates.",
+        "description": "Geographic pin for a country with active disruption news.",
         "properties": {
-          "id": {
+          "country": {
             "type": "string",
-            "description": "ISO 3166-1 alpha-2 country code."
+            "description": "Full country name.",
+            "example": "India"
           },
-          "query": {
+          "code": {
             "type": "string",
-            "description": "Country name used for risk queries."
+            "description": "ISO 3166-1 alpha-2 country code.",
+            "example": "IN"
           },
           "flag": {
             "type": "string",
-            "description": "Unicode flag emoji."
+            "description": "Country flag emoji.",
+            "example": "🇮🇳"
           },
           "lat": {
             "type": "number",
             "format": "double",
-            "description": "Latitude coordinate."
+            "description": "Latitude coordinate for map placement.",
+            "example": 20.5937
           },
           "lng": {
             "type": "number",
             "format": "double",
-            "description": "Longitude coordinate."
+            "description": "Longitude coordinate for map placement.",
+            "example": 78.9629
           },
-          "baseScore": {
+          "articleCount": {
             "type": "integer",
-            "description": "Default base risk score."
+            "description": "Number of active disruption articles for this country.",
+            "example": 8
           }
-        }
+        },
+        "required": ["country", "code", "lat", "lng"]
       },
       "CountryRiskResponse": {
         "type": "object",
@@ -527,7 +1025,7 @@
   "tags": [
     {
       "name": "Articles",
-      "description": "Supply chain news article ingestion and retrieval."
+      "description": "Supply chain news article ingestion, filtering, and retrieval."
     },
     {
       "name": "Search",
