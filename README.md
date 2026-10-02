@@ -13,10 +13,13 @@
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Active-000000?style=flat-square&logo=vercel&logoColor=white)](https://supply-chain-risk-analysis.vercel.app)
 [![MRR Boost](https://img.shields.io/badge/MRR_Boost-+11.4%25_vs_dense_only-success?style=flat-square)](#-benchmark-results)
 [![Latency](https://img.shields.io/badge/E2E_Latency-%3C480ms-orange?style=flat-square)](#-benchmark-results)
 
 > **A production-grade distributed platform that monitors global news 24/7, extracts supply-chain threats using NLP + AI, stores them as searchable vectors, and generates instant risk scores for 26 trade corridors worldwide — all deployed for free.**
+
+**[🌐 Click Here to View Live Deployment →](https://supply-chain-risk-analysis.vercel.app)**
 
 </div>
 
