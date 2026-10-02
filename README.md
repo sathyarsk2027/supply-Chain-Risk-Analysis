@@ -336,7 +336,6 @@ supply-chain-risk-monitor/
   </tr>
 </table>
 
-**Faculty Advisor:** Dr. Thenmozhi V · Dept. of Computer and Communication Engineering · Amrita School of Engineering, Chennai
 
 ---
 
