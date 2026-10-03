@@ -25,7 +25,7 @@
 
 ---
 
-## 🗺️ What Does This Actually Do? *(Simple Explanation)*
+## 🗺️ What Does This Actually Do? 
 
 Imagine you run a global company that ships goods across the world. You need to know the moment something goes wrong — a port strike in Egypt, a typhoon in Japan, or sanctions on Russia — *before* your shipment gets stuck.
 
