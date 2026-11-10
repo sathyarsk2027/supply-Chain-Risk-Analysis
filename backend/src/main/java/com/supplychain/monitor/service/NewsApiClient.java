@@ -44,7 +44,7 @@ public class NewsApiClient {
         return restTemplate;
     }
 
-    @Scheduled(fixedRateString = "${scheduler.fetch-interval-ms}")
+    @Scheduled(initialDelayString = "${scheduler.initial-delay-ms:30000}", fixedRateString = "${scheduler.fetch-interval-ms}")
     public void collectNews() {
         logger.info("Starting scheduled news collection...");
         if (apiKey == null || apiKey.isEmpty() || "test-api-key".equals(apiKey)) {

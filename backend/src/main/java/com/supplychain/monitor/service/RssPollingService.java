@@ -44,7 +44,7 @@ public class RssPollingService {
         this.feedUrlsConfig = feedUrlsConfig;
     }
 
-    @Scheduled(fixedRateString = "${rss.fetch-interval-ms}")
+    @Scheduled(initialDelayString = "${rss.initial-delay-ms:45000}", fixedRateString = "${rss.fetch-interval-ms}")
     public void pollRssFeeds() {
         pollRssFeedsInternal();
     }
